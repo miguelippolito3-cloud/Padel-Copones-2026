@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pádel Copones · Buena Vista</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@400;600;700;900&display=swap');
+  :root {
+    --verde: #2ecc71; --verde-oscuro: #27ae60; --amarillo: #f1c40f;
+    --naranja: #e67e22; --rojo: #e74c3c; --azul: #3498db;
+    --fondo: #0a1628; --fondo2: #112240; --card: #1a2e4a;
+    --card2: #1e3455; --texto: #e8f4f8; --gris: #7f8c8d;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--fondo); color: var(--texto);
+    font-family: 'Nunito', sans-serif; min-height: 100vh; padding: 20px;
+    background-image: radial-gradient(ellipse at 20% 50%, rgba(46,204,113,0.08) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 20%, rgba(52,152,219,0.08) 0%, transparent 50%);
+  }
+  header { text-align: center; margin-bottom: 30px; padding: 20px; }
+  header h1 {
+    font-family: 'Bebas Neue', sans-serif; font-size: clamp(2.5rem, 8vw, 5rem);
+    letter-spacing: 4px; background: linear-gradient(135deg, var(--verde), var(--amarillo));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; line-height: 1;
+  }
+  header p { color: var(--gris); font-size: 0.9rem; margin-top: 6px; letter-spacing: 2px; text-transform: uppercase; }
+  .container { max-width: 1000px; margin: 0 auto; }
+  .section-title {
+    font-family: 'Bebas Neue', sans-serif; font-size: 1.3rem; letter-spacing: 3px;
+    color: var(--verde); margin-bottom: 12px; border-left: 3px solid var(--verde); padding-left: 10px;
+  }
+  .roster-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px; }
+  @media(min-width:650px) { .roster-grid { grid-template-columns: repeat(4, 1fr); } }
+  .roster-copon { background: var(--card); border-radius: 12px; padding: 12px; border: 1px solid var(--card2); }
+  .roster-copon.A { border-top: 3px solid #f1c40f; }
+  .roster-copon.B { border-top: 3px solid #3498db; }
+  .roster-copon.C { border-top: 3px solid #e67e22; }
+  .roster-copon.D { border-top: 3px solid #e74c3c; }
+  .copon-label { font-family: 'Bebas Neue', sans-serif; font-size: 0.95rem; letter-spacing: 2px; margin-bottom: 8px; }
+  .A .copon-label { color: #f1c40f; } .B .copon-label { color: #3498db; }
+  .C .copon-label { color: #e67e22; } .D .copon-label { color: #e74c3c; }
+  .roster-player {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    background: var(--fondo2); border-radius: 7px; padding: 6px 9px; margin-bottom: 5px;
+    font-size: 0.8rem; font-weight: 700; cursor: pointer; border: 1px solid transparent;
+    transition: all 0.15s; user-select: none; gap: 4px;
+  }
+  .roster-player:hover { border-color: var(--verde); }
+  .roster-player.selected { background: rgba(46,204,113,0.15); border-color: var(--verde); color: var(--verde); }
+  .player-info { flex: 1; }
+  .player-name { font-size: 0.82rem; font-weight: 900; }
+  .apodo { font-size: 0.66rem; color: var(--gris); font-weight: 400; line-height: 1.3; margin-top: 1px; }
+  .check-icon { font-size: 0.8rem; flex-shrink: 0; margin-top: 1px; }
+  .selected-section { background: var(--card); border-radius: 12px; padding: 16px; margin-bottom: 20px; border: 1px solid var(--card2); }
+  .selected-chips { display: flex; flex-wrap: wrap; gap: 7px; min-height: 36px; }
+  .player-chip { display: flex; align-items: center; gap: 5px; border-radius: 20px; padding: 4px 10px; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: opacity 0.15s; }
+  .player-chip:hover { opacity: 0.7; }
+  .chip-A { background: rgba(241,196,15,0.2); border: 1px solid #f1c40f; color: #f1c40f; }
+  .chip-B { background: rgba(52,152,219,0.2); border: 1px solid #3498db; color: #3498db; }
+  .chip-C { background: rgba(230,126,34,0.2); border: 1px solid #e67e22; color: #e67e22; }
+  .chip-D { background: rgba(231,76,60,0.2); border: 1px solid #e74c3c; color: #e74c3c; }
+  .selected-meta { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; font-size: 0.75rem; color: var(--gris); }
+  .selected-meta strong { color: var(--texto); }
+  .add-custom { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+  .add-custom input {
+    flex: 1; min-width: 150px; background: var(--card); border: 2px solid var(--card2);
+    border-radius: 10px; padding: 9px 14px; color: var(--texto); font-family: 'Nunito', sans-serif;
+    font-size: 0.88rem; font-weight: 700; outline: none;
+  }
+  .add-custom input:focus { border-color: var(--verde); }
+  .add-custom input::placeholder { color: var(--gris); font-weight: 400; }
+  .copon-select {
+    background: var(--card); border: 2px solid var(--card2); border-radius: 10px;
+    padding: 9px 12px; color: var(--texto); font-family: 'Nunito', sans-serif;
+    font-weight: 700; font-size: 0.88rem; outline: none; cursor: pointer;
+  }
+  .btn {
+    background: linear-gradient(135deg, var(--verde), var(--verde-oscuro)); color: #fff; border: none;
+    border-radius: 10px; padding: 10px 18px; font-family: 'Nunito', sans-serif; font-weight: 900;
+    font-size: 0.88rem; cursor: pointer; transition: transform 0.1s; box-shadow: 0 4px 15px rgba(46,204,113,0.3);
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn:active { transform: translateY(0); }
+  .btn-generate {
+    width: 100%; padding: 16px; font-size: 1.1rem; border-radius: 14px; margin-bottom: 24px;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+  }
+  .btn-sm { background: var(--card); border: 1px solid var(--card2); color: var(--texto); box-shadow: none; padding: 7px 12px; font-size: 0.75rem; }
+  .btn-sm:hover { border-color: var(--verde); }
+  #resultado { display: none; }
+  .resultado-header { background: linear-gradient(135deg, #1a5c38, #0e3d26); border-radius: 16px; padding: 20px; text-align: center; margin-bottom: 18px; border: 1px solid var(--verde); }
+  .resultado-header h2 { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; letter-spacing: 3px; }
+  .resultado-header p { color: rgba(255,255,255,0.7); font-size: 0.82rem; margin-top: 4px; letter-spacing: 2px; }
+  .cancha-card { background: var(--card); border-radius: 14px; margin-bottom: 14px; overflow: hidden; border: 1px solid var(--card2); animation: slideIn 0.3s ease forwards; opacity: 0; }
+  @keyframes slideIn { from { transform: translateY(16px); opacity:0; } to { transform:translateY(0); opacity:1; } }
+  .cancha-title { background: var(--fondo2); padding: 9px 16px; font-family: 'Bebas Neue', sans-serif; font-size: 0.95rem; letter-spacing: 3px; color: var(--amarillo); border-bottom: 1px solid var(--card2); }
+  .match { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; gap: 8px; flex-wrap: wrap; }
+  .equipo { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 110px; }
+  .equipo.derecha { align-items: flex-end; }
+  .jugador-chip { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 0.85rem; }
+  .equipo.derecha .jugador-chip { flex-direction: row-reverse; }
+  .chip-copon { font-family: 'Bebas Neue', sans-serif; font-size: 0.72rem; width: 20px; height: 20px; border-radius: 5px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .vs-badge { font-family: 'Bebas Neue', sans-serif; font-size: 1.6rem; color: var(--gris); letter-spacing: 2px; flex-shrink: 0; }
+  .comentario { padding: 9px 16px 12px; font-size: 0.78rem; color: var(--gris); border-top: 1px solid var(--card2); font-style: italic; line-height: 1.5; }
+  .libre-card { background: var(--card); border: 1px dashed var(--naranja); border-radius: 10px; padding: 12px 16px; margin-bottom: 14px; font-size: 0.82rem; color: var(--naranja); }
+  .pronostico-card { background: linear-gradient(135deg, rgba(241,196,15,0.08), rgba(231,76,60,0.08)); border: 1px solid rgba(241,196,15,0.25); border-radius: 12px; padding: 14px 16px; margin-bottom: 18px; }
+  .pronostico-card .label { font-family: 'Bebas Neue', sans-serif; letter-spacing: 2px; font-size: 0.85rem; color: var(--amarillo); margin-bottom: 5px; }
+  .pronostico-card p { font-size: 0.83rem; line-height: 1.6; }
+  .loading { text-align: center; padding: 28px; color: var(--gris); font-style: italic; display: none; }
+  .loading .dots::after { content: ''; animation: dots 1.4s infinite; }
+  @keyframes dots { 0%,20%{content:''} 40%{content:'.'} 60%{content:'..'} 80%,100%{content:'...'} }
+  .error-msg { background: rgba(231,76,60,0.12); border: 1px solid var(--rojo); border-radius: 10px; padding: 11px 15px; color: var(--rojo); font-size: 0.82rem; margin-bottom: 14px; display: none; }
+  .search-bar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .search-bar input {
+    flex: 1; min-width: 180px; background: var(--fondo2); border: 1px solid var(--card2);
+    border-radius: 8px; padding: 7px 12px; color: var(--texto); font-family: 'Nunito', sans-serif;
+    font-size: 0.83rem; outline: none;
+  }
+  .search-bar input:focus { border-color: var(--verde); }
+  .search-bar input::placeholder { color: var(--gris); }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>🎾 BUENA VISTA</h1>
+    <p>Pádel Copones · Domingos 8:30–10hs · Sorteo Transparente™</p>
+  </header>
+
+  <div class="section-title">PLANTEL</div>
+  <div class="search-bar">
+    <input type="text" id="searchInput" placeholder="Buscar jugador..." oninput="filterRoster()" />
+    <button class="btn btn-sm" onclick="selectAll()">Todos</button>
+    <button class="btn btn-sm" onclick="clearAll()">Limpiar</button>
+  </div>
+  <div class="roster-grid" id="rosterGrid"></div>
+
+  <div class="section-title">INVITADO SORPRESA</div>
+  <div class="add-custom">
+    <input type="text" id="customName" placeholder="Nombre del invitado..." maxlength="30" />
+    <select class="copon-select" id="customCopon">
+      <option value="A">⭐ Copón A</option>
+      <option value="B">🔵 Copón B</option>
+      <option value="C" selected>🟠 Copón C</option>
+      <option value="D">🔴 Copón D</option>
+    </select>
+    <button class="btn" onclick="addCustomPlayer()">+ Agregar</button>
+  </div>
+
+  <div class="selected-section">
+    <div class="section-title" style="margin-bottom:10px">JUGADORES DE HOY</div>
+    <div class="selected-chips" id="selectedChips">
+      <span style="color:var(--gris);font-size:0.82rem;font-style:italic">Seleccioná los que vienen este domingo...</span>
+    </div>
+    <div class="selected-meta" id="selectedMeta"></div>
+  </div>
+
+  <div class="error-msg" id="errorMsg"></div>
+  <button class="btn btn-generate" onclick="generarParejas()">🎱 SORTEO TRANSPARENTE DEL DOMINGO</button>
+  <div class="loading" id="loading">
+    <p>Bolas al freezer, transparencia en proceso<span class="dots"></span></p>
+    <p style="font-size:0.75rem;margin-top:6px">Auspicia Kia Sportage 🚗</p>
+  </div>
+  <div id="resultado"></div>
+</div>
+
+<script>
+// PLANTEL OFICIAL — Ranking Pádel Buena Vista (actualizado marzo 2026)
+const ROSTER = [
+  // ──── COPÓN A ────
+  { nombre: "Chico", apodo: "Lucas / Chico Chico / Boy Boy. Buenísimo. A veces no puede por el rugby del hijo.", copon: "A" },
+  { nombre: "Don (Diegui)", apodo: "Diego Martinez / Diegui / Don Johnson. Copón A puro. Coach del equipo, señala todos los errores ajenos.", copon: "A" },
+  { nombre: "Matso", apodo: "Maxi Burtin. Hoy es muy bueno. Se distrae cuando llegan las del turno de las 10.", copon: "A" },
+  { nombre: "Track (Juli)", apodo: "Julian Tramontano / El Track / Dr. Track. Organizador. Sorteos transparentes con bolas frias. Auspicios Kia Sportage.", copon: "A" },
+  { nombre: "Juanchi", apodo: "Juanchi Gebbie / El Desganado / Pelusa / Jugoso. Copon A que parece C. Globo letal.", copon: "A" },
+  { nombre: "Laqui", apodo: "Laqui / Pjcha. MVP silencioso. Pala enorme. Le puso el apodo Rafa a Mike.", copon: "A" },
+  { nombre: "Gato", apodo: "Gaston Lopez Soler / El Gato. Copon A, muy bueno. Lleva pelotas. La CD sigue invicta.", copon: "A" },
+  { nombre: "Maren", apodo: "Martin Marenzi. Ex rugby Pumas. Polvora mojada a veces, jugador de la fecha cuando prende.", copon: "A" },
+  { nombre: "Carli", apodo: "Carlos Mohap. SUPER A — el mejor del grupo. Se cansa con 2 partidos. No me da el fisico ya.", copon: "A" },
+  { nombre: "Negro Mon", apodo: "Daniel Mon. Codo de padlista. Va con los nenes los domingos.", copon: "A" },
+
+  // ──── COPÓN B ────
+  { nombre: "TIS", apodo: "Tomas Sanguinetti. Malo pero con mucha clase y disciplina. Gestiona los abonos ($60k, canchas 2 y 3).", copon: "B" },
+  { nombre: "Alba", apodo: "Lucas Albarracin / El Magico Albarracin. Corre como un loco. Muy en estado. Copon B mejorando.", copon: "B" },
+  { nombre: "Pati", apodo: "Sebastian Scally / El Patan. Copon B pero muy calenton. No llegar a la red lo enloquece.", copon: "B" },
+  { nombre: "Tapiachu", apodo: "Patricio Tramontano / Pachu. Saca como Silvia (= Rino padre). Quiere rematar todas. Padel de los 90.", copon: "B" },
+  { nombre: "MP", apodo: "Mariano Posse. Mucha clase y mucho estado. Prefiere el fondo.", copon: "B" },
+  { nombre: "Teo", apodo: "Mateo Brady / La Tapioca. Los Globetrotters con Alba. Todo globo, todo espectaculo.", copon: "B" },
+  { nombre: "Taya", apodo: "El Taya. Revelacion del año. Llega tarde pero juega muy bien. Diego mismo lo proclamo.", copon: "B" },
+  { nombre: "Guille", apodo: "Guille. Copon B solido.", copon: "B" },
+
+  // ──── COPÓN C ────
+  { nombre: "Rafa", apodo: "Mike / Pezon / Shadow. Apodo puesto por Laqui: si pega bien es Rafa, si pega mal es Juan el del bar. Manana ganada pase lo que pase.", copon: "C" },
+  { nombre: "Calambre", apodo: "Federico Mackinson / Ficky. Se acalambraba cuando jugaba, de ahi el apodo. NUNCA decirle paleta — solo pala.", copon: "C" },
+  { nombre: "Bati", apodo: "Hernan Martinelli / Batata. Nuevo en el grupo. Dice que tiene un tiro letal.", copon: "C" },
+  { nombre: "Toto", apodo: "Juan Ignacio Mezzotero. Lesionado cronico. Vuelve concentrado siempre. Cuando pierde: que gordo que estoy.", copon: "C" },
+  { nombre: "Alejo", apodo: "El Persa Vera / Alejito / Verde. Se cree copon B. Mariposas en la panza.", copon: "C" },
+];
+const COLORES = {
+  A: { bg: '#f1c40f', text: '#000' }, B: { bg: '#3498db', text: '#fff' },
+  C: { bg: '#e67e22', text: '#fff' }, D: { bg: '#e74c3c', text: '#fff' }
+};
+
+let selected = new Set();
+let customPlayers = [];
+
+function allPlayers() { return [...ROSTER, ...customPlayers]; }
+
+function renderRoster(filter = '') {
+  const f = filter.toLowerCase();
+  const labels = { A: '⭐ Copón A · Cracks', B: '🔵 Copón B · Buenos', C: '🟠 Copón C · Promedio', D: '🔴 Copón D · Valientes' };
+  document.getElementById('rosterGrid').innerHTML = ['A','B','C','D'].map(c => {
+    const players = allPlayers().filter(p => p.copon === c && (!f || p.nombre.toLowerCase().includes(f) || p.apodo.toLowerCase().includes(f)));
+    return `<div class="roster-copon ${c}">
+      <div class="copon-label">${labels[c]}</div>
+      ${players.map(p => `
+        <div class="roster-player ${selected.has(p.nombre)?'selected':''}" onclick="togglePlayer('${p.nombre.replace(/'/g,"\\'")}')">
+          <div class="player-info">
+            <div class="player-name">${p.nombre}</div>
+            <div class="apodo">${p.apodo.split('.')[0]}</div>
+          </div>
+          <div class="check-icon">${selected.has(p.nombre)?'✓':''}</div>
+        </div>`).join('')}
+    </div>`;
+  }).join('');
+}
+
+function filterRoster() { renderRoster(document.getElementById('searchInput').value); }
+
+function togglePlayer(nombre) {
+  selected.has(nombre) ? selected.delete(nombre) : selected.add(nombre);
+  renderRoster(document.getElementById('searchInput').value);
+  renderSelected();
+}
+
+function renderSelected() {
+  const chips = document.getElementById('selectedChips');
+  const meta = document.getElementById('selectedMeta');
+  const sel = [...selected].map(n => allPlayers().find(p => p.nombre === n)).filter(Boolean);
+  if (!sel.length) {
+    chips.innerHTML = '<span style="color:var(--gris);font-size:0.82rem;font-style:italic">Seleccioná los que vienen este domingo...</span>';
+    meta.innerHTML = ''; return;
+  }
+  chips.innerHTML = sel.map(p => `<div class="player-chip chip-${p.copon}" onclick="togglePlayer('${p.nombre.replace(/'/g,"\\'")}')">${p.nombre} ×</div>`).join('');
+  const counts = {A:0,B:0,C:0,D:0};
+  sel.forEach(p => counts[p.copon]++);
+  meta.innerHTML = `<strong>Total: ${sel.length}</strong> · A:${counts.A} · B:${counts.B} · C:${counts.C} · D:${counts.D} · Canchas: ${Math.floor(sel.length/4)}`;
+}
+
+function selectAll() { allPlayers().forEach(p => selected.add(p.nombre)); renderRoster(); renderSelected(); }
+function clearAll() { selected.clear(); renderRoster(); renderSelected(); }
+
+function addCustomPlayer() {
+  const nombre = document.getElementById('customName').value.trim();
+  const copon = document.getElementById('customCopon').value;
+  if (!nombre) return;
+  if (allPlayers().find(p => p.nombre === nombre)) { mostrarError(`${nombre} ya está en el plantel`); return; }
+  customPlayers.push({ nombre, apodo: 'Invitado sorpresa', copon });
+  selected.add(nombre);
+  document.getElementById('customName').value = '';
+  renderRoster(); renderSelected(); limpiarError();
+}
+document.getElementById('customName').addEventListener('keydown', e => { if(e.key==='Enter') addCustomPlayer(); });
+function mostrarError(msg) { const el = document.getElementById('errorMsg'); el.textContent = msg; el.style.display = 'block'; }
+function limpiarError() { document.getElementById('errorMsg').style.display = 'none'; }
+
+async function generarParejas() {
+  if (selected.size < 4) { mostrarError('Necesitás al menos 4 jugadores para armar una cancha 😅'); return; }
+  limpiarError();
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('resultado').style.display = 'none';
+  document.getElementById('resultado').innerHTML = '';
+
+  const hoy = new Date().toLocaleDateString('es-AR', { weekday:'long', day:'numeric', month:'long' });
+  const listaTexto = [...selected].map(n => {
+    const p = allPlayers().find(x => x.nombre === n);
+    return p ? `${p.nombre} (${p.apodo}, Copón ${p.copon})` : n;
+  }).join('\n');
+
+  const prompt = `Sos el organizador del pádel copones del domingo en el Hurling Club de Buenos Aires, cancha Buenavista. Son amigos de toda la vida. Jugás de 8:30 a 10hs con el sistema de copones.
+
+COPONES: A=cracks (Carli SUPER A, Don/Diegui, Chico, Matso, Track/Juli, Juanchi/Desganado, Laqui, Gato, Maren, Negro Mon, Carli). B=buenos (TIS, Alba, Pati, Tapiachu, MP, Teo, Taya, Guille). C=promedio (Rafa/Mike, Calambre/Ficky, Bati, Toto, Alejo).
+
+DATOS INTERNOS CLAVE (extraidos del historial real del grupo — usar para comentarios personalizados):
+COPÓN A:
+- Chico = Lucas / Chico Chico / Boy Boy: buenísimo, a veces no puede por el rugby del hijo
+- Don/Diegui = Diego Martinez / Don Johnson: copón A irrefutable, coach del equipo, señala los errores ajenos con autoridad
+- Matso = Maxi Burtin: hoy es muy bueno, se distrae cuando llegan las del turno de las 10, organizó cumple con profes del SportClub
+- Track = Juli / Julian Tramontano / El Track / Dr. Track: organizador supremo, sorteos transparentes con bolas frias al freezer, auspicios Kia Sportage, hace los platillos de tambores antes de revelar el sorteo
+- Juanchi Gebbie = El Desganado / Pelusa / Jugoso: copón A que PARECE C, globo letal, confirma sobre el pucho
+- Laqui / Pjcha: MVP silencioso, pala enorme, le puso el apodo "Rafa" a Mike
+- Gato = Gaston Lopez Soler / El Gato: copón A muy bueno, la CD sigue invicta, lleva pelotas
+- Maren = Martin Marenzi: ex rugby Pumas, polvora mojada a veces, jugador de la fecha cuando prende
+- Carli = Carlos Mohap: SUPER A el mejor del grupo, lleva palas y pelotas, "no me da el fisico ya" (mentira)
+- Negro Mon = Daniel Mon: codo de padlista, va con los nenes los domingos
+
+COPÓN B:
+- TIS = Tomas Sanguinetti: "malo pero con mucha clase y disciplina", gestiona los abonos ($60k/mes, canchas 2 y 3, ventana miercoles)
+- Alba = Lucas Albarracin / El Magico Albarracin: corre como un loco, muy en estado, copon B mejorando, dupla Globetrotters con Teo
+- Pati = Sebastian Scally / El Patan: copón B pero MUY CALENTON, se calienta si no llega a la red
+- Tapiachu = Patricio Tramontano / Pachu: saca como Silvia (= Rino PADRE), quiere rematar todas, nunca llega a la red, padel de los 90
+- MP = Mariano Posse: mucha clase y mucho estado, prefiere el fondo
+- Teo = Mateo Brady / La Tapioca: Globetrotters con Alba, todo globo
+- Taya: revelacion del año, llega tarde pero juega muy bien, Diego mismo lo proclamo
+- Guille: copon B solido
+
+COPÓN C:
+- Rafa = Mike / Pezon / Shadow: APODO PUESTO POR LAQUI: "si le pega bien es el Rafa, si le pega mal es Juan el del bar". Manana ganada pase lo que pase. Cetogenica a pleno.
+- Calambre = Federico Mackinson / Ficky: se acalambraba cuando jugaba de ahi el apodo. NUNCA decirle "paleta" — SOLO "pala". Hace sorteos como "Ficky Bezos" / "Elon Musckinson"
+- Bati = Hernan Martinelli / Batata: nuevo, dice que tiene "un tiro letal", entusiasta
+- Toto = Juan Ignacio Mezzotero: lesionado cronico, vuelve concentrado, cuando pierde dice "que gordo que estoy"
+- Alejo = El Persa Vera / Alejito / Verde: se cree copon B, mariposas en la panza
+
+RELACIONES Y CHISTES INTERNOS:
+- Pachu y Matso: el grupo dice que Pachu le gusta Matso (lo niega atacando a Toto)
+- Toto y Laqui: dupla épica, ganaron el torneo juntos
+- Albarra + Teo = "Los Globetrotters" — cuando les toca juntos el show es garantizado
+- Guille = COPON B: solido, regular del grupo
+- TIS + Track: la pareja ganadora del torneo de diciembre (Track se comió todos los pelotazos pero ganaron igual)
+- Ficky hace el sorteo cuando Track está ocupado, lo llaman "Ficky Bezos", "Calam Musk" o "Elon Musckinson"
+- La regla de pelotazo: pelotazo directo al cuerpo sin pique = partido perdido. Laqui la aplica permanentemente
+- El desayuno: el ganador desayuna gratis (avocado toast, café, etc), los perdedores pagan
+- Matso en cancha de vidrio se distrae con las del turno de las 10
+- Pachu saca "como Silvia" — referencia a Pablo Rino PADRE
+- "Mañana ganada" = frase de Mike, pase lo que pase en la cancha
+- Premio recurrente: "Kia Sportage" (se entrega en enero por tema de patente)
+- Contacto del club: Marta Landajo. App de reservas: OnDepor
+- Sistema de abono: canchas 2 y 3, $60.000/mes, primeros 8 anotados le pagan al que puso el abono, ventana abre los miércoles
+
+REGLAS SAGRADAS:
+1. Pelotazo directo al cuerpo sin pique = partido perdido automáticamente
+2. El ganador desayuna gratis (los perdedores pagan)
+3. NUNCA decir "paleta" — siempre "pala" (Ficky se enoja en serio)
+4. La ventana de inscripción se abre los miércoles — si te dormís, te quedás afuera
+5. Nadie queda afuera — hay canchas para todos
+
+REGLAS PARA ARMAR PAREJAS:
+1. Nunca dos del mismo copón juntos (especialmente dos copón 1)
+2. Ideal: A+D, B+C (el bueno con el flojo)
+3. 4 jugadores por cancha (2 parejas)
+4. Si sobra gente, indicar quién rota
+
+Jugadores de hoy (${hoy}):
+${listaTexto}
+
+TONO: 100% argentino de club entre amigos de toda la vida, como el WhatsApp real del grupo. Usá apodos, jerga de pádel, referencias internas específicas. Cada comentario tiene que ser personalizado y gracioso para ESA pareja concreta.
+
+Devolvé SOLO un JSON válido, sin texto antes ni después, sin backticks markdown:
+{
+  "fecha": "${hoy}",
+  "canchas": [
+    {
+      "numero": 1,
+      "equipo1": [{"nombre": "...", "copon": "A"}, {"nombre": "...", "copon": "D"}],
+      "equipo2": [{"nombre": "...", "copon": "B"}, {"nombre": "...", "copon": "C"}],
+      "comentario": "comentario gracioso y personalizado sobre esta pareja y partido"
+    }
+  ],
+  "libres": [],
+  "pronostico": "pronóstico exagerado, gracioso y específico del día"
+}`;
+
+  try {
+    const GEMINI_KEY = "AIzaSyADyprNdUMwxDr1z2tjBjBYFqESx2-AXD4";
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { maxOutputTokens: 2000, temperature: 1.0 }
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || 'API error');
+    const texto = data.candidates?.[0]?.content?.parts?.map(i => i.text||'').join('') || '';
+    const clean = texto.replace(/```json|```/g,'').trim();
+    mostrarResultado(JSON.parse(clean));
+  } catch(e) {
+    mostrarError('Error en el sorteo transparente. Intentá de nuevo 😬');
+    console.error(e);
+  } finally {
+    document.getElementById('loading').style.display = 'none';
+  }
+}
+
+function chipCopon(copon) {
+  const c = COLORES[copon];
+  return `<div class="chip-copon" style="background:${c.bg};color:${c.text}">${copon}</div>`;
+}
+
+function mostrarResultado(data) {
+  const el = document.getElementById('resultado');
+  el.style.display = 'block';
+  let html = `<div class="resultado-header"><h2>🎾 SORTEO TRANSPARENTE</h2><p>${(data.fecha||'').toUpperCase()} · HURLING CLUB · BUENA VISTA</p></div>`;
+  (data.canchas||[]).forEach((c, i) => {
+    html += `<div class="cancha-card" style="animation-delay:${i*0.1}s">
+      <div class="cancha-title">🏟️ CANCHA ${c.numero}</div>
+      <div class="match">
+        <div class="equipo">${(c.equipo1||[]).map(j=>`<div class="jugador-chip">${chipCopon(j.copon)}<span>${j.nombre}</span></div>`).join('')}</div>
+        <div class="vs-badge">VS</div>
+        <div class="equipo derecha">${(c.equipo2||[]).map(j=>`<div class="jugador-chip">${chipCopon(j.copon)}<span>${j.nombre}</span></div>`).join('')}</div>
+      </div>
+      <div class="comentario">💬 ${c.comentario}</div>
+    </div>`;
+  });
+  if (data.libres && data.libres.length) html += `<div class="libre-card">⚠️ <strong>Rota:</strong> ${data.libres.join(', ')} — esperando que se libere una cancha</div>`;
+  if (data.pronostico) html += `<div class="pronostico-card"><div class="label">🔮 PRONÓSTICO DEL DÍA</div><p>${data.pronostico}</p></div>`;
+  el.innerHTML = html;
+  el.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+renderRoster();
+renderSelected();
+</script>
+</body>
+</html>
