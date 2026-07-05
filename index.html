@@ -1,419 +1,656 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pádel Copones · Buena Vista</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Copones BV · Pádel</title>
+<meta name="theme-color" content="#0a0a0a" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Copones BV" />
+<link rel="manifest" href='data:application/manifest+json,{"name":"Copones Buena Vista","short_name":"Copones BV","start_url":".","display":"standalone","background_color":"%230a0a0a","theme_color":"%230a0a0a","icons":[{"src":"data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 192 192%22%3E%3Crect width=%22192%22 height=%22192%22 fill=%22%23d50a0a%22/%3E%3Ctext x=%2296%22 y=%22130%22 font-size=%22110%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22bold%22%3ECB%3C/text%3E%3C/svg%3E","sizes":"192x192","type":"image/svg+xml"}]}' />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@400;600;700;900&display=swap');
-  :root {
-    --verde: #2ecc71; --verde-oscuro: #27ae60; --amarillo: #f1c40f;
-    --naranja: #e67e22; --rojo: #e74c3c; --azul: #3498db;
-    --fondo: #0a1628; --fondo2: #112240; --card: #1a2e4a;
-    --card2: #1e3455; --texto: #e8f4f8; --gris: #7f8c8d;
+  :root{
+    --bg:#0a0b0d; --bg2:#121317; --card:#16181d; --card2:#1d2027; --line:#2a2e37;
+    --txt:#f4f6fa; --muted:#98a0ad; --red:#e2102a; --red2:#ff3350;
+    --A:#f5c518; --B:#2f7bff; --C:#fb923c; --D:#a78bfa;
+    --gold:#ffd34d; --spoon:#8a8f99;
   }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    background: var(--fondo); color: var(--texto);
-    font-family: 'Nunito', sans-serif; min-height: 100vh; padding: 20px;
-    background-image: radial-gradient(ellipse at 20% 50%, rgba(46,204,113,0.08) 0%, transparent 60%),
-      radial-gradient(ellipse at 80% 20%, rgba(52,152,219,0.08) 0%, transparent 50%);
-  }
-  header { text-align: center; margin-bottom: 30px; padding: 20px; }
-  header h1 {
-    font-family: 'Bebas Neue', sans-serif; font-size: clamp(2.5rem, 8vw, 5rem);
-    letter-spacing: 4px; background: linear-gradient(135deg, var(--verde), var(--amarillo));
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; line-height: 1;
-  }
-  header p { color: var(--gris); font-size: 0.9rem; margin-top: 6px; letter-spacing: 2px; text-transform: uppercase; }
-  .container { max-width: 1000px; margin: 0 auto; }
-  .section-title {
-    font-family: 'Bebas Neue', sans-serif; font-size: 1.3rem; letter-spacing: 3px;
-    color: var(--verde); margin-bottom: 12px; border-left: 3px solid var(--verde); padding-left: 10px;
-  }
-  .roster-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px; }
-  @media(min-width:650px) { .roster-grid { grid-template-columns: repeat(4, 1fr); } }
-  .roster-copon { background: var(--card); border-radius: 12px; padding: 12px; border: 1px solid var(--card2); }
-  .roster-copon.A { border-top: 3px solid #f1c40f; }
-  .roster-copon.B { border-top: 3px solid #3498db; }
-  .roster-copon.C { border-top: 3px solid #e67e22; }
-  .roster-copon.D { border-top: 3px solid #e74c3c; }
-  .copon-label { font-family: 'Bebas Neue', sans-serif; font-size: 0.95rem; letter-spacing: 2px; margin-bottom: 8px; }
-  .A .copon-label { color: #f1c40f; } .B .copon-label { color: #3498db; }
-  .C .copon-label { color: #e67e22; } .D .copon-label { color: #e74c3c; }
-  .roster-player {
-    display: flex; align-items: flex-start; justify-content: space-between;
-    background: var(--fondo2); border-radius: 7px; padding: 6px 9px; margin-bottom: 5px;
-    font-size: 0.8rem; font-weight: 700; cursor: pointer; border: 1px solid transparent;
-    transition: all 0.15s; user-select: none; gap: 4px;
-  }
-  .roster-player:hover { border-color: var(--verde); }
-  .roster-player.selected { background: rgba(46,204,113,0.15); border-color: var(--verde); color: var(--verde); }
-  .player-info { flex: 1; }
-  .player-name { font-size: 0.82rem; font-weight: 900; }
-  .apodo { font-size: 0.66rem; color: var(--gris); font-weight: 400; line-height: 1.3; margin-top: 1px; }
-  .check-icon { font-size: 0.8rem; flex-shrink: 0; margin-top: 1px; }
-  .selected-section { background: var(--card); border-radius: 12px; padding: 16px; margin-bottom: 20px; border: 1px solid var(--card2); }
-  .selected-chips { display: flex; flex-wrap: wrap; gap: 7px; min-height: 36px; }
-  .player-chip { display: flex; align-items: center; gap: 5px; border-radius: 20px; padding: 4px 10px; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: opacity 0.15s; }
-  .player-chip:hover { opacity: 0.7; }
-  .chip-A { background: rgba(241,196,15,0.2); border: 1px solid #f1c40f; color: #f1c40f; }
-  .chip-B { background: rgba(52,152,219,0.2); border: 1px solid #3498db; color: #3498db; }
-  .chip-C { background: rgba(230,126,34,0.2); border: 1px solid #e67e22; color: #e67e22; }
-  .chip-D { background: rgba(231,76,60,0.2); border: 1px solid #e74c3c; color: #e74c3c; }
-  .selected-meta { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; font-size: 0.75rem; color: var(--gris); }
-  .selected-meta strong { color: var(--texto); }
-  .add-custom { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
-  .add-custom input {
-    flex: 1; min-width: 150px; background: var(--card); border: 2px solid var(--card2);
-    border-radius: 10px; padding: 9px 14px; color: var(--texto); font-family: 'Nunito', sans-serif;
-    font-size: 0.88rem; font-weight: 700; outline: none;
-  }
-  .add-custom input:focus { border-color: var(--verde); }
-  .add-custom input::placeholder { color: var(--gris); font-weight: 400; }
-  .copon-select {
-    background: var(--card); border: 2px solid var(--card2); border-radius: 10px;
-    padding: 9px 12px; color: var(--texto); font-family: 'Nunito', sans-serif;
-    font-weight: 700; font-size: 0.88rem; outline: none; cursor: pointer;
-  }
-  .btn {
-    background: linear-gradient(135deg, var(--verde), var(--verde-oscuro)); color: #fff; border: none;
-    border-radius: 10px; padding: 10px 18px; font-family: 'Nunito', sans-serif; font-weight: 900;
-    font-size: 0.88rem; cursor: pointer; transition: transform 0.1s; box-shadow: 0 4px 15px rgba(46,204,113,0.3);
-  }
-  .btn:hover { transform: translateY(-1px); }
-  .btn:active { transform: translateY(0); }
-  .btn-generate {
-    width: 100%; padding: 16px; font-size: 1.1rem; border-radius: 14px; margin-bottom: 24px;
-    display: flex; align-items: center; justify-content: center; gap: 10px;
-  }
-  .btn-sm { background: var(--card); border: 1px solid var(--card2); color: var(--texto); box-shadow: none; padding: 7px 12px; font-size: 0.75rem; }
-  .btn-sm:hover { border-color: var(--verde); }
-  #resultado { display: none; }
-  .resultado-header { background: linear-gradient(135deg, #1a5c38, #0e3d26); border-radius: 16px; padding: 20px; text-align: center; margin-bottom: 18px; border: 1px solid var(--verde); }
-  .resultado-header h2 { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; letter-spacing: 3px; }
-  .resultado-header p { color: rgba(255,255,255,0.7); font-size: 0.82rem; margin-top: 4px; letter-spacing: 2px; }
-  .cancha-card { background: var(--card); border-radius: 14px; margin-bottom: 14px; overflow: hidden; border: 1px solid var(--card2); animation: slideIn 0.3s ease forwards; opacity: 0; }
-  @keyframes slideIn { from { transform: translateY(16px); opacity:0; } to { transform:translateY(0); opacity:1; } }
-  .cancha-title { background: var(--fondo2); padding: 9px 16px; font-family: 'Bebas Neue', sans-serif; font-size: 0.95rem; letter-spacing: 3px; color: var(--amarillo); border-bottom: 1px solid var(--card2); }
-  .match { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; gap: 8px; flex-wrap: wrap; }
-  .equipo { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 110px; }
-  .equipo.derecha { align-items: flex-end; }
-  .jugador-chip { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 0.85rem; }
-  .equipo.derecha .jugador-chip { flex-direction: row-reverse; }
-  .chip-copon { font-family: 'Bebas Neue', sans-serif; font-size: 0.72rem; width: 20px; height: 20px; border-radius: 5px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-  .vs-badge { font-family: 'Bebas Neue', sans-serif; font-size: 1.6rem; color: var(--gris); letter-spacing: 2px; flex-shrink: 0; }
-  .comentario { padding: 9px 16px 12px; font-size: 0.78rem; color: var(--gris); border-top: 1px solid var(--card2); font-style: italic; line-height: 1.5; }
-  .libre-card { background: var(--card); border: 1px dashed var(--naranja); border-radius: 10px; padding: 12px 16px; margin-bottom: 14px; font-size: 0.82rem; color: var(--naranja); }
-  .pronostico-card { background: linear-gradient(135deg, rgba(241,196,15,0.08), rgba(231,76,60,0.08)); border: 1px solid rgba(241,196,15,0.25); border-radius: 12px; padding: 14px 16px; margin-bottom: 18px; }
-  .pronostico-card .label { font-family: 'Bebas Neue', sans-serif; letter-spacing: 2px; font-size: 0.85rem; color: var(--amarillo); margin-bottom: 5px; }
-  .pronostico-card p { font-size: 0.83rem; line-height: 1.6; }
-  .loading { text-align: center; padding: 28px; color: var(--gris); font-style: italic; display: none; }
-  .loading .dots::after { content: ''; animation: dots 1.4s infinite; }
-  @keyframes dots { 0%,20%{content:''} 40%{content:'.'} 60%{content:'..'} 80%,100%{content:'...'} }
-  .error-msg { background: rgba(231,76,60,0.12); border: 1px solid var(--rojo); border-radius: 10px; padding: 11px 15px; color: var(--rojo); font-size: 0.82rem; margin-bottom: 14px; display: none; }
-  .search-bar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
-  .search-bar input {
-    flex: 1; min-width: 180px; background: var(--fondo2); border: 1px solid var(--card2);
-    border-radius: 8px; padding: 7px 12px; color: var(--texto); font-family: 'Nunito', sans-serif;
-    font-size: 0.83rem; outline: none;
-  }
-  .search-bar input:focus { border-color: var(--verde); }
-  .search-bar input::placeholder { color: var(--gris); }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--bg);color:var(--txt);font-family:"Inter",system-ui,Segoe UI,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;padding-bottom:76px}
+  h1,h2,h3,.anton{font-family:"Anton",Impact,sans-serif;font-weight:400;letter-spacing:.01em}
+  .cond{font-family:"Barlow Condensed",sans-serif}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:720px;margin:0 auto;padding:0 14px}
+
+  /* Top bar ESPN */
+  .top{position:sticky;top:0;z-index:40;background:linear-gradient(180deg,#000,#0a0b0d);border-bottom:1px solid var(--line)}
+  .topin{max-width:720px;margin:0 auto;display:flex;align-items:center;gap:10px;padding:9px 14px}
+  .brandmark{background:var(--red);color:#fff;font-family:"Anton";font-size:18px;padding:4px 9px;border-radius:5px;letter-spacing:.02em;line-height:1}
+  .brandtxt{font-family:"Anton";font-size:19px;letter-spacing:.02em;line-height:1}
+  .brandtxt small{display:block;font-family:"Barlow Condensed";font-weight:600;font-size:11px;letter-spacing:.32em;color:var(--muted)}
+  .live{margin-left:auto;display:flex;align-items:center;gap:6px;font-family:"Barlow Condensed";font-weight:700;font-size:12px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--red2);box-shadow:0 0 0 0 rgba(255,51,80,.6);animation:pulse 1.8s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,51,80,.55)}70%{box-shadow:0 0 0 8px rgba(255,51,80,0)}100%{box-shadow:0 0 0 0 rgba(255,51,80,0)}}
+
+  /* ticker */
+  .ticker{background:#000;border-bottom:1px solid var(--line);overflow:hidden;white-space:nowrap}
+  .ticker .run{display:inline-block;padding:6px 0;font-family:"Barlow Condensed";font-weight:600;font-size:13px;letter-spacing:.06em;color:var(--muted);animation:scroll 26s linear infinite}
+  .ticker .run b{color:var(--txt)} .ticker .run .rd{color:var(--red2)}
+  @keyframes scroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+
+  section{padding:16px 0 6px}
+  .sechead{display:flex;align-items:center;gap:10px;margin:2px 0 12px}
+  .sechead .bar{width:5px;height:22px;background:var(--red);border-radius:2px}
+  .sechead h2{font-size:23px}
+  .sechead .sub{margin-left:auto;font-family:"Barlow Condensed";font-weight:600;color:var(--muted);font-size:13px;letter-spacing:.1em;text-transform:uppercase}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .card + .card{margin-top:12px}
+  .pad{padding:14px}
+
+  /* hero result */
+  .hero{background:linear-gradient(135deg,#1a1d24,#101116);border:1px solid var(--line);border-radius:16px;padding:16px;position:relative;overflow:hidden}
+  .hero:before{content:"";position:absolute;right:-40px;top:-40px;width:160px;height:160px;background:radial-gradient(circle,rgba(226,16,42,.25),transparent 70%)}
+  .hero .lbl{font-family:"Barlow Condensed";font-weight:700;letter-spacing:.16em;font-size:12px;color:var(--red2);text-transform:uppercase}
+  .hero .date{font-family:"Barlow Condensed";color:var(--muted);font-size:13px;font-weight:600}
+  .champ{display:flex;align-items:center;gap:12px;margin-top:8px}
+  .champ .cup{font-size:34px;filter:drop-shadow(0 3px 6px rgba(0,0,0,.5))}
+  .champ .names{font-family:"Anton";font-size:26px;line-height:1}
+  .champ .names small{display:block;font-family:"Barlow Condensed";font-weight:600;font-size:12px;letter-spacing:.14em;color:var(--muted);margin-top:4px}
+
+  /* stat pills row */
+  .pills{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .pill{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center}
+  .pill .n{font-family:"Anton";font-size:30px;line-height:1}
+  .pill .k{font-family:"Barlow Condensed";font-weight:600;font-size:12px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-top:4px}
+
+  /* tables / standings */
+  table{width:100%;border-collapse:collapse}
+  .stand th{font-family:"Barlow Condensed";font-weight:700;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:right;padding:9px 8px;border-bottom:1px solid var(--line)}
+  .stand th:first-child,.stand td:first-child{text-align:left}
+  .stand td{padding:10px 8px;border-bottom:1px solid var(--line);font-size:15px}
+  .stand tr:last-child td{border-bottom:0}
+  .stand tbody tr:nth-child(odd){background:rgba(255,255,255,.015)}
+  .rk{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;background:var(--card2);font-family:"Anton";font-size:13px;color:var(--muted);margin-right:9px}
+  .rk.g1{background:var(--gold);color:#111}.rk.g2{background:#c9ccd4;color:#111}.rk.g3{background:#cd7f43;color:#111}
+  .pname{font-weight:700;display:inline-flex;align-items:center;gap:8px;cursor:pointer}
+  .big{font-family:"Anton";font-size:18px}
+  .cA{color:var(--A)}.cB{color:var(--B)}.cC{color:var(--C)}.cD{color:var(--D)}
+  .cchip{display:inline-block;min-width:18px;text-align:center;font-family:"Anton";font-size:11px;padding:1px 5px;border-radius:5px;color:#0a0b0d}
+  .chA{background:var(--A)}.chB{background:var(--B);color:#fff}.chC{background:var(--C)}.chD{background:var(--D)}.ch0{background:#3a3f49;color:#aeb4bf}
+
+  /* segmented */
+  .seg{display:flex;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:4px;gap:4px;margin-bottom:12px}
+  .seg button{flex:1;background:transparent;border:0;color:var(--muted);font-family:"Barlow Condensed";font-weight:700;font-size:15px;letter-spacing:.04em;padding:9px 6px;border-radius:8px;cursor:pointer;text-transform:uppercase}
+  .seg button.on{background:var(--red);color:#fff}
+
+  /* buttons */
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--red);color:#fff;border:0;border-radius:11px;padding:13px 18px;font-weight:800;font-size:15px;cursor:pointer;font-family:inherit}
+  .btn:active{transform:translateY(1px)}
+  .btn.ghost{background:var(--card2);border:1px solid var(--line);color:var(--txt)}
+  .btn.block{width:100%}
+  .btn.sm{padding:9px 12px;font-size:13px;border-radius:9px}
+
+  /* jugadores grid */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+  .jcard{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:12px;cursor:pointer;position:relative;overflow:hidden}
+  .jcard .av{width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-family:"Anton";font-size:18px;color:#0a0b0d;margin-bottom:8px}
+  .jcard .jn{font-weight:800;font-size:16px;line-height:1.1}
+  .jcard .jm{font-family:"Barlow Condensed";font-weight:600;color:var(--muted);font-size:12.5px;letter-spacing:.04em;margin-top:3px}
+  .jcard .jstat{display:flex;gap:12px;margin-top:9px}
+  .jcard .jstat div{font-family:"Barlow Condensed"}
+  .jcard .jstat b{font-family:"Anton";font-size:17px;display:block;line-height:1}
+  .jcard .jstat span{font-size:11px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+
+  /* profile */
+  .phead{display:flex;align-items:center;gap:14px}
+  .phead .pav{width:64px;height:64px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-family:"Anton";font-size:28px;color:#0a0b0d}
+  .phead .pn{font-family:"Anton";font-size:30px;line-height:1}
+  .phead .pm{font-family:"Barlow Condensed";font-weight:600;color:var(--muted);letter-spacing:.06em;margin-top:4px}
+  .row{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--line);font-size:14.5px}
+  .row:last-child{border-bottom:0}
+  .row .muted{color:var(--muted)}
+  .tag{font-family:"Barlow Condensed";font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+
+  /* sorteo */
+  .field{display:flex;flex-direction:column;gap:6px}
+  .field label{font-family:"Barlow Condensed";font-weight:700;font-size:12px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase}
+  input,select{background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:11px 12px;font-family:inherit;font-size:15px;font-weight:600}
+  input:focus,select:focus{outline:none;border-color:var(--red)}
+  .pairwrap{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-top:12px}
+  .pcard{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--red);border-radius:12px;padding:12px;position:relative}
+  .pcard .no{position:absolute;top:9px;right:12px;font-family:"Anton";font-size:20px;color:#3a3f49}
+  .pl{display:flex;align-items:center;gap:9px;font-weight:700;font-size:15px;padding:4px 0}
+  .amp{color:var(--muted);font-family:"Anton";font-size:15px;padding-left:2px}
+
+  .note{color:var(--muted);font-size:13px;line-height:1.55}
+  .warn{color:#ffcf4d;font-weight:700}
+  .empty{color:var(--muted);text-align:center;padding:26px 10px}
+
+  /* admin list edit */
+  .adline{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:8px 10px;margin-bottom:6px}
+  .adline .an{flex:1;font-weight:600}
+  .adline select{padding:6px 8px;font-size:13px}
+  .adline button{background:transparent;border:0;color:var(--muted);font-size:16px;cursor:pointer}
+
+  /* bottom nav */
+  .nav{position:fixed;left:0;right:0;bottom:0;z-index:50;background:rgba(10,11,13,.94);backdrop-filter:blur(10px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+  .navin{max-width:720px;margin:0 auto;display:flex}
+  .nav a{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 4px 8px;color:var(--muted);font-family:"Barlow Condensed";font-weight:700;font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+  .nav a .ic{font-size:19px;line-height:1}
+  .nav a.on{color:var(--txt)}
+  .nav a.on .ic{filter:drop-shadow(0 0 8px rgba(226,16,42,.8))}
+  .nav a.on:after{content:"";position:absolute;top:0;width:26px;height:3px;background:var(--red);border-radius:0 0 3px 3px}
+  .nav a{position:relative}
+
+  .hidden{display:none}
+  .toast{position:fixed;left:50%;bottom:86px;transform:translateX(-50%);background:#000;border:1px solid var(--line);color:#fff;padding:10px 16px;border-radius:10px;font-weight:700;font-size:14px;z-index:80;opacity:0;transition:.25s;pointer-events:none}
+  .toast.show{opacity:1}
 </style>
 </head>
 <body>
-<div class="container">
-  <header>
-    <h1>🎾 BUENA VISTA</h1>
-    <p>Pádel Copones · Domingos 8:30–10hs · Sorteo Transparente™</p>
-  </header>
 
-  <div class="section-title">PLANTEL</div>
-  <div class="search-bar">
-    <input type="text" id="searchInput" placeholder="Buscar jugador..." oninput="filterRoster()" />
-    <button class="btn btn-sm" onclick="selectAll()">Todos</button>
-    <button class="btn btn-sm" onclick="clearAll()">Limpiar</button>
+<div class="top">
+  <div class="topin">
+    <span class="brandmark">CB</span>
+    <div class="brandtxt">COPONES<small>BUENA VISTA · PÁDEL</small></div>
+    <div class="live"><span class="dot"></span>Domingos 8:30</div>
   </div>
-  <div class="roster-grid" id="rosterGrid"></div>
-
-  <div class="section-title">INVITADO SORPRESA</div>
-  <div class="add-custom">
-    <input type="text" id="customName" placeholder="Nombre del invitado..." maxlength="30" />
-    <select class="copon-select" id="customCopon">
-      <option value="A">⭐ Copón A</option>
-      <option value="B">🔵 Copón B</option>
-      <option value="C" selected>🟠 Copón C</option>
-      <option value="D">🔴 Copón D</option>
-    </select>
-    <button class="btn" onclick="addCustomPlayer()">+ Agregar</button>
-  </div>
-
-  <div class="selected-section">
-    <div class="section-title" style="margin-bottom:10px">JUGADORES DE HOY</div>
-    <div class="selected-chips" id="selectedChips">
-      <span style="color:var(--gris);font-size:0.82rem;font-style:italic">Seleccioná los que vienen este domingo...</span>
-    </div>
-    <div class="selected-meta" id="selectedMeta"></div>
-  </div>
-
-  <div class="error-msg" id="errorMsg"></div>
-  <button class="btn btn-generate" onclick="generarParejas()">🎱 SORTEO TRANSPARENTE DEL DOMINGO</button>
-  <div class="loading" id="loading">
-    <p>Bolas al freezer, transparencia en proceso<span class="dots"></span></p>
-    <p style="font-size:0.75rem;margin-top:6px">Auspicia Kia Sportage 🚗</p>
-  </div>
-  <div id="resultado"></div>
 </div>
+<div class="ticker"><span class="run" id="ticker"></span></div>
+
+<div class="wrap" id="app"></div>
+
+<div class="nav"><div class="navin" id="nav">
+  <a data-go="inicio" class="on"><span class="ic">🏠</span>Inicio</a>
+  <a data-go="ranking"><span class="ic">📊</span>Ranking</a>
+  <a data-go="sorteo"><span class="ic">🎾</span>Sorteo</a>
+  <a data-go="jugadores"><span class="ic">👤</span>Perfiles</a>
+  <a data-go="admin"><span class="ic">⚙️</span>Admin</a>
+</div></div>
+
+<div class="toast" id="toast"></div>
 
 <script>
-// PLANTEL OFICIAL — Ranking Pádel Buena Vista (actualizado marzo 2026)
-const ROSTER = [
-  // ──── COPÓN A ────
-  { nombre: "Chico", apodo: "Lucas / Chico Chico / Boy Boy. Buenísimo. A veces no puede por el rugby del hijo.", copon: "A" },
-  { nombre: "Don (Diegui)", apodo: "Diego Martinez / Diegui / Don Johnson. Copón A puro. Coach del equipo, señala todos los errores ajenos.", copon: "A" },
-  { nombre: "Matso", apodo: "Maxi Burtin. Hoy es muy bueno. Se distrae cuando llegan las del turno de las 10.", copon: "A" },
-  { nombre: "Track (Juli)", apodo: "Julian Tramontano / El Track / Dr. Track. Organizador. Sorteos transparentes con bolas frias. Auspicios Kia Sportage.", copon: "A" },
-  { nombre: "Juanchi", apodo: "Juanchi Gebbie / El Desganado / Pelusa / Jugoso. Copon A que parece C. Globo letal.", copon: "A" },
-  { nombre: "Laqui", apodo: "Laqui / Pjcha. MVP silencioso. Pala enorme. Le puso el apodo Rafa a Mike.", copon: "A" },
-  { nombre: "Gato", apodo: "Gaston Lopez Soler / El Gato. Copon A, muy bueno. Lleva pelotas. La CD sigue invicta.", copon: "A" },
-  { nombre: "Maren", apodo: "Martin Marenzi. Ex rugby Pumas. Polvora mojada a veces, jugador de la fecha cuando prende.", copon: "A" },
-  { nombre: "Carli", apodo: "Carlos Mohap. SUPER A — el mejor del grupo. Se cansa con 2 partidos. No me da el fisico ya.", copon: "A" },
-  { nombre: "Negro Mon", apodo: "Daniel Mon. Codo de padlista. Va con los nenes los domingos.", copon: "A" },
+"use strict";
 
-  // ──── COPÓN B ────
-  { nombre: "TIS", apodo: "Tomas Sanguinetti. Malo pero con mucha clase y disciplina. Gestiona los abonos ($60k, canchas 2 y 3).", copon: "B" },
-  { nombre: "Alba", apodo: "Lucas Albarracin / El Magico Albarracin. Corre como un loco. Muy en estado. Copon B mejorando.", copon: "B" },
-  { nombre: "Pati", apodo: "Sebastian Scally / El Patan. Copon B pero muy calenton. No llegar a la red lo enloquece.", copon: "B" },
-  { nombre: "Tapiachu", apodo: "Patricio Tramontano / Pachu. Saca como Silvia (= Rino padre). Quiere rematar todas. Padel de los 90.", copon: "B" },
-  { nombre: "MP", apodo: "Mariano Posse. Mucha clase y mucho estado. Prefiere el fondo.", copon: "B" },
-  { nombre: "Teo", apodo: "Mateo Brady / La Tapioca. Los Globetrotters con Alba. Todo globo, todo espectaculo.", copon: "B" },
-  { nombre: "Taya", apodo: "El Taya. Revelacion del año. Llega tarde pero juega muy bien. Diego mismo lo proclamo.", copon: "B" },
-  { nombre: "Guille", apodo: "Guille. Copon B solido.", copon: "B" },
-
-  // ──── COPÓN C ────
-  { nombre: "Rafa", apodo: "Mike / Pezon / Shadow. Apodo puesto por Laqui: si pega bien es Rafa, si pega mal es Juan el del bar. Manana ganada pase lo que pase.", copon: "C" },
-  { nombre: "Calambre", apodo: "Federico Mackinson / Ficky. Se acalambraba cuando jugaba, de ahi el apodo. NUNCA decirle paleta — solo pala.", copon: "C" },
-  { nombre: "Bati", apodo: "Hernan Martinelli / Batata. Nuevo en el grupo. Dice que tiene un tiro letal.", copon: "C" },
-  { nombre: "Toto", apodo: "Juan Ignacio Mezzotero. Lesionado cronico. Vuelve concentrado siempre. Cuando pierde: que gordo que estoy.", copon: "C" },
-  { nombre: "Alejo", apodo: "El Persa Vera / Alejito / Verde. Se cree copon B. Mariposas en la panza.", copon: "C" },
-];
-const COLORES = {
-  A: { bg: '#f1c40f', text: '#000' }, B: { bg: '#3498db', text: '#fff' },
-  C: { bg: '#e67e22', text: '#fff' }, D: { bg: '#e74c3c', text: '#fff' }
+/* ================= DATOS SEMILLA (editables desde Admin) ================= */
+const SEED = {
+  jugadores: [
+    // copón actual (los 16 de la foto) — A=amarillo, B=azul, C=naranja, D=violeta
+    {n:"Julian",c:"A"},{n:"Matso",c:"A"},{n:"Carli",c:"A"},{n:"Batata",c:"A"},{n:"Laqui",c:"A"},{n:"Garzo",c:"A"},
+    {n:"TIS",c:"B"},{n:"Tapiachu",c:"B"},{n:"MP",c:"B"},{n:"Alba",c:"B"},{n:"Ema",c:"B"},
+    {n:"Calambre",c:"C"},{n:"Diegui",c:"C"},{n:"Toto",c:"C"},{n:"Rafa",c:"C"},{n:"Trucho",c:"C"},
+    // otros habitués (sin copón fijo)
+    {n:"Mike",c:""},{n:"Taya",c:""},{n:"Alejo",c:""},{n:"Maren",c:""},{n:"Pati",c:""},{n:"Gato",c:""},
+    {n:"Fede",c:""},{n:"Pachu",c:""},{n:"Negro",c:""},{n:"Charly",c:""},{n:"Copito",c:""},{n:"Chuck",c:""}
+  ],
+  // fechas leídas del chat (parejas confirmadas; campeón sólo donde estaba explícito)
+  fechas: [
+    {f:"2026-06-28", parejas:[["Mike","Julian"],["Tapiachu","TIS"],["Matso","Chuck"],["Ema","Batata"]], campeon:null, pala:null},
+    {f:"2026-06-21", parejas:[["Maren","Batata"],["Taya","Julian"],["Alba","Laqui"],["TIS","Ema"]], campeon:["Taya","Julian"], pala:null},
+    {f:"2026-06-07", parejas:[["Julian","Toto"],["Matso","Mike"],["TIS","Maren"],["Negro","Ema"]], campeon:null, pala:null},
+    {f:"2026-05-23", parejas:[["Toto","Pati"],["Charly","Alba"],["Chuck","Julian"],["Trucho","Gato"],["Mike","MP"],["Batata","Pachu"]], campeon:null, pala:null},
+    {f:"2026-05-17", parejas:[["Invitado","Pachu"],["Copito","Toto"],["TIS","Charly"],["Mike","Julian"],["Calambre","Pati"],["Batata","Chuck"]], campeon:null, pala:null},
+    {f:"2026-05-10", parejas:[["Alba","Pati"],["Julian","Pachu"],["Copito","Taya"],["Charly","MP"],["Maren","Toto"],["Batata","Matso"],["Mike","Ema"],["Negro","Calambre"]], campeon:["Batata","Matso"], pala:["Julian","Pachu"]},
+    {f:"2026-05-03", parejas:[["Taya","Matso"],["Julian","Pachu"],["Maren","Mike"],["Toto","Gato"],["Charly","Copito"],["Fede","Batata"]], campeon:["Julian","Pachu"], pala:null},
+    {f:"2026-04-19", parejas:[["Charly","Alba"],["Invitado","Batata"],["Julian","Toto"],["Calambre","Pachu"],["Ema","Taya"],["MP","Mike"]], campeon:null, pala:null},
+    {f:"2026-03-14", parejas:[["Diegui","Calambre"],["Matso","Mike"],["Carli","Trucho"],["Laqui","TIS"],["Garzo","Toto"],["Julian","Alba"],["Ema","Pachu"],["MP","Batata"]], campeon:null, pala:null},
+    {f:"2026-02-27", parejas:[["Invitado","Pachu"],["Alejo","Garzo"],["Gato","Mike"],["Alba","Matso"],["Calambre","Julian"],["Herno","Diegui"],["Little","Pati"],["TIS","MP"]], campeon:null, pala:null},
+    {f:"2025-12-14", parejas:[["Alejo","Invitado"],["Carli","Toto"],["Maren","Calambre"],["Diegui","Pachu"],["Alba","Matso"],["Julian","TIS"],["Juanchi","Pati"],["Pjcha","MP"]], campeon:["Julian","TIS"], pala:null},
+    {f:"2025-12-28", parejas:[["Matso","Mambo"],["Gato","Toto"],["Chico","Pati"]], campeon:["Matso","Mambo"], pala:null}
+  ]
 };
 
-let selected = new Set();
-let customPlayers = [];
+/* ================= ESTADO ================= */
+const LS="padel_espn_v1";
+let DATA=load();
+function load(){ try{const s=JSON.parse(localStorage.getItem(LS)); if(s&&s.jugadores&&s.fechas) return s;}catch(e){} return JSON.parse(JSON.stringify(SEED)); }
+function save(){ try{localStorage.setItem(LS,JSON.stringify(DATA));}catch(e){} }
+const COL={A:"chA",B:"chB",C:"chC",D:"chD","":"ch0"};
+const COLtx={A:"cA",B:"cB",C:"cC",D:"cD","":""};
 
-function allPlayers() { return [...ROSTER, ...customPlayers]; }
-
-function renderRoster(filter = '') {
-  const f = filter.toLowerCase();
-  const labels = { A: '⭐ Copón A · Cracks', B: '🔵 Copón B · Buenos', C: '🟠 Copón C · Promedio', D: '🔴 Copón D · Valientes' };
-  document.getElementById('rosterGrid').innerHTML = ['A','B','C','D'].map(c => {
-    const players = allPlayers().filter(p => p.copon === c && (!f || p.nombre.toLowerCase().includes(f) || p.apodo.toLowerCase().includes(f)));
-    return `<div class="roster-copon ${c}">
-      <div class="copon-label">${labels[c]}</div>
-      ${players.map(p => `
-        <div class="roster-player ${selected.has(p.nombre)?'selected':''}" onclick="togglePlayer('${p.nombre.replace(/'/g,"\\'")}')">
-          <div class="player-info">
-            <div class="player-name">${p.nombre}</div>
-            <div class="apodo">${p.apodo.split('.')[0]}</div>
-          </div>
-          <div class="check-icon">${selected.has(p.nombre)?'✓':''}</div>
-        </div>`).join('')}
-    </div>`;
-  }).join('');
+/* ================= HELPERS ================= */
+function key(a,b){return [a,b].sort().join(" ‑ ");}
+function coponDe(n){ const j=DATA.jugadores.find(x=>x.n===n); return j?j.c:""; }
+function todosLosNombres(){
+  const s=new Set(DATA.jugadores.map(j=>j.n));
+  DATA.fechas.forEach(f=>f.parejas.forEach(p=>p.forEach(n=>s.add(n))));
+  return [...s];
 }
-
-function filterRoster() { renderRoster(document.getElementById('searchInput').value); }
-
-function togglePlayer(nombre) {
-  selected.has(nombre) ? selected.delete(nombre) : selected.add(nombre);
-  renderRoster(document.getElementById('searchInput').value);
-  renderSelected();
-}
-
-function renderSelected() {
-  const chips = document.getElementById('selectedChips');
-  const meta = document.getElementById('selectedMeta');
-  const sel = [...selected].map(n => allPlayers().find(p => p.nombre === n)).filter(Boolean);
-  if (!sel.length) {
-    chips.innerHTML = '<span style="color:var(--gris);font-size:0.82rem;font-style:italic">Seleccioná los que vienen este domingo...</span>';
-    meta.innerHTML = ''; return;
-  }
-  chips.innerHTML = sel.map(p => `<div class="player-chip chip-${p.copon}" onclick="togglePlayer('${p.nombre.replace(/'/g,"\\'")}')">${p.nombre} ×</div>`).join('');
-  const counts = {A:0,B:0,C:0,D:0};
-  sel.forEach(p => counts[p.copon]++);
-  meta.innerHTML = `<strong>Total: ${sel.length}</strong> · A:${counts.A} · B:${counts.B} · C:${counts.C} · D:${counts.D} · Canchas: ${Math.floor(sel.length/4)}`;
-}
-
-function selectAll() { allPlayers().forEach(p => selected.add(p.nombre)); renderRoster(); renderSelected(); }
-function clearAll() { selected.clear(); renderRoster(); renderSelected(); }
-
-function addCustomPlayer() {
-  const nombre = document.getElementById('customName').value.trim();
-  const copon = document.getElementById('customCopon').value;
-  if (!nombre) return;
-  if (allPlayers().find(p => p.nombre === nombre)) { mostrarError(`${nombre} ya está en el plantel`); return; }
-  customPlayers.push({ nombre, apodo: 'Invitado sorpresa', copon });
-  selected.add(nombre);
-  document.getElementById('customName').value = '';
-  renderRoster(); renderSelected(); limpiarError();
-}
-document.getElementById('customName').addEventListener('keydown', e => { if(e.key==='Enter') addCustomPlayer(); });
-function mostrarError(msg) { const el = document.getElementById('errorMsg'); el.textContent = msg; el.style.display = 'block'; }
-function limpiarError() { document.getElementById('errorMsg').style.display = 'none'; }
-
-async function generarParejas() {
-  if (selected.size < 4) { mostrarError('Necesitás al menos 4 jugadores para armar una cancha 😅'); return; }
-  limpiarError();
-  document.getElementById('loading').style.display = 'block';
-  document.getElementById('resultado').style.display = 'none';
-  document.getElementById('resultado').innerHTML = '';
-
-  const hoy = new Date().toLocaleDateString('es-AR', { weekday:'long', day:'numeric', month:'long' });
-  const listaTexto = [...selected].map(n => {
-    const p = allPlayers().find(x => x.nombre === n);
-    return p ? `${p.nombre} (${p.apodo}, Copón ${p.copon})` : n;
-  }).join('\n');
-
-  const prompt = `Sos el organizador del pádel copones del domingo en el Hurling Club de Buenos Aires, cancha Buenavista. Son amigos de toda la vida. Jugás de 8:30 a 10hs con el sistema de copones.
-
-COPONES: A=cracks (Carli SUPER A, Don/Diegui, Chico, Matso, Track/Juli, Juanchi/Desganado, Laqui, Gato, Maren, Negro Mon, Carli). B=buenos (TIS, Alba, Pati, Tapiachu, MP, Teo, Taya, Guille). C=promedio (Rafa/Mike, Calambre/Ficky, Bati, Toto, Alejo).
-
-DATOS INTERNOS CLAVE (extraidos del historial real del grupo — usar para comentarios personalizados):
-COPÓN A:
-- Chico = Lucas / Chico Chico / Boy Boy: buenísimo, a veces no puede por el rugby del hijo
-- Don/Diegui = Diego Martinez / Don Johnson: copón A irrefutable, coach del equipo, señala los errores ajenos con autoridad
-- Matso = Maxi Burtin: hoy es muy bueno, se distrae cuando llegan las del turno de las 10, organizó cumple con profes del SportClub
-- Track = Juli / Julian Tramontano / El Track / Dr. Track: organizador supremo, sorteos transparentes con bolas frias al freezer, auspicios Kia Sportage, hace los platillos de tambores antes de revelar el sorteo
-- Juanchi Gebbie = El Desganado / Pelusa / Jugoso: copón A que PARECE C, globo letal, confirma sobre el pucho
-- Laqui / Pjcha: MVP silencioso, pala enorme, le puso el apodo "Rafa" a Mike
-- Gato = Gaston Lopez Soler / El Gato: copón A muy bueno, la CD sigue invicta, lleva pelotas
-- Maren = Martin Marenzi: ex rugby Pumas, polvora mojada a veces, jugador de la fecha cuando prende
-- Carli = Carlos Mohap: SUPER A el mejor del grupo, lleva palas y pelotas, "no me da el fisico ya" (mentira)
-- Negro Mon = Daniel Mon: codo de padlista, va con los nenes los domingos
-
-COPÓN B:
-- TIS = Tomas Sanguinetti: "malo pero con mucha clase y disciplina", gestiona los abonos ($60k/mes, canchas 2 y 3, ventana miercoles)
-- Alba = Lucas Albarracin / El Magico Albarracin: corre como un loco, muy en estado, copon B mejorando, dupla Globetrotters con Teo
-- Pati = Sebastian Scally / El Patan: copón B pero MUY CALENTON, se calienta si no llega a la red
-- Tapiachu = Patricio Tramontano / Pachu: saca como Silvia (= Rino PADRE), quiere rematar todas, nunca llega a la red, padel de los 90
-- MP = Mariano Posse: mucha clase y mucho estado, prefiere el fondo
-- Teo = Mateo Brady / La Tapioca: Globetrotters con Alba, todo globo
-- Taya: revelacion del año, llega tarde pero juega muy bien, Diego mismo lo proclamo
-- Guille: copon B solido
-
-COPÓN C:
-- Rafa = Mike / Pezon / Shadow: APODO PUESTO POR LAQUI: "si le pega bien es el Rafa, si le pega mal es Juan el del bar". Manana ganada pase lo que pase. Cetogenica a pleno.
-- Calambre = Federico Mackinson / Ficky: se acalambraba cuando jugaba de ahi el apodo. NUNCA decirle "paleta" — SOLO "pala". Hace sorteos como "Ficky Bezos" / "Elon Musckinson"
-- Bati = Hernan Martinelli / Batata: nuevo, dice que tiene "un tiro letal", entusiasta
-- Toto = Juan Ignacio Mezzotero: lesionado cronico, vuelve concentrado, cuando pierde dice "que gordo que estoy"
-- Alejo = El Persa Vera / Alejito / Verde: se cree copon B, mariposas en la panza
-
-RELACIONES Y CHISTES INTERNOS:
-- Pachu y Matso: el grupo dice que Pachu le gusta Matso (lo niega atacando a Toto)
-- Toto y Laqui: dupla épica, ganaron el torneo juntos
-- Albarra + Teo = "Los Globetrotters" — cuando les toca juntos el show es garantizado
-- Guille = COPON B: solido, regular del grupo
-- TIS + Track: la pareja ganadora del torneo de diciembre (Track se comió todos los pelotazos pero ganaron igual)
-- Ficky hace el sorteo cuando Track está ocupado, lo llaman "Ficky Bezos", "Calam Musk" o "Elon Musckinson"
-- La regla de pelotazo: pelotazo directo al cuerpo sin pique = partido perdido. Laqui la aplica permanentemente
-- El desayuno: el ganador desayuna gratis (avocado toast, café, etc), los perdedores pagan
-- Matso en cancha de vidrio se distrae con las del turno de las 10
-- Pachu saca "como Silvia" — referencia a Pablo Rino PADRE
-- "Mañana ganada" = frase de Mike, pase lo que pase en la cancha
-- Premio recurrente: "Kia Sportage" (se entrega en enero por tema de patente)
-- Contacto del club: Marta Landajo. App de reservas: OnDepor
-- Sistema de abono: canchas 2 y 3, $60.000/mes, primeros 8 anotados le pagan al que puso el abono, ventana abre los miércoles
-
-REGLAS SAGRADAS:
-1. Pelotazo directo al cuerpo sin pique = partido perdido automáticamente
-2. El ganador desayuna gratis (los perdedores pagan)
-3. NUNCA decir "paleta" — siempre "pala" (Ficky se enoja en serio)
-4. La ventana de inscripción se abre los miércoles — si te dormís, te quedás afuera
-5. Nadie queda afuera — hay canchas para todos
-
-REGLAS PARA ARMAR PAREJAS:
-1. Nunca dos del mismo copón juntos (especialmente dos copón 1)
-2. Ideal: A+D, B+C (el bueno con el flojo)
-3. 4 jugadores por cancha (2 parejas)
-4. Si sobra gente, indicar quién rota
-
-Jugadores de hoy (${hoy}):
-${listaTexto}
-
-TONO: 100% argentino de club entre amigos de toda la vida, como el WhatsApp real del grupo. Usá apodos, jerga de pádel, referencias internas específicas. Cada comentario tiene que ser personalizado y gracioso para ESA pareja concreta.
-
-Devolvé SOLO un JSON válido, sin texto antes ni después, sin backticks markdown:
-{
-  "fecha": "${hoy}",
-  "canchas": [
-    {
-      "numero": 1,
-      "equipo1": [{"nombre": "...", "copon": "A"}, {"nombre": "...", "copon": "D"}],
-      "equipo2": [{"nombre": "...", "copon": "B"}, {"nombre": "...", "copon": "C"}],
-      "comentario": "comentario gracioso y personalizado sobre esta pareja y partido"
-    }
-  ],
-  "libres": [],
-  "pronostico": "pronóstico exagerado, gracioso y específico del día"
-}`;
-
-  try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": ["sk-ant-api03-xHF7GIiU5FxvEY", "u5QSwLONsVjiZfEnQmH-rxv5HGHpuV6yw-cZuHyXshNb0YHIvUTnqBx24meRg7xb51yv_nWA-pDbKywAA"].join(""),
-        "anthropic-version": "2023-06-01",
-        "anthropic-dangerous-direct-browser-access": "true"
-      },
-      body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 2000, messages: [{ role: "user", content: prompt }] })
+function statsInd(){
+  const m={};
+  const get=n=>m[n]||(m[n]={n,pj:0,camp:0,pala:0,comp:{}});
+  DATA.fechas.forEach(f=>{
+    const enFecha=new Set();
+    f.parejas.forEach(([a,b])=>{
+      enFecha.add(a);enFecha.add(b);
+      get(a).comp[b]=(get(a).comp[b]||0)+1;
+      get(b).comp[a]=(get(b).comp[a]||0)+1;
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error?.message || 'API error');
-    const texto = data.content.map(i => i.text||'').join('');
-    const clean = texto.replace(/```json|```/g,'').trim();
-    mostrarResultado(JSON.parse(clean));
-  } catch(e) {
-    mostrarError('Error en el sorteo transparente. Intentá de nuevo 😬');
-    console.error(e);
-  } finally {
-    document.getElementById('loading').style.display = 'none';
+    enFecha.forEach(n=>get(n).pj++);
+    if(f.campeon){f.campeon.forEach(n=>get(n).camp++);}
+    if(f.pala){f.pala.forEach(n=>get(n).pala++);}
+  });
+  return m;
+}
+function statsPar(){
+  const m={};
+  DATA.fechas.forEach(f=>{
+    f.parejas.forEach(([a,b])=>{
+      const k=key(a,b); const o=m[k]||(m[k]={a,b,veces:0,camp:0});
+      o.veces++;
+      if(f.campeon && key(f.campeon[0],f.campeon[1])===k) o.camp++;
+    });
+  });
+  return m;
+}
+function initials(n){return n.replace(/[^A-Za-zÀ-ÿ ]/g,"").trim().split(/\s+/).map(w=>w[0]).slice(0,2).join("").toUpperCase()||"?";}
+function avatarColor(n){const cols=["#e2102a","#2f7bff","#fb923c","#22c55e","#a78bfa","#f5c518","#ff5da2","#14b8a6"];let h=0;for(const ch of n)h=(h*31+ch.charCodeAt(0))>>>0;return cols[h%cols.length];}
+function fmtFecha(s){const [y,m,d]=s.split("-");const ms=["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];return `${+d} ${ms[+m-1]} ${y}`;}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function toast(t){const el=document.getElementById("toast");el.textContent=t;el.classList.add("show");clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove("show"),1800);}
+
+/* ================= ROUTER ================= */
+let VIEW="inicio", PARAM=null;
+function go(v,p){ VIEW=v;PARAM=p||null; location.hash=v+(p?("="+encodeURIComponent(p)):""); render(); window.scrollTo(0,0);
+  document.querySelectorAll("#nav a").forEach(a=>a.classList.toggle("on",a.dataset.go===v));
+}
+document.getElementById("nav").addEventListener("click",e=>{const a=e.target.closest("a");if(a)go(a.dataset.go);});
+window.addEventListener("hashchange",()=>{ const h=location.hash.slice(1); if(!h){return;} const [v,p]=h.split("="); if(v&&v!==VIEW||p!==(PARAM?encodeURIComponent(PARAM):null)){} });
+
+/* ================= RENDER ================= */
+function render(){
+  const app=document.getElementById("app");
+  if(VIEW==="inicio")app.innerHTML=vInicio();
+  else if(VIEW==="ranking")app.innerHTML=vRanking();
+  else if(VIEW==="sorteo")app.innerHTML=vSorteo();
+  else if(VIEW==="jugadores")app.innerHTML=vJugadores();
+  else if(VIEW==="perfil")app.innerHTML=vPerfil(PARAM);
+  else if(VIEW==="admin")app.innerHTML=vAdmin();
+  bind();
+  renderTicker();
+}
+
+function renderTicker(){
+  const ind=statsInd();
+  const arr=Object.values(ind);
+  const topJ=[...arr].sort((a,b)=>b.pj-a.pj)[0];
+  const topC=[...arr].sort((a,b)=>b.camp-a.camp)[0];
+  const ult=DATA.fechas[0];
+  let bits=[];
+  if(ult&&ult.campeon)bits.push(`<span class="rd">🏆 ÚLTIMO CAMPEÓN</span> ${esc(ult.campeon.join(" & "))}`);
+  if(topC&&topC.camp)bits.push(`<span class="rd">👑 MÁS TÍTULOS</span> <b>${esc(topC.n)}</b> (${topC.camp})`);
+  if(topJ)bits.push(`<span class="rd">🔥 MÁS PRESENTE</span> <b>${esc(topJ.n)}</b> (${topJ.pj} fechas)`);
+  bits.push(`<b>${DATA.fechas.length}</b> fechas registradas`);
+  bits.push(`<b>${todosLosNombres().length}</b> jugadores`);
+  const line=bits.join(" &nbsp;•&nbsp; ");
+  document.getElementById("ticker").innerHTML=line+" &nbsp;•&nbsp; "+line;
+}
+
+/* ---------- INICIO ---------- */
+function vInicio(){
+  const ind=statsInd(), arr=Object.values(ind);
+  const ult=DATA.fechas[0];
+  const topJ=[...arr].sort((a,b)=>b.pj-a.pj).slice(0,5);
+  const topC=[...arr].sort((a,b)=>b.camp-a.camp||b.pj-a.pj).slice(0,5);
+  let heroHTML="";
+  if(ult){
+    if(ult.campeon){
+      heroHTML=`<div class="hero">
+        <div style="display:flex;justify-content:space-between"><span class="lbl">Campeones · última fecha</span><span class="date">${fmtFecha(ult.f)}</span></div>
+        <div class="champ"><div class="cup">🏆</div><div class="names">${esc(ult.campeon[0])} & ${esc(ult.campeon[1])}<small>Copa del domingo</small></div></div>
+      </div>`;
+    }else{
+      heroHTML=`<div class="hero">
+        <div style="display:flex;justify-content:space-between"><span class="lbl">Última fecha</span><span class="date">${fmtFecha(ult.f)}</span></div>
+        <div class="champ"><div class="cup">🎾</div><div class="names">${ult.parejas.length} parejas<small>Campeón sin cargar · editá en Admin</small></div></div>
+      </div>`;
+    }
+  }
+  const totalFechas=DATA.fechas.length;
+  const totalCamp=DATA.fechas.filter(f=>f.campeon).length;
+  return `
+  <section>
+    ${heroHTML}
+    <div class="pills" style="margin-top:12px">
+      <div class="pill"><div class="n">${totalFechas}</div><div class="k">Fechas</div></div>
+      <div class="pill"><div class="n">${todosLosNombres().length}</div><div class="k">Jugadores</div></div>
+      <div class="pill"><div class="n">${totalCamp}</div><div class="k">Campeones</div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sechead"><span class="bar"></span><h2>Líderes</h2><span class="sub">Temporada</span></div>
+    <div class="card pad">
+      <div class="tag" style="margin-bottom:6px">👑 Más títulos</div>
+      ${miniRank(topC,"camp")}
+    </div>
+    <div class="card pad">
+      <div class="tag" style="margin-bottom:6px">🔥 Más presentes</div>
+      ${miniRank(topJ,"pj")}
+    </div>
+    <button class="btn ghost block" style="margin-top:12px" data-go2="ranking">Ver ranking completo →</button>
+  </section>
+
+  <section>
+    <div class="sechead"><span class="bar"></span><h2>Sorteo</h2><span class="sub">Del domingo</span></div>
+    <div class="card pad">
+      <div class="note">Armá las parejas del próximo domingo con la regla de siempre: <b>uno de arriba con uno de abajo</b>, mezclado y transparente.</div>
+      <button class="btn block" style="margin-top:12px" data-go2="sorteo">🎾 Ir al sorteo</button>
+    </div>
+  </section>`;
+}
+function miniRank(list,field){
+  if(!list.length||!list.some(x=>x[field]))return `<div class="empty" style="padding:12px">Sin datos todavía</div>`;
+  return `<table class="stand"><tbody>${list.map((p,i)=>`
+    <tr><td><span class="rk ${i<3?'g'+(i+1):''}">${i+1}</span><span class="pname" data-perfil="${esc(p.n)}">${chip(p.n)} ${esc(p.n)}</span></td>
+    <td style="text-align:right"><span class="big">${p[field]}</span></td></tr>`).join("")}</tbody></table>`;
+}
+function chip(n){const c=coponDe(n);return `<span class="cchip ${COL[c]}">${c||"·"}</span>`;}
+
+/* ---------- RANKING ---------- */
+let RKTAB="jug";
+function vRanking(){
+  return `<section>
+    <div class="sechead"><span class="bar"></span><h2>Ranking</h2><span class="sub">Toda la temporada</span></div>
+    <div class="seg" id="rkseg">
+      <button data-t="jug" class="${RKTAB==='jug'?'on':''}">Jugadores</button>
+      <button data-t="par" class="${RKTAB==='par'?'on':''}">Parejas</button>
+    </div>
+    <div class="card" id="rktable">${RKTAB==='jug'?tablaJug():tablaPar()}</div>
+    <div class="note" style="margin-top:10px">PJ = fechas jugadas · 🏆 = campeonatos · 🥄 = palas de madera. Tocá un nombre para ver su perfil.</div>
+  </section>`;
+}
+function tablaJug(){
+  const arr=Object.values(statsInd()).sort((a,b)=>b.camp-a.camp||b.pj-a.pj);
+  if(!arr.length)return `<div class="empty">Sin datos</div>`;
+  return `<table class="stand"><thead><tr><th>Jugador</th><th>PJ</th><th>🏆</th><th>🥄</th></tr></thead><tbody>
+    ${arr.map((p,i)=>`<tr>
+      <td><span class="rk ${i<3?'g'+(i+1):''}">${i+1}</span><span class="pname" data-perfil="${esc(p.n)}">${chip(p.n)} ${esc(p.n)}</span></td>
+      <td style="text-align:right"><span class="big">${p.pj}</span></td>
+      <td style="text-align:right;color:var(--gold);font-weight:800">${p.camp||"·"}</td>
+      <td style="text-align:right;color:var(--spoon)">${p.pala||"·"}</td>
+    </tr>`).join("")}
+  </tbody></table>`;
+}
+function tablaPar(){
+  const arr=Object.values(statsPar()).sort((a,b)=>b.camp-a.camp||b.veces-a.veces);
+  if(!arr.length)return `<div class="empty">Sin datos</div>`;
+  return `<table class="stand"><thead><tr><th>Pareja</th><th>Veces</th><th>🏆</th></tr></thead><tbody>
+    ${arr.slice(0,40).map((p,i)=>`<tr>
+      <td><span class="rk ${i<3?'g'+(i+1):''}">${i+1}</span> <b>${esc(p.a)}</b> <span class="amp">&</span> <b>${esc(p.b)}</b></td>
+      <td style="text-align:right"><span class="big">${p.veces}</span></td>
+      <td style="text-align:right;color:var(--gold);font-weight:800">${p.camp||"·"}</td>
+    </tr>`).join("")}
+  </tbody></table>`;
+}
+
+/* ---------- JUGADORES (grid) ---------- */
+function vJugadores(){
+  const ind=statsInd();
+  const nombres=todosLosNombres().sort((a,b)=>(ind[b]?ind[b].pj:0)-(ind[a]?ind[a].pj:0)||a.localeCompare(b));
+  return `<section>
+    <div class="sechead"><span class="bar"></span><h2>Perfiles</h2><span class="sub">${nombres.length} jugadores</span></div>
+    <div class="note" style="margin-bottom:12px">Tocá tu nombre para ver tus estadísticas y compartirlas.</div>
+    <div class="grid">
+      ${nombres.map(n=>{const s=ind[n]||{pj:0,camp:0};const col=avatarColor(n);return `
+        <div class="jcard" data-perfil="${esc(n)}">
+          <div class="av" style="background:${col}">${initials(n)}</div>
+          <div class="jn">${esc(n)}</div>
+          <div class="jm">${chip(n)} ${copName(coponDe(n))}</div>
+          <div class="jstat"><div><b>${s.pj}</b><span>Fechas</span></div><div><b style="color:var(--gold)">${s.camp}</b><span>Títulos</span></div></div>
+        </div>`;}).join("")}
+    </div>
+  </section>`;
+}
+function copName(c){return c?("Copón "+c):"Invitado/otro";}
+
+/* ---------- PERFIL ---------- */
+function vPerfil(name){
+  if(!name)return vJugadores();
+  const ind=statsInd()[name]||{n:name,pj:0,camp:0,pala:0,comp:{}};
+  const col=avatarColor(name), c=coponDe(name);
+  const comps=Object.entries(ind.comp||{}).sort((a,b)=>b[1]-a[1]).slice(0,3);
+  const fechas=DATA.fechas.filter(f=>f.parejas.some(p=>p.includes(name)));
+  const winPct=ind.pj?Math.round(ind.camp/ind.pj*100):0;
+  return `<section>
+    <button class="btn ghost sm" data-go2="jugadores" style="margin-bottom:14px">← Perfiles</button>
+    <div class="card pad">
+      <div class="phead">
+        <div class="pav" style="background:${col}">${initials(name)}</div>
+        <div><div class="pn">${esc(name)}</div><div class="pm">${chip(name)} ${copName(c)}</div></div>
+      </div>
+      <div class="pills" style="margin-top:14px">
+        <div class="pill"><div class="n">${ind.pj}</div><div class="k">Fechas</div></div>
+        <div class="pill"><div class="n" style="color:var(--gold)">${ind.camp}</div><div class="k">🏆 Títulos</div></div>
+        <div class="pill"><div class="n" style="color:var(--spoon)">${ind.pala}</div><div class="k">🥄 Palas</div></div>
+      </div>
+      <div class="row"><span class="muted">Efectividad (títulos / fechas)</span><b class="big">${winPct}%</b></div>
+      ${comps.length?`<div class="row" style="display:block;border-bottom:0">
+        <div class="tag" style="margin-bottom:8px">Compañeros más frecuentes</div>
+        ${comps.map(([n,v])=>`<div class="row"><span class="pname" data-perfil="${esc(n)}">${chip(n)} ${esc(n)}</span><span class="muted">${v} ${v===1?'vez':'veces'}</span></div>`).join("")}
+      </div>`:""}
+      <button class="btn block" id="share" style="margin-top:14px">📲 Compartir mis estadísticas</button>
+    </div>
+
+    <section>
+      <div class="sechead"><span class="bar"></span><h2>Historial</h2><span class="sub">${fechas.length} fechas</span></div>
+      ${fechas.length?fechas.map(f=>{
+        const par=f.parejas.find(p=>p.includes(name));
+        const comp=par[0]===name?par[1]:par[0];
+        const fueCamp=f.campeon&&f.campeon.includes(name);
+        const fuePala=f.pala&&f.pala.includes(name);
+        return `<div class="card pad" style="display:flex;align-items:center;gap:12px">
+          <div style="font-size:22px">${fueCamp?"🏆":fuePala?"🥄":"🎾"}</div>
+          <div style="flex:1"><b>con ${esc(comp)}</b><div class="tag" style="margin-top:2px">${fmtFecha(f.f)}${fueCamp?' · Campeón':fuePala?' · Pala de madera':''}</div></div>
+        </div>`;
+      }).join(""):`<div class="empty">Sin fechas registradas</div>`}
+    </section>
+  </section>`;
+}
+
+/* ---------- SORTEO ---------- */
+function mulberry32(a){return function(){a|=0;a=(a+0x6D2B79F5)|0;let t=Math.imul(a^(a>>>15),1|a);t=(t+Math.imul(t^(t>>>7),61|t))^t;return((t^(t>>>14))>>>0)/4294967296;};}
+function shuffle(arr,rnd){const a=arr.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+let SEL=new Set(DATA.jugadores.filter(j=>j.c).map(j=>j.n)); // preselección: los que tienen copón
+let LASTPAIRS=null;
+function vSorteo(){
+  const js=DATA.jugadores.slice().sort((a,b)=>("ABCD".indexOf(a.c||"Z"))-("ABCD".indexOf(b.c||"Z"))||a.n.localeCompare(b.n));
+  return `<section>
+    <div class="sechead"><span class="bar"></span><h2>Sorteo</h2><span class="sub">Transparente</span></div>
+    <div class="card pad">
+      <div class="note" style="margin-top:0">Marcá quién juega hoy y apretá sortear. Regla: <b>uno de la mitad más fuerte con uno de la más floja</b>. El <b>Nº de la suerte</b> lo hace repetible y justo.</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;align-items:end">
+        <div class="field"><label>Nº de la suerte</label><input id="seed" inputmode="numeric" style="width:120px"></div>
+        <div class="field"><label>Canchas</label><input id="courts" type="number" min="1" max="12" value="4" style="width:84px"></div>
+        <button class="btn" id="btnDraw">🎾 Sortear</button>
+        <button class="btn ghost sm" id="btnSeed">Otro Nº</button>
+      </div>
+    </div>
+
+    <div class="card pad" style="margin-top:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div class="tag">Presentes (<span id="selcount">${SEL.size}</span>)</div>
+        <div><button class="btn ghost sm" id="selAll">Todos</button> <button class="btn ghost sm" id="selNone">Ninguno</button></div>
+      </div>
+      <div id="checklist">${js.map(j=>`
+        <label class="adline" style="cursor:pointer">
+          <input type="checkbox" data-sel="${esc(j.n)}" ${SEL.has(j.n)?"checked":""} style="width:auto">
+          <span class="an">${esc(j.n)}</span>
+          <span class="cchip ${COL[j.c]}">${j.c||"·"}</span>
+        </label>`).join("")}
+      </div>
+    </div>
+
+    <div id="drawMsg" class="note" style="margin-top:10px"></div>
+    <div id="pairsOut"></div>
+  </section>`;
+}
+function draw(){
+  const seedRaw=(document.getElementById("seed").value||"").trim();
+  const msg=document.getElementById("drawMsg");
+  if(!seedRaw){msg.innerHTML='<span class="warn">Poné un Nº de la suerte.</span>';return;}
+  let seed=0;for(let i=0;i<seedRaw.length;i++)seed=(seed*31+seedRaw.charCodeAt(i))|0;
+  const rnd=mulberry32(seed>>>0);
+  let all=[...SEL].map(n=>({n,c:coponDe(n)}));
+  if(all.length<2){msg.innerHTML='<span class="warn">Marcá al menos 2 jugadores.</span>';document.getElementById("pairsOut").innerHTML="";return;}
+  const rankC=c=>("ABCD".indexOf(c)>=0?"ABCD".indexOf(c):2.5); // sin copón = medio
+  all=all.map(p=>({...p,k:rnd()})).sort((a,b)=>rankC(a.c)-rankC(b.c)||a.k-b.k);
+  let sup=null;
+  if(all.length%2){sup=all.splice(Math.floor(all.length/2),1)[0];}
+  const half=all.length/2;
+  const fuertes=shuffle(all.slice(0,half),rnd), flojos=shuffle(all.slice(half),rnd);
+  const pairs=[];for(let i=0;i<half;i++)pairs.push([fuertes[i],flojos[i]]);
+  LASTPAIRS=pairs.map(p=>[p[0].n,p[1].n]);
+  const courts=Math.max(1,parseInt(document.getElementById("courts").value)||1);
+  document.getElementById("pairsOut").innerHTML=`
+    <div class="pairwrap">${pairs.map((p,i)=>`
+      <div class="pcard"><div class="no">${i+1}</div>
+        <div class="pl"><span class="cchip ${COL[p[0].c]}">${p[0].c||"·"}</span>${esc(p[0].n)}</div>
+        <div class="amp">&</div>
+        <div class="pl"><span class="cchip ${COL[p[1].c]}">${p[1].c||"·"}</span>${esc(p[1].n)}</div>
+      </div>`).join("")}
+    </div>
+    <button class="btn ghost block" id="saveFecha" style="margin-top:14px">💾 Guardar como fecha de hoy</button>`;
+  let m=`Sorteo con Nº <b>${esc(seedRaw)}</b> · ${pairs.length} parejas · ${courts} canchas.`;
+  if(sup)m+=`<br><span class="warn">Impar:</span> ${esc(sup.n)} queda de suplente rotativo.`;
+  msg.innerHTML=m;
+  document.getElementById("saveFecha").onclick=()=>{
+    const hoy=new Date().toISOString().slice(0,10);
+    DATA.fechas.unshift({f:hoy,parejas:LASTPAIRS,campeon:null,pala:null});
+    save();toast("Fecha guardada");go("admin");
+  };
+}
+
+/* ---------- ADMIN ---------- */
+function vAdmin(){
+  return `<section>
+    <div class="sechead"><span class="bar"></span><h2>Admin</h2><span class="sub">Cargar resultados</span></div>
+
+    <div class="card pad">
+      <div class="tag" style="margin-bottom:8px">➕ Cargar fecha manual</div>
+      <div class="note" style="margin-bottom:10px">Formato por línea: <b>JugadorA, JugadorB</b> (una pareja por línea).</div>
+      <div class="field"><label>Fecha</label><input id="afecha" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
+      <div class="field" style="margin-top:8px"><label>Parejas</label>
+        <textarea id="apar" rows="6" style="background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:11px;font-family:inherit;font-size:14px" placeholder="Mike, Julian&#10;TIS, Batata&#10;Toto, Gato"></textarea></div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <div class="field" style="flex:1"><label>Campeón (opcional)</label><input id="acamp" placeholder="Mike, Julian"></div>
+        <div class="field" style="flex:1"><label>Pala 🥄 (opcional)</label><input id="apala" placeholder="Toto, Gato"></div>
+      </div>
+      <button class="btn block" id="addFecha" style="margin-top:12px">Guardar fecha</button>
+    </div>
+
+    <div class="card pad" style="margin-top:12px">
+      <div class="tag" style="margin-bottom:8px">📅 Fechas cargadas (${DATA.fechas.length})</div>
+      ${DATA.fechas.map((f,i)=>`<div class="adline">
+        <span class="an">${fmtFecha(f.f)} · ${f.parejas.length} parejas ${f.campeon?'🏆':''}</span>
+        <button data-editcamp="${i}" title="Marcar campeón">👑</button>
+        <button data-delf="${i}" title="Borrar">🗑️</button>
+      </div>`).join("")||'<div class="empty">Sin fechas</div>'}
+    </div>
+
+    <div class="card pad" style="margin-top:12px">
+      <div class="tag" style="margin-bottom:8px">👥 Plantel y copones</div>
+      <div class="note" style="margin-bottom:8px">A=más fuerte → D=más flojo. Sin copón = invitado/otro.</div>
+      ${DATA.jugadores.map((j,i)=>`<div class="adline">
+        <span class="an">${esc(j.n)}</span>
+        <select data-cop="${i}"><option value="" ${j.c===""?"selected":""}>—</option>${["A","B","C","D"].map(c=>`<option ${j.c===c?"selected":""}>${c}</option>`).join("")}</select>
+        <button data-delj="${i}">🗑️</button>
+      </div>`).join("")}
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <input id="newj" placeholder="Nuevo jugador" style="flex:1">
+        <button class="btn sm" id="addj">Agregar</button>
+      </div>
+    </div>
+
+    <div class="card pad" style="margin-top:12px">
+      <div class="tag" style="margin-bottom:8px">🔗 Compartir con el grupo</div>
+      <div class="note" style="margin-bottom:10px">Para que <b>todos vean el mismo ranking</b>, exportá los datos y reemplazá el bloque <b>SEED</b> del archivo <b>index.html</b> en GitHub. Así queda publicado para todos.</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn sm" id="expData">⬇️ Exportar datos (JSON)</button>
+        <button class="btn ghost sm" id="copyData">📋 Copiar</button>
+        <button class="btn ghost sm" id="impData">⬆️ Importar</button>
+        <button class="btn ghost sm" id="resetData">♻️ Restaurar</button>
+      </div>
+      <input id="impFile" type="file" accept="application/json" class="hidden">
+    </div>
+  </section>`;
+}
+function parsePairs(txt){
+  return txt.split("\n").map(l=>l.trim()).filter(Boolean).map(l=>l.split(",").map(s=>s.trim()).filter(Boolean)).filter(p=>p.length===2);
+}
+function parseDuo(s){const p=(s||"").split(",").map(x=>x.trim()).filter(Boolean);return p.length===2?p:null;}
+
+/* ================= BIND ================= */
+function bind(){
+  document.querySelectorAll("[data-go2]").forEach(b=>b.onclick=()=>go(b.dataset.go2));
+  document.querySelectorAll("[data-perfil]").forEach(b=>b.onclick=()=>go("perfil",b.dataset.perfil));
+
+  if(VIEW==="ranking"){
+    document.querySelectorAll("#rkseg button").forEach(b=>b.onclick=()=>{RKTAB=b.dataset.t;document.getElementById("rktable").innerHTML=RKTAB==='jug'?tablaJug():tablaPar();document.querySelectorAll("#rkseg button").forEach(x=>x.classList.toggle("on",x.dataset.t===RKTAB));bind();});
+  }
+
+  if(VIEW==="perfil"){
+    const sh=document.getElementById("share");
+    if(sh)sh.onclick=async()=>{
+      const url=location.href.split("#")[0]+"#perfil="+encodeURIComponent(PARAM);
+      const ind=statsInd()[PARAM]||{pj:0,camp:0};
+      const txt=`${PARAM} en Copones Buena Vista 🎾\n${ind.pj} fechas · ${ind.camp} 🏆 títulos\n${url}`;
+      try{ if(navigator.share){await navigator.share({title:"Copones BV",text:txt,url});} else {await navigator.clipboard.writeText(txt);toast("Copiado al portapapeles");} }catch(e){}
+    };
+  }
+
+  if(VIEW==="sorteo"){
+    if(!document.getElementById("seed").value)document.getElementById("seed").value=String(1000+Math.floor(Math.random()*8999));
+    document.getElementById("btnSeed").onclick=()=>{document.getElementById("seed").value=String(1000+Math.floor(Math.random()*8999));};
+    document.getElementById("btnDraw").onclick=draw;
+    document.querySelectorAll("[data-sel]").forEach(cb=>cb.onchange=()=>{cb.checked?SEL.add(cb.dataset.sel):SEL.delete(cb.dataset.sel);document.getElementById("selcount").textContent=SEL.size;});
+    document.getElementById("selAll").onclick=()=>{DATA.jugadores.forEach(j=>SEL.add(j.n));render();go("sorteo");};
+    document.getElementById("selNone").onclick=()=>{SEL.clear();render();go("sorteo");};
+  }
+
+  if(VIEW==="admin"){
+    document.getElementById("addFecha").onclick=()=>{
+      const f=document.getElementById("afecha").value;
+      const pares=parsePairs(document.getElementById("apar").value);
+      if(!f||!pares.length){toast("Falta fecha o parejas");return;}
+      DATA.fechas.unshift({f,parejas:pares,campeon:parseDuo(document.getElementById("acamp").value),pala:parseDuo(document.getElementById("apala").value)});
+      DATA.fechas.sort((a,b)=>b.f.localeCompare(a.f));
+      save();toast("Fecha agregada");render();
+    };
+    document.querySelectorAll("[data-delf]").forEach(b=>b.onclick=()=>{DATA.fechas.splice(+b.dataset.delf,1);save();render();});
+    document.querySelectorAll("[data-editcamp]").forEach(b=>b.onclick=()=>{
+      const i=+b.dataset.editcamp,f=DATA.fechas[i];
+      const opciones=f.parejas.map((p,idx)=>`${idx+1}) ${p.join(" & ")}`).join("\n");
+      const r=prompt("¿Qué pareja fue campeona? Escribí el número:\n"+opciones+"\n(0 = sin campeón)");
+      if(r===null)return;const idx=parseInt(r)-1;
+      f.campeon=(idx>=0&&idx<f.parejas.length)?f.parejas[idx]:null;
+      save();toast("Actualizado");render();
+    });
+    document.querySelectorAll("[data-cop]").forEach(s=>s.onchange=()=>{DATA.jugadores[+s.dataset.cop].c=s.value;save();});
+    document.querySelectorAll("[data-delj]").forEach(b=>b.onclick=()=>{DATA.jugadores.splice(+b.dataset.delj,1);save();render();});
+    document.getElementById("addj").onclick=()=>{const v=document.getElementById("newj").value.trim();if(!v)return;DATA.jugadores.push({n:v,c:""});save();render();};
+    document.getElementById("expData").onclick=()=>{const blob=new Blob([JSON.stringify(DATA,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="copones-datos.json";a.click();};
+    document.getElementById("copyData").onclick=async()=>{try{await navigator.clipboard.writeText(JSON.stringify(DATA,null,2));toast("Datos copiados");}catch(e){toast("No se pudo copiar");}};
+    document.getElementById("impData").onclick=()=>document.getElementById("impFile").click();
+    document.getElementById("impFile").onchange=e=>{const file=e.target.files[0];if(!file)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(d.jugadores&&d.fechas){DATA=d;save();toast("Datos importados");render();}else toast("Archivo inválido");}catch(err){toast("Archivo inválido");}};r.readAsText(file);};
+    document.getElementById("resetData").onclick=()=>{if(confirm("¿Restaurar los datos originales? Se pierden tus cambios locales.")){DATA=JSON.parse(JSON.stringify(SEED));save();render();}};
   }
 }
 
-function chipCopon(copon) {
-  const c = COLORES[copon];
-  return `<div class="chip-copon" style="background:${c.bg};color:${c.text}">${copon}</div>`;
-}
-
-function mostrarResultado(data) {
-  const el = document.getElementById('resultado');
-  el.style.display = 'block';
-  let html = `<div class="resultado-header"><h2>🎾 SORTEO TRANSPARENTE</h2><p>${(data.fecha||'').toUpperCase()} · HURLING CLUB · BUENA VISTA</p></div>`;
-  (data.canchas||[]).forEach((c, i) => {
-    html += `<div class="cancha-card" style="animation-delay:${i*0.1}s">
-      <div class="cancha-title">🏟️ CANCHA ${c.numero}</div>
-      <div class="match">
-        <div class="equipo">${(c.equipo1||[]).map(j=>`<div class="jugador-chip">${chipCopon(j.copon)}<span>${j.nombre}</span></div>`).join('')}</div>
-        <div class="vs-badge">VS</div>
-        <div class="equipo derecha">${(c.equipo2||[]).map(j=>`<div class="jugador-chip">${chipCopon(j.copon)}<span>${j.nombre}</span></div>`).join('')}</div>
-      </div>
-      <div class="comentario">💬 ${c.comentario}</div>
-    </div>`;
-  });
-  if (data.libres && data.libres.length) html += `<div class="libre-card">⚠️ <strong>Rota:</strong> ${data.libres.join(', ')} — esperando que se libere una cancha</div>`;
-  if (data.pronostico) html += `<div class="pronostico-card"><div class="label">🔮 PRONÓSTICO DEL DÍA</div><p>${data.pronostico}</p></div>`;
-  el.innerHTML = html;
-  el.scrollIntoView({ behavior:'smooth', block:'start' });
-}
-
-renderRoster();
-renderSelected();
+/* ================= INIT ================= */
+(function init(){
+  const h=location.hash.slice(1);
+  if(h){const [v,p]=h.split("=");VIEW=v||"inicio";PARAM=p?decodeURIComponent(p):null;}
+  document.querySelectorAll("#nav a").forEach(a=>a.classList.toggle("on",a.dataset.go===VIEW));
+  render();
+})();
 </script>
 </body>
 </html>
