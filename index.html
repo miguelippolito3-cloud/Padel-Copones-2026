@@ -21,7 +21,19 @@
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0}
-  body{background:var(--bg);color:var(--txt);font-family:"Inter",system-ui,Segoe UI,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;padding-bottom:76px}
+  body{
+    background:
+      radial-gradient(680px 460px at 6% 3%, rgba(245,197,24,.07), transparent 62%),
+      radial-gradient(680px 460px at 94% 8%, rgba(47,123,255,.10), transparent 62%),
+      radial-gradient(760px 560px at 88% 94%, rgba(251,146,60,.07), transparent 62%),
+      radial-gradient(760px 560px at 10% 90%, rgba(167,139,250,.07), transparent 62%),
+      var(--bg);
+    background-attachment:fixed;
+    color:var(--txt);font-family:"Inter",system-ui,Segoe UI,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;padding-bottom:76px}
+  body:before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.6;
+    background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);
+    background-size:46px 46px}
+  .ticker,.rainbow,.wrap{position:relative;z-index:1}
   h1,h2,h3,.anton{font-family:"Anton",Impact,sans-serif;font-weight:400;letter-spacing:.01em}
   .cond{font-family:"Barlow Condensed",sans-serif}
   a{color:inherit;text-decoration:none}
@@ -146,6 +158,19 @@
   .ptoggle:last-child{margin-bottom:0}
   .ptoggle.on{color:#0a0b0d;border-color:transparent}
   .ptoggle.on.k-A{background:var(--A)}.ptoggle.on.k-B{background:var(--B);color:#fff}.ptoggle.on.k-C{background:var(--C)}.ptoggle.on.k-D{background:var(--D);color:#0a0b0d}
+  .plcols{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  @media(max-width:820px){.plcols{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:460px){.plcols{grid-template-columns:1fr}}
+  .plcol{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;border-top:3px solid var(--cc,#444)}
+  .plhead{font-family:"Anton";font-size:13px;letter-spacing:.03em;color:var(--cc,#ccc);margin-bottom:10px;display:flex;align-items:center;gap:7px;text-transform:uppercase}
+  .plcard{background:var(--card2);border:1px solid var(--line);border-radius:9px;padding:9px 10px;margin-bottom:7px;cursor:pointer;transition:.12s}
+  .plcard:hover{border-color:var(--cc,#888);transform:translateX(2px)}
+  .plcard:last-child{margin-bottom:0}
+  .pln{font-weight:800;font-size:14.5px;line-height:1.15}
+  .pchamp{color:var(--gold);font-size:12px;font-weight:700}
+  .plr{font-family:"Barlow Condensed";font-weight:600;color:var(--muted);font-size:12px;letter-spacing:.02em;margin-top:2px}
+  .pls{font-family:"Barlow Condensed";font-weight:700;color:var(--cc,#888);font-size:10.5px;margin-top:5px;text-transform:uppercase;letter-spacing:.07em}
+  .co-inv{--cc:#7a828f}
 
   .note{color:var(--muted);font-size:13px;line-height:1.55}
   .warn{color:#ffcf4d;font-weight:700}
@@ -202,45 +227,54 @@
 /* ================= DATOS SEMILLA (editables desde Admin) ================= */
 const SEED = {
   jugadores: [
-    // copón actual (los 16 de la foto) — A=amarillo, B=azul, C=naranja, D=violeta
-    {n:"Julian",c:"A"},{n:"Matso",c:"A"},{n:"Carli",c:"A"},{n:"Batata",c:"A"},{n:"Laqui",c:"A"},{n:"Garzo",c:"A"},
-    {n:"TIS",c:"B"},{n:"Tapiachu",c:"B"},{n:"MP",c:"B"},{n:"Alba",c:"B"},{n:"Ema",c:"B"},
-    {n:"Calambre",c:"C"},{n:"Diegui",c:"C"},{n:"Toto",c:"C"},{n:"Rafa",c:"C"},{n:"Trucho",c:"C"},
-    // otros habitués (sin copón fijo)
-    {n:"Mike",c:"C"},{n:"Taya",c:"C"},{n:"Alejo",c:"C"},{n:"Maren",c:"B"},{n:"Pati",c:"B"},{n:"Gato",c:"B"},
-    {n:"Fede",c:"B"},{n:"Pachu",c:"C"},{n:"Negro",c:"A"},{n:"Charly",c:"A"},{n:"Copito",c:"A"},{n:"Chuck",c:"A"},
-    {n:"Teo",c:"B"},{n:"Juanchi",c:"A"},{n:"Pjcha",c:"C"},{n:"Gasti",c:"B"},{n:"Longo",c:"B"},{n:"Chico",c:"A"},{n:"Mambo",c:"D"},{n:"Nico Mon",c:"D"}
+    // COPÓN A · CRACKS
+    {n:"Chico",c:"A",real:"Lucas Chico Chico · Boy Boy"},{n:"Don (Diegui)",c:"A",real:"Diego Martínez · Don Johnson"},
+    {n:"Matso",c:"A",real:"Maxi Burtin"},{n:"Track (Juli)",c:"A",real:"Julián Tramontano · Dr"},
+    {n:"Juanchi",c:"A",real:"Juanchi Gebbie · Desganado · Pelusa · Jugoso"},{n:"Laqui",c:"A",real:"Laqui · Pjcha"},
+    {n:"Gato",c:"A",real:"Gastón López Soler"},{n:"Maren",c:"A",real:"Martín Marenzi"},
+    {n:"Carli",c:"A",real:"Carlos Mohap"},{n:"Negro Mon",c:"A",real:"Daniel Mon"},{n:"Garzo",c:"A",real:"Garzo Hurling"},
+    // COPÓN B · BUENOS
+    {n:"TIS",c:"B",real:"Tomás Sanguinetti"},{n:"Alba",c:"B",real:"Lucas Albarracín · El Mágico"},
+    {n:"Pati",c:"B",real:"Sebastián Scally · El Patán"},{n:"Tapiachu",c:"B",real:"Patricio Tramontano · Pachu"},
+    {n:"MP",c:"B",real:"Mariano Posse"},{n:"Teo",c:"B",real:"Mateo Brady · La Tapioca"},
+    {n:"Taya",c:"B",real:"El Taya"},{n:"Guille",c:"B",real:"Guille"},{n:"Ema",c:"B",real:"Ema Alemán"},
+    // COPÓN C · PROMEDIO
+    {n:"Rafa",c:"C",real:"Mike · Pezón · Shadow"},{n:"Calambre",c:"C",real:"Federico MacKinson · Ficky"},
+    {n:"Bati",c:"C",real:"Hernán Martinelli · Batata"},{n:"Toto",c:"C",real:"Juan Ignacio Mezzotero"},
+    {n:"Alejo",c:"C",real:"El Persa Vera · Alejito · Verde"},{n:"Trucho",c:"C",real:"Alex Kruszewski"},
+    // COPÓN D · VALIENTES
+    {n:"Mambo",c:"D",real:"Mambo"},{n:"Nico Mon",c:"D",real:"Nico Mon"}
   ],
   // fechas leídas del chat (parejas confirmadas; campeón sólo donde estaba explícito)
   fechas: [
-    {f:"2026-07-05", parejas:[["Pachu","Invitado"],["TIS","Chuck","Laqui"],["Alba","Juanchi"],["Mike","Calambre","Julian"],["Matso","Toto"],["Pati","Batata"]], campeon:null, pala:null},
-    {f:"2026-06-28", parejas:[["Mike","Julian"],["Tapiachu","TIS"],["Matso","Chuck"],["Ema","Batata"]], campeon:null, pala:null},
-    {f:"2026-06-21", parejas:[["Maren","Batata"],["Taya","Julian"],["Alba","Laqui"],["TIS","Ema"]], campeon:["Taya","Julian"], pala:null},
-    {f:"2026-06-07", parejas:[["Julian","Toto"],["Matso","Mike"],["TIS","Maren"],["Negro","Ema"]], campeon:null, pala:null},
-    {f:"2026-05-23", parejas:[["Toto","Pati"],["Charly","Alba"],["Chuck","Julian"],["Trucho","Gato"],["Mike","MP"],["Batata","Pachu"]], campeon:null, pala:null},
-    {f:"2026-05-17", parejas:[["Invitado","Pachu"],["Copito","Toto"],["TIS","Charly"],["Mike","Julian"],["Calambre","Pati"],["Batata","Chuck"]], campeon:null, pala:null},
-    {f:"2026-05-10", parejas:[["Alba","Pati"],["Julian","Pachu"],["Copito","Taya"],["Charly","MP"],["Maren","Toto"],["Batata","Matso"],["Mike","Ema"],["Negro","Calambre"]], campeon:["Batata","Matso"], pala:["Julian","Pachu"]},
-    {f:"2026-05-03", parejas:[["Taya","Matso"],["Julian","Pachu"],["Maren","Mike"],["Toto","Gato"],["Charly","Copito"],["Fede","Batata"]], campeon:["Julian","Pachu"], pala:null},
-    {f:"2026-04-26", parejas:[["Alejo","Alba"],["Ema","Pati"],["Trucho","Julian"],["Copito","Calambre"],["Matso","Chuck"],["Charly","Juanchi"]], campeon:["Copito","Calambre"], pala:null},
-    {f:"2026-04-19", parejas:[["Charly","Alba"],["Invitado","Batata"],["Julian","Toto"],["Calambre","Pachu"],["Ema","Taya"],["MP","Mike"]], campeon:null, pala:null},
-    {f:"2026-04-12", parejas:[["Julian","Batata"],["Charly","Pachu"],["TIS","Diegui"],["Negro","Calambre"]], campeon:null, pala:null},
-    {f:"2026-03-27", parejas:[["TIS","Longo"],["Calambre","Pachu"],["Negro","Nico Mon"],["Gato","Mike"],["Copito","Trucho"],["Pati","Batata"],["Alejo","Taya"],["Toto","Ema"]], campeon:null, pala:null},
-    {f:"2026-03-21", parejas:[["Julian","Trucho"],["Tapiachu","Toto"],["Juanchi","Taya"],["Teo","Calambre"]], campeon:["Julian","Trucho"], pala:null},
-    {f:"2026-03-14", parejas:[["Diegui","Calambre"],["Matso","Mike"],["Carli","Trucho"],["Laqui","TIS"],["Garzo","Toto"],["Julian","Alba"],["Ema","Pachu"],["MP","Batata"]], campeon:null, pala:null},
-    {f:"2026-02-27", parejas:[["Invitado","Pachu"],["Alejo","Garzo"],["Gato","Mike"],["Alba","Matso"],["Calambre","Julian"],["Batata","Diegui"],["Chico","Pati"],["TIS","MP"]], campeon:null, pala:null},
-    {f:"2026-02-22", parejas:[["Batata","Tapiachu"],["Julian","Mike"],["Chico","TIS"],["Alejo","Gato"],["Invitado","Garzo"],["Toto","Pati"]], campeon:null, pala:null},
-    {f:"2026-02-08", parejas:[["Chico","Mike"],["Toto","Diegui"],["Alejo","Pjcha"],["Alba","Julian"],["Taya","Calambre"]], campeon:null, pala:null},
-    {f:"2026-02-01", parejas:[["Alba","Invitado"],["Diegui","Calambre"],["Mike","Julian"],["TIS","Pati"]], campeon:["Diegui","Calambre"], pala:null},
+    {f:"2026-07-05", parejas:[["Tapiachu","Invitado"],["TIS","Chuck","Laqui"],["Alba","Juanchi"],["Rafa","Calambre","Track (Juli)"],["Matso","Toto"],["Pati","Bati"]], campeon:null, pala:null},
+    {f:"2026-06-28", parejas:[["Rafa","Track (Juli)"],["Tapiachu","TIS"],["Matso","Chuck"],["Ema","Bati"]], campeon:null, pala:null},
+    {f:"2026-06-21", parejas:[["Maren","Bati"],["Taya","Track (Juli)"],["Alba","Laqui"],["TIS","Ema"]], campeon:["Taya","Track (Juli)"], pala:null},
+    {f:"2026-06-07", parejas:[["Track (Juli)","Toto"],["Matso","Rafa"],["TIS","Maren"],["Negro Mon","Ema"]], campeon:null, pala:null},
+    {f:"2026-05-23", parejas:[["Toto","Pati"],["Charly","Alba"],["Chuck","Track (Juli)"],["Trucho","Gato"],["Rafa","MP"],["Bati","Tapiachu"]], campeon:null, pala:null},
+    {f:"2026-05-17", parejas:[["Invitado","Tapiachu"],["Copito","Toto"],["TIS","Charly"],["Rafa","Track (Juli)"],["Calambre","Pati"],["Bati","Chuck"]], campeon:null, pala:null},
+    {f:"2026-05-10", parejas:[["Alba","Pati"],["Track (Juli)","Tapiachu"],["Copito","Taya"],["Charly","MP"],["Maren","Toto"],["Bati","Matso"],["Rafa","Ema"],["Negro Mon","Calambre"]], campeon:["Bati","Matso"], pala:["Track (Juli)","Tapiachu"]},
+    {f:"2026-05-03", parejas:[["Taya","Matso"],["Track (Juli)","Tapiachu"],["Maren","Rafa"],["Toto","Gato"],["Charly","Copito"],["Calambre","Bati"]], campeon:["Track (Juli)","Tapiachu"], pala:null},
+    {f:"2026-04-26", parejas:[["Alejo","Alba"],["Ema","Pati"],["Trucho","Track (Juli)"],["Copito","Calambre"],["Matso","Chuck"],["Charly","Juanchi"]], campeon:["Copito","Calambre"], pala:null},
+    {f:"2026-04-19", parejas:[["Charly","Alba"],["Invitado","Bati"],["Track (Juli)","Toto"],["Calambre","Tapiachu"],["Ema","Taya"],["MP","Rafa"]], campeon:null, pala:null},
+    {f:"2026-04-12", parejas:[["Track (Juli)","Bati"],["Charly","Tapiachu"],["TIS","Don (Diegui)"],["Negro Mon","Calambre"]], campeon:null, pala:null},
+    {f:"2026-03-27", parejas:[["TIS","Longo"],["Calambre","Tapiachu"],["Negro Mon","Nico Mon"],["Gato","Rafa"],["Copito","Trucho"],["Pati","Bati"],["Alejo","Taya"],["Toto","Ema"]], campeon:null, pala:null},
+    {f:"2026-03-21", parejas:[["Track (Juli)","Trucho"],["Tapiachu","Toto"],["Juanchi","Taya"],["Teo","Calambre"]], campeon:["Track (Juli)","Trucho"], pala:null},
+    {f:"2026-03-14", parejas:[["Don (Diegui)","Calambre"],["Matso","Rafa"],["Carli","Trucho"],["Laqui","TIS"],["Garzo","Toto"],["Track (Juli)","Alba"],["Ema","Tapiachu"],["MP","Bati"]], campeon:null, pala:null},
+    {f:"2026-02-27", parejas:[["Invitado","Tapiachu"],["Alejo","Garzo"],["Gato","Rafa"],["Alba","Matso"],["Calambre","Track (Juli)"],["Bati","Don (Diegui)"],["Chico","Pati"],["TIS","MP"]], campeon:null, pala:null},
+    {f:"2026-02-22", parejas:[["Bati","Tapiachu"],["Track (Juli)","Rafa"],["Chico","TIS"],["Alejo","Gato"],["Invitado","Garzo"],["Juanchi","Pati"]], campeon:null, pala:null},
+    {f:"2026-02-08", parejas:[["Chico","Rafa"],["Toto","Don (Diegui)"],["Alejo","Laqui"],["Alba","Track (Juli)"],["Taya","Calambre"]], campeon:null, pala:null},
+    {f:"2026-02-01", parejas:[["Alba","Invitado"],["Don (Diegui)","Calambre"],["Rafa","Track (Juli)"],["TIS","Pati"]], campeon:["Don (Diegui)","Calambre"], pala:null},
     {f:"2026-01-25", parejas:[["Garzo","Gasti"],["Pati","Taya"],["Teo","Calambre"],["Tapiachu","TIS"]], campeon:null, pala:null},
-    {f:"2026-01-18", parejas:[["TIS","Invitado"],["Gato","Taya"],["Diegui","Pati"],["Alba","Garzo"]], campeon:null, pala:null},
+    {f:"2026-01-18", parejas:[["TIS","Invitado"],["Gato","Taya"],["Don (Diegui)","Pati"],["Alba","Garzo"]], campeon:null, pala:null},
     {f:"2026-01-11", parejas:[["Maren","Toto"],["Gato","Garzo"],["TIS","Calambre"],["Tapiachu","Pati"]], campeon:null, pala:null},
-    {f:"2026-01-04", parejas:[["Maren","Alejo"],["Gato","Pachu"],["Matso","Alba"],["Pati","Fede"],["Pjcha","Toto"],["TIS","Invitado"],["Taya","Juanma"]], campeon:null, pala:null},
+    {f:"2026-01-04", parejas:[["Maren","Alejo"],["Gato","Tapiachu"],["Matso","Alba"],["Pati","Calambre"],["Laqui","Toto"],["TIS","Invitado"],["Taya","Juanma"]], campeon:null, pala:null},
     {f:"2025-12-28", parejas:[["Matso","Mambo"],["Gato","Toto"],["Chico","Pati"]], campeon:["Matso","Mambo"], pala:null},
-    {f:"2025-12-21", parejas:[["Matso","Toto"],["Gato","Pachu"],["Julian","Alejo"],["Juampi","Alba"],["TIS","MP"],["Juanchi","Calambre"]], campeon:null, pala:null},
-    {f:"2025-12-14", parejas:[["Alejo","Invitado"],["Carli","Toto"],["Maren","Calambre"],["Diegui","Pachu"],["Alba","Matso"],["Julian","TIS"],["Juanchi","Pati"],["Pjcha","MP"]], campeon:["Julian","TIS"], pala:null},
-    {f:"2025-12-07", parejas:[["Carli","Calambre"],["TIS","Chico"],["Julian","Juampi"],["Pachu","Toto"],["Alba","Diegui"],["MP","Tapiachu"],["Pjcha","Alejo"]], campeon:null, pala:null},
-    {f:"2025-11-30", parejas:[["Matso","Teo"],["Tapiachu","Chico"],["Alejo","Diegui"],["Taya","Julian"],["TIS","Guille"],["MP","Toto"],["Negro","Invitado"]], campeon:null, pala:null},
-    {f:"2025-11-15", parejas:[["Alejo","Calambre"],["Pachu","Pjcha"],["TIS","Juanchi"],["Mike","Julian"]], campeon:null, pala:null}
+    {f:"2025-12-21", parejas:[["Matso","Toto"],["Gato","Tapiachu"],["Track (Juli)","Alejo"],["Juampi","Alba"],["TIS","MP"],["Juanchi","Calambre"]], campeon:null, pala:null},
+    {f:"2025-12-14", parejas:[["Alejo","Invitado"],["Carli","Toto"],["Maren","Calambre"],["Don (Diegui)","Tapiachu"],["Alba","Matso"],["Track (Juli)","TIS"],["Juanchi","Pati"],["Laqui","MP"]], campeon:["Track (Juli)","TIS"], pala:null},
+    {f:"2025-12-07", parejas:[["Carli","Calambre"],["TIS","Chico"],["Track (Juli)","Juampi"],["Tapiachu","Juanchi"],["Alba","Don (Diegui)"],["MP","Teo"],["Laqui","Alejo"]], campeon:null, pala:null},
+    {f:"2025-11-30", parejas:[["Matso","Teo"],["Tapiachu","Chico"],["Alejo","Don (Diegui)"],["Taya","Track (Juli)"],["TIS","Guille"],["MP","Juanchi"],["Negro Mon","Invitado"]], campeon:null, pala:null},
+    {f:"2025-11-15", parejas:[["Alejo","Calambre"],["Tapiachu","Laqui"],["TIS","Juanchi"],["Rafa","Track (Juli)"]], campeon:null, pala:null}
   ]
 };
 
@@ -251,6 +285,8 @@ function load(){ try{const s=JSON.parse(localStorage.getItem(LS)); if(s&&s.jugad
 function save(){ try{localStorage.setItem(LS,JSON.stringify(DATA));}catch(e){} }
 const COL={A:"chA",B:"chB",C:"chC",D:"chD","":"ch0"};
 const COLtx={A:"cA",B:"cB",C:"cC",D:"cD","":""};
+const COPTIT={A:"Cracks",B:"Buenos",C:"Promedio",D:"Valientes"};
+function realDe(n){const j=DATA.jugadores.find(x=>x.n===n);return j?(j.real||""):"";}
 
 /* ================= HELPERS ================= */
 function key(a,b){return [a,b].sort().join(" ‑ ");}
@@ -429,22 +465,36 @@ function tablaPar(){
 }
 
 /* ---------- JUGADORES (grid) ---------- */
+let PQ="";
 function vJugadores(){
   const ind=statsInd();
-  const nombres=todosLosNombres().sort((a,b)=>(ind[b]?ind[b].pj:0)-(ind[a]?ind[a].pj:0)||a.localeCompare(b));
+  const q=PQ.trim().toLowerCase();
+  const match=(n,real)=>!q||n.toLowerCase().includes(q)||(real||"").toLowerCase().includes(q);
+  const roster=new Set(DATA.jugadores.map(j=>j.n));
+  const inv=todosLosNombres().filter(n=>!roster.has(n)&&n!=="Invitado"&&match(n,"")).sort();
   return `<section>
-    <div class="sechead"><span class="bar"></span><h2>Perfiles</h2><span class="sub">${nombres.length} jugadores</span></div>
-    <div class="note" style="margin-bottom:12px">Tocá tu nombre para ver tus estadísticas y compartirlas.</div>
-    <div class="grid">
-      ${nombres.map(n=>{const s=ind[n]||{pj:0,camp:0};const col=avatarColor(n);return `
-        <div class="jcard" data-perfil="${esc(n)}">
-          <div class="av" style="background:${col}">${initials(n)}</div>
-          <div class="jn">${esc(n)}</div>
-          <div class="jm">${chip(n)} ${copName(coponDe(n))}</div>
-          <div class="jstat"><div><b>${s.pj}</b><span>Fechas</span></div><div><b style="color:var(--gold)">${s.camp}</b><span>Títulos</span></div></div>
-        </div>`;}).join("")}
+    <div class="sechead"><span class="bar"></span><h2>Plantel</h2><span class="sub">${DATA.jugadores.length} jugadores</span></div>
+    <input id="psearch" placeholder="🔍 Buscar jugador o apodo…" value="${esc(PQ)}" style="width:100%;margin-bottom:12px">
+    <div class="plcols">
+      ${["A","B","C","D"].map(c=>{
+        const arr=DATA.jugadores.filter(j=>j.c===c&&match(j.n,j.real)).sort((a,b)=>a.n.localeCompare(b.n));
+        return `<div class="plcol co-${c}">
+          <div class="plhead"><span class="cchip ${COL[c]}">${c}</span> ${COPTIT[c]}</div>
+          ${arr.length?arr.map(j=>plcardHTML(j.n,j.real,ind[j.n])).join(""):'<div class="note" style="font-size:12px;padding:4px 2px">—</div>'}
+        </div>`;
+      }).join("")}
     </div>
+    ${inv.length?`<div class="sechead" style="margin-top:20px"><span class="bar"></span><h2>Invitados</h2><span class="sub">${inv.length}</span></div>
+      <div class="plcol co-inv">${inv.map(n=>plcardHTML(n,"invitado sorpresa",ind[n])).join("")}</div>`:""}
   </section>`;
+}
+function plcardHTML(n,real,s){
+  s=s||{pj:0,camp:0};
+  return `<div class="plcard" data-perfil="${esc(n)}">
+    <div class="pln">${esc(n)}${s.camp?` <span class="pchamp">🏆${s.camp}</span>`:""}</div>
+    ${real?`<div class="plr">${esc(real)}</div>`:""}
+    <div class="pls">${s.pj} ${s.pj===1?'fecha':'fechas'}</div>
+  </div>`;
 }
 function copName(c){return c?("Copón "+c):"Invitado/otro";}
 
@@ -461,7 +511,7 @@ function vPerfil(name){
     <div class="card pad">
       <div class="phead">
         <div class="pav" style="background:${col}">${initials(name)}</div>
-        <div><div class="pn">${esc(name)}</div><div class="pm">${chip(name)} ${copName(c)}</div></div>
+        <div><div class="pn">${esc(name)}</div><div class="pm">${chip(name)} ${copName(c)}${realDe(name)?" · "+esc(realDe(name)):""}</div></div>
       </div>
       <div class="pills" style="margin-top:14px">
         <div class="pill"><div class="n">${ind.pj}</div><div class="k">Fechas</div></div>
@@ -520,7 +570,7 @@ function vSorteo(){
         ${["A","B","C","D"].map(c=>{
           const arr=DATA.jugadores.filter(j=>j.c===c).map(j=>j.n).sort((a,b)=>a.localeCompare(b));
           return `<div class="sortcol co-${c}">
-            <div class="sh">Copón ${c}<small id="cnt-${c}">0/${arr.length}</small></div>
+            <div class="sh">${c} · ${COPTIT[c]}<small id="cnt-${c}">0/${arr.length}</small></div>
             ${arr.length?arr.map(n=>`<button class="ptoggle k-${c} ${SEL.has(n)?'on':''}" data-tog="${esc(n)}">${esc(n)}</button>`).join(""):'<div class="note" style="font-size:12px">—</div>'}
           </div>`;
         }).join("")}
@@ -639,6 +689,11 @@ function parseDuo(s){const p=(s||"").split(",").map(x=>x.trim()).filter(Boolean)
 function bind(){
   document.querySelectorAll("[data-go2]").forEach(b=>b.onclick=()=>go(b.dataset.go2));
   document.querySelectorAll("[data-perfil]").forEach(b=>b.onclick=()=>go("perfil",b.dataset.perfil));
+
+  if(VIEW==="jugadores"){
+    const ps=document.getElementById("psearch");
+    if(ps)ps.oninput=()=>{PQ=ps.value;document.getElementById("app").innerHTML=vJugadores();bind();const el=document.getElementById("psearch");if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length);}};
+  }
 
   if(VIEW==="ranking"){
     document.querySelectorAll("#rkseg button").forEach(b=>b.onclick=()=>{RKTAB=b.dataset.t;document.getElementById("rktable").innerHTML=RKTAB==='jug'?tablaJug():tablaPar();document.querySelectorAll("#rkseg button").forEach(x=>x.classList.toggle("on",x.dataset.t===RKTAB));bind();});
