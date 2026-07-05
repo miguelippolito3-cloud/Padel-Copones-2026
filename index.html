@@ -30,7 +30,7 @@
   /* Top bar ESPN */
   .top{position:sticky;top:0;z-index:40;background:linear-gradient(180deg,#000,#0a0b0d);border-bottom:1px solid var(--line)}
   .topin{max-width:720px;margin:0 auto;display:flex;align-items:center;gap:10px;padding:9px 14px}
-  .brandmark{background:var(--red);color:#fff;font-family:"Anton";font-size:18px;padding:4px 9px;border-radius:5px;letter-spacing:.02em;line-height:1}
+  .brandmark{background:linear-gradient(135deg,var(--red),var(--C) 90%);color:#fff;font-family:"Anton";font-size:18px;padding:4px 9px;border-radius:5px;letter-spacing:.02em;line-height:1;box-shadow:0 2px 10px rgba(226,16,42,.35)}
   .brandtxt{font-family:"Anton";font-size:19px;letter-spacing:.02em;line-height:1}
   .brandtxt small{display:block;font-family:"Barlow Condensed";font-weight:600;font-size:11px;letter-spacing:.32em;color:var(--muted)}
   .live{margin-left:auto;display:flex;align-items:center;gap:6px;font-family:"Barlow Condensed";font-weight:700;font-size:12px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase}
@@ -45,7 +45,7 @@
 
   section{padding:16px 0 6px}
   .sechead{display:flex;align-items:center;gap:10px;margin:2px 0 12px}
-  .sechead .bar{width:5px;height:22px;background:var(--red);border-radius:2px}
+  .sechead .bar{width:5px;height:22px;background:linear-gradient(180deg,var(--A),var(--C),var(--red));border-radius:2px}
   .sechead h2{font-size:23px}
   .sechead .sub{margin-left:auto;font-family:"Barlow Condensed";font-weight:600;color:var(--muted);font-size:13px;letter-spacing:.1em;text-transform:uppercase}
 
@@ -54,12 +54,14 @@
   .pad{padding:14px}
 
   /* hero result */
-  .hero{background:linear-gradient(135deg,#1a1d24,#101116);border:1px solid var(--line);border-radius:16px;padding:16px;position:relative;overflow:hidden}
-  .hero:before{content:"";position:absolute;right:-40px;top:-40px;width:160px;height:160px;background:radial-gradient(circle,rgba(226,16,42,.25),transparent 70%)}
+  .hero{background:linear-gradient(135deg,#241a2e,#151019 55%,#101622);border:1px solid var(--line);border-radius:16px;padding:16px;position:relative;overflow:hidden}
+  .hero:before{content:"";position:absolute;right:-40px;top:-40px;width:170px;height:170px;background:radial-gradient(circle,rgba(226,16,42,.28),transparent 70%)}
+  .hero:after{content:"";position:absolute;left:-30px;bottom:-45px;width:150px;height:150px;background:radial-gradient(circle,rgba(47,123,255,.2),transparent 70%)}
   .hero .lbl{font-family:"Barlow Condensed";font-weight:700;letter-spacing:.16em;font-size:12px;color:var(--red2);text-transform:uppercase}
   .hero .date{font-family:"Barlow Condensed";color:var(--muted);font-size:13px;font-weight:600}
   .champ{display:flex;align-items:center;gap:12px;margin-top:8px}
-  .champ .cup{font-size:34px;filter:drop-shadow(0 3px 6px rgba(0,0,0,.5))}
+  .champ .cup{font-size:34px;filter:drop-shadow(0 3px 6px rgba(0,0,0,.5));animation:bob 2.4s ease-in-out infinite}
+  @keyframes bob{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-4px) rotate(4deg)}}
   .champ .names{font-family:"Anton";font-size:26px;line-height:1}
   .champ .names small{display:block;font-family:"Barlow Condensed";font-weight:600;font-size:12px;letter-spacing:.14em;color:var(--muted);margin-top:4px}
 
@@ -68,6 +70,13 @@
   .pill{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center}
   .pill .n{font-family:"Anton";font-size:30px;line-height:1}
   .pill .k{font-family:"Barlow Condensed";font-weight:600;font-size:12px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-top:4px}
+  .rainbow{height:3px;background:linear-gradient(90deg,var(--A),var(--C),var(--red),var(--D),var(--B))}
+  .pills .pill:nth-child(1){border-top:3px solid var(--A)}
+  .pills .pill:nth-child(2){border-top:3px solid var(--C)}
+  .pills .pill:nth-child(3){border-top:3px solid var(--B)}
+  .pills .pill:nth-child(1) .n{color:var(--A)}
+  .pills .pill:nth-child(2) .n{color:var(--C)}
+  .pills .pill:nth-child(3) .n{color:var(--B)}
 
   /* tables / standings */
   table{width:100%;border-collapse:collapse}
@@ -127,6 +136,16 @@
   .pcard .no{position:absolute;top:9px;right:12px;font-family:"Anton";font-size:20px;color:#3a3f49}
   .pl{display:flex;align-items:center;gap:9px;font-weight:700;font-size:15px;padding:4px 0}
   .amp{color:var(--muted);font-family:"Anton";font-size:15px;padding-left:2px}
+  .sortcols{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+  @media(max-width:600px){.sortcols{grid-template-columns:repeat(2,1fr)}}
+  .sortcol{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px;border-top:3px solid var(--cc,#444)}
+  .co-A{--cc:var(--A)}.co-B{--cc:var(--B)}.co-C{--cc:var(--C)}.co-D{--cc:var(--D)}
+  .sortcol .sh{font-family:"Anton";font-size:15px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:baseline;color:var(--cc,#ccc)}
+  .sortcol .sh small{font-family:"Inter";font-weight:700;font-size:11px;color:var(--muted)}
+  .ptoggle{display:block;width:100%;text-align:center;background:var(--card2);border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:8px 6px;margin-bottom:6px;font-weight:700;font-size:13px;cursor:pointer;transition:.12s;font-family:inherit}
+  .ptoggle:last-child{margin-bottom:0}
+  .ptoggle.on{color:#0a0b0d;border-color:transparent}
+  .ptoggle.on.k-A{background:var(--A)}.ptoggle.on.k-B{background:var(--B);color:#fff}.ptoggle.on.k-C{background:var(--C)}.ptoggle.on.k-D{background:var(--D);color:#0a0b0d}
 
   .note{color:var(--muted);font-size:13px;line-height:1.55}
   .warn{color:#ffcf4d;font-weight:700}
@@ -162,6 +181,7 @@
     <div class="live"><span class="dot"></span>Domingos 8:30</div>
   </div>
 </div>
+<div class="rainbow"></div>
 <div class="ticker"><span class="run" id="ticker"></span></div>
 
 <div class="wrap" id="app"></div>
@@ -187,12 +207,13 @@ const SEED = {
     {n:"TIS",c:"B"},{n:"Tapiachu",c:"B"},{n:"MP",c:"B"},{n:"Alba",c:"B"},{n:"Ema",c:"B"},
     {n:"Calambre",c:"C"},{n:"Diegui",c:"C"},{n:"Toto",c:"C"},{n:"Rafa",c:"C"},{n:"Trucho",c:"C"},
     // otros habitués (sin copón fijo)
-    {n:"Mike",c:""},{n:"Taya",c:""},{n:"Alejo",c:""},{n:"Maren",c:""},{n:"Pati",c:""},{n:"Gato",c:""},
-    {n:"Fede",c:""},{n:"Pachu",c:""},{n:"Negro",c:""},{n:"Charly",c:""},{n:"Copito",c:""},{n:"Chuck",c:""},
-    {n:"Teo",c:""},{n:"Juanchi",c:""},{n:"Alec",c:""},{n:"Pjcha",c:""},{n:"Gasti",c:""},{n:"Longo",c:""},{n:"Little",c:""}
+    {n:"Mike",c:"C"},{n:"Taya",c:"C"},{n:"Alejo",c:"C"},{n:"Maren",c:"B"},{n:"Pati",c:"B"},{n:"Gato",c:"B"},
+    {n:"Fede",c:"B"},{n:"Pachu",c:"C"},{n:"Negro",c:"A"},{n:"Charly",c:"A"},{n:"Copito",c:"A"},{n:"Chuck",c:"A"},
+    {n:"Teo",c:"B"},{n:"Juanchi",c:"A"},{n:"Pjcha",c:"C"},{n:"Gasti",c:"B"},{n:"Longo",c:"B"},{n:"Chico",c:"A"},{n:"Mambo",c:"D"},{n:"Nico Mon",c:"D"}
   ],
   // fechas leídas del chat (parejas confirmadas; campeón sólo donde estaba explícito)
   fechas: [
+    {f:"2026-07-05", parejas:[["Pachu","Invitado"],["TIS","Chuck","Laqui"],["Alba","Juanchi"],["Mike","Calambre","Julian"],["Matso","Toto"],["Pati","Batata"]], campeon:null, pala:null},
     {f:"2026-06-28", parejas:[["Mike","Julian"],["Tapiachu","TIS"],["Matso","Chuck"],["Ema","Batata"]], campeon:null, pala:null},
     {f:"2026-06-21", parejas:[["Maren","Batata"],["Taya","Julian"],["Alba","Laqui"],["TIS","Ema"]], campeon:["Taya","Julian"], pala:null},
     {f:"2026-06-07", parejas:[["Julian","Toto"],["Matso","Mike"],["TIS","Maren"],["Negro","Ema"]], campeon:null, pala:null},
@@ -203,22 +224,22 @@ const SEED = {
     {f:"2026-04-26", parejas:[["Alejo","Alba"],["Ema","Pati"],["Trucho","Julian"],["Copito","Calambre"],["Matso","Chuck"],["Charly","Juanchi"]], campeon:["Copito","Calambre"], pala:null},
     {f:"2026-04-19", parejas:[["Charly","Alba"],["Invitado","Batata"],["Julian","Toto"],["Calambre","Pachu"],["Ema","Taya"],["MP","Mike"]], campeon:null, pala:null},
     {f:"2026-04-12", parejas:[["Julian","Batata"],["Charly","Pachu"],["TIS","Diegui"],["Negro","Calambre"]], campeon:null, pala:null},
-    {f:"2026-03-27", parejas:[["TIS","Longo"],["Calambre","Pachu"],["Fer Mon","Nico Mon"],["Gato","Mike"],["Copito","Trucho"],["Pati","Batata"],["Alec","Taya"],["Toto","Ema"]], campeon:null, pala:null},
+    {f:"2026-03-27", parejas:[["TIS","Longo"],["Calambre","Pachu"],["Negro","Nico Mon"],["Gato","Mike"],["Copito","Trucho"],["Pati","Batata"],["Alejo","Taya"],["Toto","Ema"]], campeon:null, pala:null},
     {f:"2026-03-21", parejas:[["Julian","Trucho"],["Tapiachu","Toto"],["Juanchi","Taya"],["Teo","Calambre"]], campeon:["Julian","Trucho"], pala:null},
     {f:"2026-03-14", parejas:[["Diegui","Calambre"],["Matso","Mike"],["Carli","Trucho"],["Laqui","TIS"],["Garzo","Toto"],["Julian","Alba"],["Ema","Pachu"],["MP","Batata"]], campeon:null, pala:null},
-    {f:"2026-02-27", parejas:[["Invitado","Pachu"],["Alejo","Garzo"],["Gato","Mike"],["Alba","Matso"],["Calambre","Julian"],["Herno","Diegui"],["Little","Pati"],["TIS","MP"]], campeon:null, pala:null},
-    {f:"2026-02-22", parejas:[["Batata","Tapiachu"],["Julian","Mike"],["Little","TIS"],["Alejo","Gato"],["Invitado","Garzo"],["Toto","Pati"]], campeon:null, pala:null},
-    {f:"2026-02-08", parejas:[["Little","Mike"],["Toto","Diegui"],["Alec","Pjcha"],["Alba","Julian"],["Taya","Calambre"]], campeon:null, pala:null},
+    {f:"2026-02-27", parejas:[["Invitado","Pachu"],["Alejo","Garzo"],["Gato","Mike"],["Alba","Matso"],["Calambre","Julian"],["Batata","Diegui"],["Chico","Pati"],["TIS","MP"]], campeon:null, pala:null},
+    {f:"2026-02-22", parejas:[["Batata","Tapiachu"],["Julian","Mike"],["Chico","TIS"],["Alejo","Gato"],["Invitado","Garzo"],["Toto","Pati"]], campeon:null, pala:null},
+    {f:"2026-02-08", parejas:[["Chico","Mike"],["Toto","Diegui"],["Alejo","Pjcha"],["Alba","Julian"],["Taya","Calambre"]], campeon:null, pala:null},
     {f:"2026-02-01", parejas:[["Alba","Invitado"],["Diegui","Calambre"],["Mike","Julian"],["TIS","Pati"]], campeon:["Diegui","Calambre"], pala:null},
     {f:"2026-01-25", parejas:[["Garzo","Gasti"],["Pati","Taya"],["Teo","Calambre"],["Tapiachu","TIS"]], campeon:null, pala:null},
     {f:"2026-01-18", parejas:[["TIS","Invitado"],["Gato","Taya"],["Diegui","Pati"],["Alba","Garzo"]], campeon:null, pala:null},
     {f:"2026-01-11", parejas:[["Maren","Toto"],["Gato","Garzo"],["TIS","Calambre"],["Tapiachu","Pati"]], campeon:null, pala:null},
-    {f:"2026-01-04", parejas:[["Maren","Alejo"],["Gato","Pachu"],["Matso","Alba"],["Cebolla","Fede"],["Pjcha","Toto"],["TIS","Invitado"],["Taya","Juanma"]], campeon:null, pala:null},
+    {f:"2026-01-04", parejas:[["Maren","Alejo"],["Gato","Pachu"],["Matso","Alba"],["Pati","Fede"],["Pjcha","Toto"],["TIS","Invitado"],["Taya","Juanma"]], campeon:null, pala:null},
     {f:"2025-12-28", parejas:[["Matso","Mambo"],["Gato","Toto"],["Chico","Pati"]], campeon:["Matso","Mambo"], pala:null},
     {f:"2025-12-21", parejas:[["Matso","Toto"],["Gato","Pachu"],["Julian","Alejo"],["Juampi","Alba"],["TIS","MP"],["Juanchi","Calambre"]], campeon:null, pala:null},
     {f:"2025-12-14", parejas:[["Alejo","Invitado"],["Carli","Toto"],["Maren","Calambre"],["Diegui","Pachu"],["Alba","Matso"],["Julian","TIS"],["Juanchi","Pati"],["Pjcha","MP"]], campeon:["Julian","TIS"], pala:null},
-    {f:"2025-12-07", parejas:[["Carli","Calambre"],["TIS","Little"],["Julian","Cañón"],["Pachu","Toto"],["Alba","Diegui"],["MP","Tapiachu"],["Pjcha","Alejo"]], campeon:null, pala:null},
-    {f:"2025-11-30", parejas:[["Matso","Teo"],["Tapiachu","Little"],["Alejo","Diegui"],["Taya","Julian"],["TIS","Guille"],["Merluza","Toto"],["Negro","Invitado"]], campeon:null, pala:null},
+    {f:"2025-12-07", parejas:[["Carli","Calambre"],["TIS","Chico"],["Julian","Juampi"],["Pachu","Toto"],["Alba","Diegui"],["MP","Tapiachu"],["Pjcha","Alejo"]], campeon:null, pala:null},
+    {f:"2025-11-30", parejas:[["Matso","Teo"],["Tapiachu","Chico"],["Alejo","Diegui"],["Taya","Julian"],["TIS","Guille"],["MP","Toto"],["Negro","Invitado"]], campeon:null, pala:null},
     {f:"2025-11-15", parejas:[["Alejo","Calambre"],["Pachu","Pjcha"],["TIS","Juanchi"],["Mike","Julian"]], campeon:null, pala:null}
   ]
 };
@@ -244,10 +265,9 @@ function statsInd(){
   const get=n=>m[n]||(m[n]={n,pj:0,camp:0,pala:0,comp:{}});
   DATA.fechas.forEach(f=>{
     const enFecha=new Set();
-    f.parejas.forEach(([a,b])=>{
-      enFecha.add(a);enFecha.add(b);
-      get(a).comp[b]=(get(a).comp[b]||0)+1;
-      get(b).comp[a]=(get(b).comp[a]||0)+1;
+    f.parejas.forEach(team=>{
+      team.forEach(n=>enFecha.add(n));
+      team.forEach(a=>team.forEach(b=>{ if(a!==b) get(a).comp[b]=(get(a).comp[b]||0)+1; }));
     });
     enFecha.forEach(n=>get(n).pj++);
     if(f.campeon){f.campeon.forEach(n=>get(n).camp++);}
@@ -258,10 +278,12 @@ function statsInd(){
 function statsPar(){
   const m={};
   DATA.fechas.forEach(f=>{
-    f.parejas.forEach(([a,b])=>{
+    f.parejas.forEach(team=>{
+      if(team.length!==2) return;
+      const [a,b]=team;
       const k=key(a,b); const o=m[k]||(m[k]={a,b,veces:0,camp:0});
       o.veces++;
-      if(f.campeon && key(f.campeon[0],f.campeon[1])===k) o.camp++;
+      if(f.campeon && f.campeon.length===2 && key(f.campeon[0],f.campeon[1])===k) o.camp++;
     });
   });
   return m;
@@ -457,8 +479,8 @@ function vPerfil(name){
     <section>
       <div class="sechead"><span class="bar"></span><h2>Historial</h2><span class="sub">${fechas.length} fechas</span></div>
       ${fechas.length?fechas.map(f=>{
-        const par=f.parejas.find(p=>p.includes(name));
-        const comp=par[0]===name?par[1]:par[0];
+        const team=f.parejas.find(p=>p.includes(name));
+        const comp=team.filter(x=>x!==name).join(" & ")||"—";
         const fueCamp=f.campeon&&f.campeon.includes(name);
         const fuePala=f.pala&&f.pala.includes(name);
         return `<div class="card pad" style="display:flex;align-items:center;gap:12px">
@@ -473,7 +495,7 @@ function vPerfil(name){
 /* ---------- SORTEO ---------- */
 function mulberry32(a){return function(){a|=0;a=(a+0x6D2B79F5)|0;let t=Math.imul(a^(a>>>15),1|a);t=(t+Math.imul(t^(t>>>7),61|t))^t;return((t^(t>>>14))>>>0)/4294967296;};}
 function shuffle(arr,rnd){const a=arr.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
-let SEL=new Set(DATA.jugadores.filter(j=>j.c).map(j=>j.n)); // preselección: los que tienen copón
+let SEL=new Set(); // el usuario marca quién vino hoy
 let LASTPAIRS=null;
 function vSorteo(){
   const js=DATA.jugadores.slice().sort((a,b)=>("ABCD".indexOf(a.c||"Z"))-("ABCD".indexOf(b.c||"Z"))||a.n.localeCompare(b.n));
@@ -490,17 +512,20 @@ function vSorteo(){
     </div>
 
     <div class="card pad" style="margin-top:12px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div class="tag">Presentes (<span id="selcount">${SEL.size}</span>)</div>
-        <div><button class="btn ghost sm" id="selAll">Todos</button> <button class="btn ghost sm" id="selNone">Ninguno</button></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div class="tag">Presentes hoy · <span id="selcount">${SEL.size}</span></div>
+        <div><button class="btn ghost sm" id="selAll">Todos</button> <button class="btn ghost sm" id="selNone">Limpiar</button></div>
       </div>
-      <div id="checklist">${js.map(j=>`
-        <label class="adline" style="cursor:pointer">
-          <input type="checkbox" data-sel="${esc(j.n)}" ${SEL.has(j.n)?"checked":""} style="width:auto">
-          <span class="an">${esc(j.n)}</span>
-          <span class="cchip ${COL[j.c]}">${j.c||"·"}</span>
-        </label>`).join("")}
+      <div class="sortcols">
+        ${["A","B","C","D"].map(c=>{
+          const arr=DATA.jugadores.filter(j=>j.c===c).map(j=>j.n).sort((a,b)=>a.localeCompare(b));
+          return `<div class="sortcol co-${c}">
+            <div class="sh">Copón ${c}<small id="cnt-${c}">0/${arr.length}</small></div>
+            ${arr.length?arr.map(n=>`<button class="ptoggle k-${c} ${SEL.has(n)?'on':''}" data-tog="${esc(n)}">${esc(n)}</button>`).join(""):'<div class="note" style="font-size:12px">—</div>'}
+          </div>`;
+        }).join("")}
       </div>
+      <div class="note" style="margin-top:8px;font-size:12px">Tocá los que vinieron hoy. Los copones se editan en Admin.</div>
     </div>
 
     <div id="drawMsg" class="note" style="margin-top:10px"></div>
@@ -606,7 +631,7 @@ function vAdmin(){
   </section>`;
 }
 function parsePairs(txt){
-  return txt.split("\n").map(l=>l.trim()).filter(Boolean).map(l=>l.split(",").map(s=>s.trim()).filter(Boolean)).filter(p=>p.length===2);
+  return txt.split("\n").map(l=>l.trim()).filter(Boolean).map(l=>l.split(",").map(s=>s.trim()).filter(Boolean)).filter(p=>p.length>=2);
 }
 function parseDuo(s){const p=(s||"").split(",").map(x=>x.trim()).filter(Boolean);return p.length===2?p:null;}
 
@@ -633,9 +658,11 @@ function bind(){
     if(!document.getElementById("seed").value)document.getElementById("seed").value=String(1000+Math.floor(Math.random()*8999));
     document.getElementById("btnSeed").onclick=()=>{document.getElementById("seed").value=String(1000+Math.floor(Math.random()*8999));};
     document.getElementById("btnDraw").onclick=draw;
-    document.querySelectorAll("[data-sel]").forEach(cb=>cb.onchange=()=>{cb.checked?SEL.add(cb.dataset.sel):SEL.delete(cb.dataset.sel);document.getElementById("selcount").textContent=SEL.size;});
-    document.getElementById("selAll").onclick=()=>{DATA.jugadores.forEach(j=>SEL.add(j.n));render();go("sorteo");};
-    document.getElementById("selNone").onclick=()=>{SEL.clear();render();go("sorteo");};
+    const updCounts=()=>{document.getElementById("selcount").textContent=SEL.size;["A","B","C","D"].forEach(c=>{const js=DATA.jugadores.filter(j=>j.c===c);const sel=js.filter(j=>SEL.has(j.n)).length;const el=document.getElementById("cnt-"+c);if(el)el.textContent=sel+"/"+js.length;});};
+    updCounts();
+    document.querySelectorAll("[data-tog]").forEach(b=>b.onclick=()=>{const n=b.dataset.tog;if(SEL.has(n)){SEL.delete(n);b.classList.remove("on");}else{SEL.add(n);b.classList.add("on");}updCounts();});
+    document.getElementById("selAll").onclick=()=>{DATA.jugadores.forEach(j=>{if(j.c)SEL.add(j.n);});route("sorteo");};
+    document.getElementById("selNone").onclick=()=>{SEL.clear();route("sorteo");};
   }
 
   if(VIEW==="admin"){
