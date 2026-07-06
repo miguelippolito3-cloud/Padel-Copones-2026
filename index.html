@@ -247,7 +247,7 @@ const SEED = {
   ],
   // fechas leídas del chat (parejas confirmadas; campeón sólo donde estaba explícito)
   fechas: [
-    {f:"2026-07-05", parejas:[["Tapiachu","Invitado"],["TIS","Chuck","Laqui"],["Alba","Juanchi"],["Rafa","Calambre","Track (Juli)"],["Matso","Toto"],["Pati","Bati"]], campeon:null, pala:null},
+    {f:"2026-07-05", parejas:[["Tapiachu","Invitado"],["TIS","Chuck","Laqui"],["Alba","Juanchi"],["Rafa","Calambre","Track (Juli)"],["Matso","Toto"],["Pati","Bati"]], campeon:["Matso","Toto"], pala:["Pati","Bati"], mvp:"Track (Juli)"},
     {f:"2026-06-28", parejas:[["Rafa","Track (Juli)"],["Tapiachu","TIS"],["Matso","Chuck"],["Ema","Bati"]], campeon:null, pala:null},
     {f:"2026-06-21", parejas:[["Maren","Bati"],["Taya","Track (Juli)"],["Alba","Laqui"],["TIS","Ema"]], campeon:["Taya","Track (Juli)"], pala:null},
     {f:"2026-06-07", parejas:[["Track (Juli)","Toto"],["Matso","Rafa"],["TIS","Maren"],["Negro Mon","Ema"]], campeon:null, pala:null},
@@ -298,7 +298,7 @@ function todosLosNombres(){
 }
 function statsInd(){
   const m={};
-  const get=n=>m[n]||(m[n]={n,pj:0,camp:0,pala:0,comp:{}});
+  const get=n=>m[n]||(m[n]={n,pj:0,camp:0,pala:0,mvp:0,comp:{}});
   DATA.fechas.forEach(f=>{
     const enFecha=new Set();
     f.parejas.forEach(team=>{
@@ -308,6 +308,7 @@ function statsInd(){
     enFecha.forEach(n=>get(n).pj++);
     if(f.campeon){f.campeon.forEach(n=>get(n).camp++);}
     if(f.pala){f.pala.forEach(n=>get(n).pala++);}
+    if(f.mvp){get(f.mvp).mvp++;}
   });
   return m;
 }
@@ -357,8 +358,10 @@ function renderTicker(){
   const topC=[...arr].sort((a,b)=>b.camp-a.camp)[0];
   const ult=DATA.fechas[0];
   let bits=[];
-  if(ult&&ult.campeon)bits.push(`<span class="rd">🏆 ÚLTIMO CAMPEÓN</span> ${esc(ult.campeon.join(" & "))}`);
-  if(topC&&topC.camp)bits.push(`<span class="rd">👑 MÁS TÍTULOS</span> <b>${esc(topC.n)}</b> (${topC.camp})`);
+  if(ult&&ult.campeon)bits.push(`<span class="rd">🚗 SE LLEVARON EL KIA</span> ${esc(ult.campeon.join(" & "))}`);
+  if(ult&&ult.mvp)bits.push(`<span class="rd">🎖️ MVP</span> <b>${esc(ult.mvp)}</b>`);
+  if(ult&&ult.pala)bits.push(`<span class="rd">🥄 CUCHARA</span> ${esc(ult.pala.join(" & "))}`);
+  if(topC&&topC.camp)bits.push(`<span class="rd">👑 MÁS KIAS</span> <b>${esc(topC.n)}</b> (${topC.camp})`);
   if(topJ)bits.push(`<span class="rd">🔥 MÁS PRESENTE</span> <b>${esc(topJ.n)}</b> (${topJ.pj} fechas)`);
   bits.push(`<b>${DATA.fechas.length}</b> fechas registradas`);
   bits.push(`<b>${todosLosNombres().length}</b> jugadores`);
@@ -376,8 +379,13 @@ function vInicio(){
   if(ult){
     if(ult.campeon){
       heroHTML=`<div class="hero">
-        <div style="display:flex;justify-content:space-between"><span class="lbl">Campeones · última fecha</span><span class="date">${fmtFecha(ult.f)}</span></div>
-        <div class="champ"><div class="cup">🏆</div><div class="names">${esc(ult.campeon[0])} & ${esc(ult.campeon[1])}<small>Copa del domingo</small></div></div>
+        <div style="display:flex;justify-content:space-between"><span class="lbl">Se llevaron el Kia 🚗</span><span class="date">${fmtFecha(ult.f)}</span></div>
+        <div class="champ"><div class="cup">🏆</div><div class="names">${esc(ult.campeon.join(" & "))}<small>Campeones del domingo</small></div></div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:12px">
+          ${ult.pala?`<div class="tag">🥄 Cuchara de madera: <b style="color:var(--txt)">${esc(ult.pala.join(" & "))}</b></div>`:""}
+          ${ult.mvp?`<div class="tag">🎖️ MVP: <b style="color:var(--gold)">${esc(ult.mvp)}</b></div>`:""}
+        </div>
+        <button class="btn block" id="waShare" style="margin-top:14px;background:#25D366;color:#0a0b0d">📲 Mandar resultados al grupo</button>
       </div>`;
     }else{
       heroHTML=`<div class="hero">
@@ -437,17 +445,18 @@ function vRanking(){
       <button data-t="par" class="${RKTAB==='par'?'on':''}">Parejas</button>
     </div>
     <div class="card" id="rktable">${RKTAB==='jug'?tablaJug():tablaPar()}</div>
-    <div class="note" style="margin-top:10px">PJ = fechas jugadas · 🏆 = campeonatos · 🥄 = palas de madera. Tocá un nombre para ver su perfil.</div>
+    <div class="note" style="margin-top:10px">PJ = fechas jugadas · 🚗 = Kias (campeonatos) · 🎖️ = MVP del día · 🥄 = cucharas de madera. Tocá un nombre para ver su perfil.</div>
   </section>`;
 }
 function tablaJug(){
   const arr=Object.values(statsInd()).sort((a,b)=>b.camp-a.camp||b.pj-a.pj);
   if(!arr.length)return `<div class="empty">Sin datos</div>`;
-  return `<table class="stand"><thead><tr><th>Jugador</th><th>PJ</th><th>🏆</th><th>🥄</th></tr></thead><tbody>
+  return `<table class="stand"><thead><tr><th>Jugador</th><th>PJ</th><th>🚗</th><th>🎖️</th><th>🥄</th></tr></thead><tbody>
     ${arr.map((p,i)=>`<tr>
       <td><span class="rk ${i<3?'g'+(i+1):''}">${i+1}</span><span class="pname" data-perfil="${esc(p.n)}">${chip(p.n)} ${esc(p.n)}</span></td>
       <td style="text-align:right"><span class="big">${p.pj}</span></td>
       <td style="text-align:right;color:var(--gold);font-weight:800">${p.camp||"·"}</td>
+      <td style="text-align:right;color:var(--A);font-weight:800">${p.mvp||"·"}</td>
       <td style="text-align:right;color:var(--spoon)">${p.pala||"·"}</td>
     </tr>`).join("")}
   </tbody></table>`;
@@ -515,10 +524,12 @@ function vPerfil(name){
       </div>
       <div class="pills" style="margin-top:14px">
         <div class="pill"><div class="n">${ind.pj}</div><div class="k">Fechas</div></div>
-        <div class="pill"><div class="n" style="color:var(--gold)">${ind.camp}</div><div class="k">🏆 Títulos</div></div>
-        <div class="pill"><div class="n" style="color:var(--spoon)">${ind.pala}</div><div class="k">🥄 Palas</div></div>
+        <div class="pill"><div class="n" style="color:var(--gold)">${ind.camp}</div><div class="k">🚗 Kias</div></div>
+        <div class="pill"><div class="n" style="color:var(--spoon)">${ind.pala}</div><div class="k">🥄 Cucharas</div></div>
       </div>
-      <div class="row"><span class="muted">Efectividad (títulos / fechas)</span><b class="big">${winPct}%</b></div>
+      <div class="row"><span class="muted">🎖️ MVP del día</span><b class="big" style="color:var(--gold)">${ind.mvp||0}</b></div>
+      <div class="row"><span class="muted">Efectividad (Kias / fechas)</span><b class="big">${winPct}%</b></div>
+      ${badgesHTML(ind)}
       ${comps.length?`<div class="row" style="display:block;border-bottom:0">
         <div class="tag" style="margin-bottom:8px">Compañeros más frecuentes</div>
         ${comps.map(([n,v])=>`<div class="row"><span class="pname" data-perfil="${esc(n)}">${chip(n)} ${esc(n)}</span><span class="muted">${v} ${v===1?'vez':'veces'}</span></div>`).join("")}
@@ -540,6 +551,25 @@ function vPerfil(name){
       }).join(""):`<div class="empty">Sin fechas registradas</div>`}
     </section>
   </section>`;
+}
+
+/* ---------- LOGROS ---------- */
+function badgesHTML(ind){
+  const b=[];
+  if(ind.camp>=1)b.push(["🚗","Se llevó el Kia"]);
+  if(ind.camp>=3)b.push(["🏎️","Concesionaria Kia (3+)"]);
+  if(ind.mvp>=1)b.push(["🎖️","MVP del día"]);
+  if(ind.pj>=5)b.push(["☕","Fana del cafecito (5+ fechas)"]);
+  if(ind.pj>=12)b.push(["🔥","No falta nunca (12+ fechas)"]);
+  if(ind.pala>=1)b.push(["🥄","Catador de Blindex"]);
+  if(ind.camp===0&&ind.pj>=8)b.push(["🧊","Bola fría (8+ fechas sin Kia)"]);
+  if(!b.length)return "";
+  return `<div class="row" style="display:block;border-bottom:0">
+    <div class="tag" style="margin-bottom:8px">Logros</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px">
+      ${b.map(([e,t])=>`<span style="background:var(--card2);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:700">${e} ${t}</span>`).join("")}
+    </div>
+  </div>`;
 }
 
 /* ---------- SORTEO ---------- */
@@ -637,9 +667,10 @@ function vAdmin(){
       <div class="field"><label>Fecha</label><input id="afecha" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
       <div class="field" style="margin-top:8px"><label>Parejas</label>
         <textarea id="apar" rows="6" style="background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:11px;font-family:inherit;font-size:14px" placeholder="Mike, Julian&#10;TIS, Batata&#10;Toto, Gato"></textarea></div>
-      <div style="display:flex;gap:8px;margin-top:8px">
-        <div class="field" style="flex:1"><label>Campeón (opcional)</label><input id="acamp" placeholder="Mike, Julian"></div>
-        <div class="field" style="flex:1"><label>Pala 🥄 (opcional)</label><input id="apala" placeholder="Toto, Gato"></div>
+      <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+        <div class="field" style="flex:1;min-width:140px"><label>🚗 Kia / Campeón</label><input id="acamp" placeholder="Matso, Toto"></div>
+        <div class="field" style="flex:1;min-width:140px"><label>🥄 Cuchara</label><input id="apala" placeholder="Pati, Bati"></div>
+        <div class="field" style="flex:1;min-width:140px"><label>🎖️ MVP</label><input id="amvp" placeholder="Track (Juli)"></div>
       </div>
       <button class="btn block" id="addFecha" style="margin-top:12px">Guardar fecha</button>
     </div>
@@ -690,6 +721,19 @@ function bind(){
   document.querySelectorAll("[data-go2]").forEach(b=>b.onclick=()=>go(b.dataset.go2));
   document.querySelectorAll("[data-perfil]").forEach(b=>b.onclick=()=>go("perfil",b.dataset.perfil));
 
+  if(VIEW==="inicio"){
+    const wa=document.getElementById("waShare");
+    if(wa)wa.onclick=()=>{
+      const f=DATA.fechas[0];
+      let txt=`🎾 *PÁDEL COPONES BV* · ${fmtFecha(f.f)}\n\n`;
+      if(f.campeon)txt+=`🚗🏆 *Se llevaron el Kia:* ${f.campeon.join(" & ")}\n`;
+      if(f.pala)txt+=`🥄 *Cuchara de madera:* ${f.pala.join(" & ")}\n`;
+      if(f.mvp)txt+=`🎖️ *MVP del día:* ${f.mvp}\n`;
+      txt+=`\n📊 Ranking completo:\nhttps://miguelippolito3-cloud.github.io/Padel-Copones-2026/`;
+      window.open("https://wa.me/?text="+encodeURIComponent(txt),"_blank");
+    };
+  }
+
   if(VIEW==="jugadores"){
     const ps=document.getElementById("psearch");
     if(ps)ps.oninput=()=>{PQ=ps.value;document.getElementById("app").innerHTML=vJugadores();bind();const el=document.getElementById("psearch");if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length);}};
@@ -725,7 +769,8 @@ function bind(){
       const f=document.getElementById("afecha").value;
       const pares=parsePairs(document.getElementById("apar").value);
       if(!f||!pares.length){toast("Falta fecha o parejas");return;}
-      DATA.fechas.unshift({f,parejas:pares,campeon:parseDuo(document.getElementById("acamp").value),pala:parseDuo(document.getElementById("apala").value)});
+      const mvpVal=document.getElementById("amvp").value.trim();
+      DATA.fechas.unshift({f,parejas:pares,campeon:parseDuo(document.getElementById("acamp").value),pala:parseDuo(document.getElementById("apala").value),mvp:mvpVal||null});
       DATA.fechas.sort((a,b)=>b.f.localeCompare(a.f));
       save();toast("Fecha agregada");render();
     };
@@ -733,9 +778,13 @@ function bind(){
     document.querySelectorAll("[data-editcamp]").forEach(b=>b.onclick=()=>{
       const i=+b.dataset.editcamp,f=DATA.fechas[i];
       const opciones=f.parejas.map((p,idx)=>`${idx+1}) ${p.join(" & ")}`).join("\n");
-      const r=prompt("¿Qué pareja fue campeona? Escribí el número:\n"+opciones+"\n(0 = sin campeón)");
+      const r=prompt("🚗 ¿Qué pareja se llevó el Kia? Escribí el número:\n"+opciones+"\n(0 = sin campeón)");
       if(r===null)return;const idx=parseInt(r)-1;
       f.campeon=(idx>=0&&idx<f.parejas.length)?f.parejas[idx]:null;
+      const rp=prompt("🥄 ¿Y la cuchara de madera? Número de pareja:\n"+opciones+"\n(0 = nadie)");
+      if(rp!==null){const ip=parseInt(rp)-1;f.pala=(ip>=0&&ip<f.parejas.length)?f.parejas[ip]:null;}
+      const rm=prompt("🎖️ ¿MVP del día? (nombre exacto, vacío = nadie)",f.mvp||"");
+      if(rm!==null)f.mvp=rm.trim()||null;
       save();toast("Actualizado");render();
     });
     document.querySelectorAll("[data-cop]").forEach(s=>s.onchange=()=>{DATA.jugadores[+s.dataset.cop].c=s.value;save();});
