@@ -148,16 +148,16 @@
   .pcard .no{position:absolute;top:9px;right:12px;font-family:"Anton";font-size:20px;color:#3a3f49}
   .pl{display:flex;align-items:center;gap:9px;font-weight:700;font-size:15px;padding:4px 0}
   .amp{color:var(--muted);font-family:"Anton";font-size:15px;padding-left:2px}
-  .sortcols{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
-  @media(max-width:600px){.sortcols{grid-template-columns:repeat(2,1fr)}}
+  .sortcols{display:grid;grid-template-columns:repeat(5,1fr);gap:9px}
+  @media(max-width:700px){.sortcols{grid-template-columns:repeat(2,1fr)}}
   .sortcol{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px;border-top:3px solid var(--cc,#444)}
-  .co-A{--cc:var(--A)}.co-B{--cc:var(--B)}.co-C{--cc:var(--C)}.co-D{--cc:var(--D)}
+  .co-A{--cc:var(--A)}.co-B{--cc:var(--B)}.co-C{--cc:var(--C)}.co-D{--cc:var(--D)}.co-S{--cc:#22c55e}
   .sortcol .sh{font-family:"Anton";font-size:15px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:baseline;color:var(--cc,#ccc)}
   .sortcol .sh small{font-family:"Inter";font-weight:700;font-size:11px;color:var(--muted)}
   .ptoggle{display:block;width:100%;text-align:center;background:var(--card2);border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:8px 6px;margin-bottom:6px;font-weight:700;font-size:13px;cursor:pointer;transition:.12s;font-family:inherit}
   .ptoggle:last-child{margin-bottom:0}
   .ptoggle.on{color:#0a0b0d;border-color:transparent}
-  .ptoggle.on.k-A{background:var(--A)}.ptoggle.on.k-B{background:var(--B);color:#fff}.ptoggle.on.k-C{background:var(--C)}.ptoggle.on.k-D{background:var(--D);color:#0a0b0d}
+  .ptoggle.on.k-A{background:var(--A)}.ptoggle.on.k-B{background:var(--B);color:#fff}.ptoggle.on.k-C{background:var(--C)}.ptoggle.on.k-D{background:var(--D);color:#0a0b0d}.ptoggle.on.k-S{background:#22c55e;color:#0a0b0d}
   .plcols{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
   @media(max-width:820px){.plcols{grid-template-columns:repeat(2,1fr)}}
   @media(max-width:460px){.plcols{grid-template-columns:1fr}}
@@ -195,6 +195,21 @@
   .hidden{display:none}
   .toast{position:fixed;left:50%;bottom:86px;transform:translateX(-50%);background:#000;border:1px solid var(--line);color:#fff;padding:10px 16px;border-radius:10px;font-weight:700;font-size:14px;z-index:80;opacity:0;transition:.25s;pointer-events:none}
   .toast.show{opacity:1}
+
+  /* ===== MODO CLARO ===== */
+  body.light{
+    --bg:#eef1f6; --bg2:#e3e7ee; --card:#ffffff; --card2:#e9edf3; --line:#d3d9e2;
+    --txt:#131720; --muted:#5c6573;
+  }
+  body.light .top{background:linear-gradient(180deg,#ffffff,#eef1f6);border-bottom-color:var(--line)}
+  body.light .ticker{background:#e3e7ee;border-bottom-color:var(--line)}
+  body.light .ticker .run b{color:#131720}
+  body.light .nav{background:rgba(255,255,255,.95);border-top-color:var(--line)}
+  body.light .hero{background:linear-gradient(135deg,#ffffff,#eef1f6 55%,#e6ebf4)}
+  body.light .toast{background:#131720;color:#fff;border-color:#131720}
+  body.light .rk{color:#5c6573}
+  body.light .pcard .no{color:#c3c9d4}
+  body.light .seg button.on{color:#fff}
 </style>
 </head>
 <body>
@@ -204,6 +219,7 @@
     <span class="brandmark">CB</span>
     <div class="brandtxt">COPONES<small>BUENA VISTA · PÁDEL</small></div>
     <div class="live"><span class="dot"></span>Domingos 8:30</div>
+    <button id="themeBtn" title="Modo claro/oscuro" style="background:var(--card2);border:1px solid var(--line);border-radius:999px;width:34px;height:34px;font-size:15px;cursor:pointer;flex:none">🌙</button>
     <button id="authBtn" class="hidden" style="background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:999px;padding:7px 13px;font-weight:800;font-size:12px;cursor:pointer;font-family:inherit;white-space:nowrap"></button>
   </div>
 </div>
@@ -243,10 +259,14 @@ const FIREBASE_CONFIG = {
 };
 const ADMINS = ["miguelippolito3@gmail.com","miguel.ippolito@grupomitre.com.ar"];
 const CLOUD = !JSON.stringify(FIREBASE_CONFIG).includes("PEGAR_ACA");
-let USER=null, ISADMIN=false, auth=null, dbRef=null;
+let USER=null, ISADMIN=false, auth=null, dbRef=null, CLOUDSTATE="conectando";
 
-/* ================= DATOS SEMILLA (editables desde Admin) ================= */
-const SEED = {
+/* ================= DATOS =================
+   Los datos VIVEN EN LA NUBE (Firestore). El index arranca vacío y se llena solo.
+   MIGRACION es una copia congelada de los datos oficiales: solo se usa una vez,
+   con el botón "Cargar datos oficiales" de Admin. NO editar datos acá. */
+const SEED = { jugadores: [], fechas: [] };
+const MIGRACION = {
   jugadores: [
     // COPÓN A · CRACKS
     {n:"Chico",c:"A",real:"Lucas Chico Chico · Boy Boy"},{n:"Don (Diegui)",c:"A",real:"Diego Martínez · Don Johnson"},
@@ -325,9 +345,13 @@ if(CLOUD){
   onAuthStateChanged(auth,u=>{USER=u;ISADMIN=!!(u&&ADMINS.includes(u.email));renderAuth();render();});
   onSnapshot(dbRef,snap=>{
     if(snap.exists()){
-      try{const d=JSON.parse(snap.data().json); if(d&&d.jugadores&&d.fechas){DATA=d; try{localStorage.setItem(LS,snap.data().json);}catch(e){} render();}}catch(e){}
+      CLOUDSTATE="ok";
+      try{const d=JSON.parse(snap.data().json); if(d&&d.jugadores&&d.fechas){DATA=d; try{localStorage.setItem(LS,snap.data().json);}catch(e){} }}catch(e){}
+    }else{
+      CLOUDSTATE="vacia";
     }
-  },err=>{ toast("⚠️ Sin conexión a la nube"); });
+    render();
+  },err=>{ CLOUDSTATE="error"; toast("⚠️ Sin conexión a la nube"); });
 }
 window.fbLogin=async()=>{ try{await signInWithPopup(auth,new GoogleAuthProvider());}catch(e){toast("No se pudo iniciar sesión");} };
 window.fbLogout=async()=>{ await signOut(auth); };
@@ -618,6 +642,37 @@ function vPerfil(name){
   </section>`;
 }
 
+/* ---------- SORPRESAS Y UNIR JUGADORES ---------- */
+function looseNames(){ // nombres que aparecen en fechas pero no están en el plantel
+  const roster=new Set(DATA.jugadores.map(j=>j.n));
+  const s=new Set((DATA.bolsa||[]).filter(n=>!roster.has(n)));
+  DATA.fechas.forEach(f=>{
+    f.parejas.forEach(t=>t.forEach(n=>{if(!roster.has(n))s.add(n);}));
+    if(f.mvp&&!roster.has(f.mvp))s.add(f.mvp);
+  });
+  return [...s].sort((a,b)=>a.localeCompare(b));
+}
+function allKnownNames(){
+  const s=new Set(DATA.jugadores.map(j=>j.n));
+  looseNames().forEach(n=>s.add(n));
+  return [...s].sort((a,b)=>a.localeCompare(b));
+}
+function fechasDe(n){return DATA.fechas.filter(f=>f.parejas.some(t=>t.includes(n))).length;}
+function mergePlayers(keep,dup){
+  if(!keep||!dup||keep===dup)return;
+  DATA.fechas.forEach(f=>{
+    f.parejas=f.parejas.map(t=>{const r=t.map(n=>n===dup?keep:n);return r.filter((n,i)=>r.indexOf(n)===i);});
+    if(f.campeon){f.campeon=f.campeon.map(n=>n===dup?keep:n).filter((n,i,a)=>a.indexOf(n)===i);}
+    if(f.pala){f.pala=f.pala.map(n=>n===dup?keep:n).filter((n,i,a)=>a.indexOf(n)===i);}
+    if(f.mvp===dup)f.mvp=keep;
+  });
+  const kI=DATA.jugadores.findIndex(j=>j.n===keep), dI=DATA.jugadores.findIndex(j=>j.n===dup);
+  if(dI>=0&&kI>=0)DATA.jugadores.splice(dI,1);
+  else if(dI>=0&&kI<0)DATA.jugadores[dI].n=keep;
+  if(DATA.bolsa)DATA.bolsa=DATA.bolsa.filter(n=>n!==dup);
+  save();
+}
+
 /* ---------- LOGROS ---------- */
 function badgesHTML(ind){
   const b=[];
@@ -669,8 +724,16 @@ function vSorteo(){
             ${arr.length?arr.map(n=>`<button class="ptoggle k-${c} ${SEL.has(n)?'on':''}" data-tog="${esc(n)}">${esc(n)}</button>`).join(""):'<div class="note" style="font-size:12px">—</div>'}
           </div>`;
         }).join("")}
+        <div class="sortcol co-S">
+          <div class="sh" style="color:#22c55e">🎁 Sorpresas<small id="cnt-S"></small></div>
+          ${looseNames().map(n=>`<button class="ptoggle k-S ${SEL.has(n)?'on':''}" data-tog="${esc(n)}">${esc(n)}</button>`).join("")||'<div class="note" style="font-size:12px;margin-bottom:6px">—</div>'}
+          <div style="display:flex;gap:5px;margin-top:6px">
+            <input id="newsorp" placeholder="Nuevo…" style="flex:1;min-width:0;padding:7px 8px;font-size:12px">
+            <button class="btn sm" id="addsorp" style="padding:7px 11px">+</button>
+          </div>
+        </div>
       </div>
-      <div class="note" style="margin-top:8px;font-size:12px">Tocá los que vinieron hoy. Los copones se editan en Admin.</div>
+      <div class="note" style="margin-top:8px;font-size:12px">Tocá los que vinieron hoy. Los copones se editan en Admin. Los <b style="color:#22c55e">sorpresa</b> entran al sorteo como copón B (después podés cambiarlos desde Admin).</div>
     </div>
 
     <div id="drawMsg" class="note" style="margin-top:10px"></div>
@@ -685,7 +748,7 @@ function draw(){
   const rnd=mulberry32(seed>>>0);
   let all=[...SEL].map(n=>({n,c:coponDe(n)}));
   if(all.length<2){msg.innerHTML='<span class="warn">Marcá al menos 2 jugadores.</span>';document.getElementById("pairsOut").innerHTML="";return;}
-  const rankC=c=>("ABCD".indexOf(c)>=0?"ABCD".indexOf(c):2.5); // sin copón = medio
+  const rankC=c=>("ABCD".indexOf(c)>=0?"ABCD".indexOf(c):1); // sorpresa / sin copón = nivel B
   all=all.map(p=>({...p,k:rnd()})).sort((a,b)=>rankC(a.c)-rankC(b.c)||a.k-b.k);
   let sup=null;
   if(all.length%2){sup=all.splice(Math.floor(all.length/2),1)[0];}
@@ -736,9 +799,10 @@ function vAdmin(){
   }
   const cloudCard = CLOUD
     ? `<div class="card pad" style="border-color:#2a6e3f;margin-bottom:12px">
-        <div class="tag" style="color:#4ade80;margin-bottom:6px">☁️ Nube conectada</div>
-        <div class="note">Ingresaste como <b>${esc(USER?USER.email:"")}</b> (admin 👑). Todo lo que guardes acá <b>lo ven todos al instante</b> — ya no hace falta re-subir el archivo a GitHub para actualizar datos.</div>
-        <button class="btn sm block" style="margin-top:10px" id="pushCloud">☁️ Subir todos los datos actuales a la nube</button>
+        <div class="tag" style="color:#4ade80;margin-bottom:6px">☁️ Nube conectada · ${CLOUDSTATE==="ok"?"✓ con datos":CLOUDSTATE==="vacia"?"⚠️ VACÍA":CLOUDSTATE==="error"?"⚠️ error":"…"}</div>
+        <div class="note">Ingresaste como <b>${esc(USER?USER.email:"")}</b> (admin 👑). Los datos viven en la base de datos: todo lo que guardes <b>lo ven todos al instante</b>, sin tocar GitHub.</div>
+        <button class="btn sm block" style="margin-top:10px" id="pushCloud">☁️ Subir los datos de este dispositivo a la nube</button>
+        <button class="btn ghost sm block" style="margin-top:8px" id="migrar">📦 Cargar datos oficiales (migración — usar una sola vez)</button>
       </div>`
     : `<div class="card pad" style="border-color:#6e5b2a;margin-bottom:12px">
         <div class="tag" style="color:#ffcf4d;margin-bottom:6px">📴 Modo local (sin nube)</div>
@@ -783,6 +847,26 @@ function vAdmin(){
         <input id="newj" placeholder="Nuevo jugador" style="flex:1">
         <button class="btn sm" id="addj">Agregar</button>
       </div>
+    </div>
+
+    <div class="card pad" style="margin-top:12px">
+      <div class="tag" style="margin-bottom:8px">🧬 Unir jugadores duplicados</div>
+      <div class="note" style="margin-bottom:10px">Si una misma persona quedó con dos nombres (ej: <b>Tapiachu</b> y <b>Pachu</b>), acá los juntás: todas las fechas, Kias, cucharas y MVP del duplicado pasan al que queda. Sirve también para los sorpresa.</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end">
+        <div class="field" style="flex:1;min-width:150px"><label>✅ Queda este</label><select id="mergeKeep"><option value="">Elegir…</option>${allKnownNames().map(n=>`<option>${esc(n)}</option>`).join("")}</select></div>
+        <div class="field" style="flex:1;min-width:150px"><label>🗑️ Se une (desaparece)</label><select id="mergeDup"><option value="">Elegir…</option>${allKnownNames().map(n=>`<option>${esc(n)}</option>`).join("")}</select></div>
+        <button class="btn sm" id="btnMerge">Unir</button>
+      </div>
+    </div>
+
+    <div class="card pad" style="margin-top:12px">
+      <div class="tag" style="margin-bottom:8px">🎁 Jugadores sorpresa detectados (${looseNames().length})</div>
+      <div class="note" style="margin-bottom:10px">Nombres que jugaron alguna fecha pero no están en el plantel. Elegí copón y dalos de alta — o unilos a un jugador existente con la herramienta de arriba. Ojo: <b>"Invitado"</b> es el comodín genérico, conviene dejarlo como está.</div>
+      ${looseNames().map(n=>`<div class="adline">
+        <span class="an">${esc(n)} <small style="color:var(--muted)">· ${fechasDe(n)} fecha${fechasDe(n)===1?"":"s"}</small></span>
+        <select data-altacop="${esc(n)}">${["A","B","C","D"].map(c=>`<option ${c==="B"?"selected":""}>${c}</option>`).join("")}</select>
+        <button data-alta="${esc(n)}" title="Dar de alta" style="color:#4ade80;font-size:14px;font-weight:800">⬆️ Alta</button>
+      </div>`).join("")||'<div class="empty" style="padding:10px">No hay sorpresas sueltos 🎉</div>'}
     </div>
 
     <div class="card pad" style="margin-top:12px">
@@ -844,17 +928,51 @@ function bind(){
     if(!document.getElementById("seed").value)document.getElementById("seed").value=String(1000+Math.floor(Math.random()*8999));
     document.getElementById("btnSeed").onclick=()=>{document.getElementById("seed").value=String(1000+Math.floor(Math.random()*8999));};
     document.getElementById("btnDraw").onclick=draw;
-    const updCounts=()=>{document.getElementById("selcount").textContent=SEL.size;["A","B","C","D"].forEach(c=>{const js=DATA.jugadores.filter(j=>j.c===c);const sel=js.filter(j=>SEL.has(j.n)).length;const el=document.getElementById("cnt-"+c);if(el)el.textContent=sel+"/"+js.length;});};
+    const updCounts=()=>{
+      document.getElementById("selcount").textContent=SEL.size;
+      ["A","B","C","D"].forEach(c=>{const js=DATA.jugadores.filter(j=>j.c===c);const sel=js.filter(j=>SEL.has(j.n)).length;const el=document.getElementById("cnt-"+c);if(el)el.textContent=sel+"/"+js.length;});
+      const loose=looseNames();const elS=document.getElementById("cnt-S");if(elS)elS.textContent=loose.filter(n=>SEL.has(n)).length+"/"+loose.length;
+    };
     updCounts();
     document.querySelectorAll("[data-tog]").forEach(b=>b.onclick=()=>{const n=b.dataset.tog;if(SEL.has(n)){SEL.delete(n);b.classList.remove("on");}else{SEL.add(n);b.classList.add("on");}updCounts();});
     document.getElementById("selAll").onclick=()=>{DATA.jugadores.forEach(j=>{if(j.c)SEL.add(j.n);});route("sorteo");};
     document.getElementById("selNone").onclick=()=>{SEL.clear();route("sorteo");};
+    const addSorp=()=>{
+      const inp=document.getElementById("newsorp");const v=inp.value.trim();if(!v)return;
+      if(allKnownNames().includes(v)){toast("Ese nombre ya existe");return;}
+      (DATA.bolsa||(DATA.bolsa=[])).push(v);SEL.add(v);save();route("sorteo");
+    };
+    document.getElementById("addsorp").onclick=addSorp;
+    document.getElementById("newsorp").addEventListener("keydown",e=>{if(e.key==="Enter")addSorp();});
   }
 
   if(VIEW==="admin"){
     if(CLOUD&&!ISADMIN)return; // vista bloqueada: no hay controles que atar
     const pc=document.getElementById("pushCloud");
     if(pc)pc.onclick=()=>save();
+    const mg=document.getElementById("migrar");
+    if(mg)mg.onclick=()=>{
+      if(!confirm("📦 Esto reemplaza TODO lo que hay en la nube por los datos oficiales (28 fechas, plantel con apodos).\n\nUsalo si la nube tiene datos viejos o incompletos. ¿Continuar?"))return;
+      DATA=JSON.parse(JSON.stringify(MIGRACION));
+      save();render();
+    };
+    const bm=document.getElementById("btnMerge");
+    if(bm)bm.onclick=()=>{
+      const keep=document.getElementById("mergeKeep").value, dup=document.getElementById("mergeDup").value;
+      if(!keep||!dup){toast("Elegí los dos nombres");return;}
+      if(keep===dup){toast("Son el mismo nombre");return;}
+      if(!confirm(`¿Unir "${dup}" dentro de "${keep}"?\n\nTodas las fechas, Kias, cucharas y MVP de "${dup}" pasan a "${keep}" y "${dup}" desaparece.\n\nEsto no se puede deshacer.`))return;
+      mergePlayers(keep,dup);toast(`${dup} → ${keep} ✓`);render();
+    };
+    document.querySelectorAll("[data-alta]").forEach(b=>b.onclick=()=>{
+      const n=b.dataset.alta;
+      const sel=document.querySelector(`select[data-altacop="${CSS.escape(n)}"]`);
+      const c=sel&&sel.value?sel.value:"";
+      if(!c&&!confirm(`No elegiste copón para ${n}. ¿Darlo de alta igual como invitado sin copón?`))return;
+      DATA.jugadores.push({n,c,real:"ex invitado sorpresa"});
+      if(DATA.bolsa)DATA.bolsa=DATA.bolsa.filter(x=>x!==n);
+      save();toast(n+" dado de alta ✓");render();
+    });
     document.getElementById("addFecha").onclick=()=>{
       const f=document.getElementById("afecha").value;
       const pares=parsePairs(document.getElementById("apar").value);
@@ -884,7 +1002,7 @@ function bind(){
     document.getElementById("copyData").onclick=async()=>{try{await navigator.clipboard.writeText(JSON.stringify(DATA,null,2));toast("Datos copiados");}catch(e){toast("No se pudo copiar");}};
     document.getElementById("impData").onclick=()=>document.getElementById("impFile").click();
     document.getElementById("impFile").onchange=e=>{const file=e.target.files[0];if(!file)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(d.jugadores&&d.fechas){DATA=d;save();toast("Datos importados");render();}else toast("Archivo inválido");}catch(err){toast("Archivo inválido");}};r.readAsText(file);};
-    document.getElementById("resetData").onclick=()=>{if(confirm("¿Restaurar los datos originales? Se pierden tus cambios locales.")){DATA=JSON.parse(JSON.stringify(SEED));save();render();}};
+    document.getElementById("resetData").onclick=()=>{if(confirm("¿Restaurar los datos oficiales (migración)? Reemplaza lo que hay ahora.")){DATA=JSON.parse(JSON.stringify(MIGRACION));save();render();}};
   }
 }
 
@@ -893,6 +1011,11 @@ function bind(){
   const h=location.hash.slice(1);
   if(h){const [v,p]=h.split("=");VIEW=v||"inicio";PARAM=p?decodeURIComponent(p):null;}
   document.querySelectorAll("#nav a").forEach(a=>a.classList.toggle("on",a.dataset.go===VIEW));
+  // tema claro/oscuro
+  const applyTheme=t=>{document.body.classList.toggle("light",t==="light");document.getElementById("themeBtn").textContent=t==="light"?"☀️":"🌙";};
+  let theme=localStorage.getItem("cb_theme")||"dark";
+  applyTheme(theme);
+  document.getElementById("themeBtn").onclick=()=>{theme=theme==="light"?"dark":"light";localStorage.setItem("cb_theme",theme);applyTheme(theme);};
   renderAuth();
   render();
 })();
