@@ -204,6 +204,7 @@
     <span class="brandmark">CB</span>
     <div class="brandtxt">COPONES<small>BUENA VISTA · PÁDEL</small></div>
     <div class="live"><span class="dot"></span>Domingos 8:30</div>
+    <button id="authBtn" class="hidden" style="background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:999px;padding:7px 13px;font-weight:800;font-size:12px;cursor:pointer;font-family:inherit;white-space:nowrap"></button>
   </div>
 </div>
 <div class="rainbow"></div>
@@ -221,8 +222,28 @@
 
 <div class="toast" id="toast"></div>
 
-<script>
+<script type="module">
 "use strict";
+
+/* ================= NUBE (Firebase: base de datos + login Google) =================
+   Estas claves NO son secretas: se pueden publicar tranquilas.
+   La seguridad la dan las "reglas" de Firestore (solo el admin puede escribir). */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBWLltxhNx-3XT0u9-KqKb5hYV2k4jZueY",
+  authDomain: "padel-copones.firebaseapp.com",
+  projectId: "padel-copones",
+  storageBucket: "padel-copones.firebasestorage.app",
+  messagingSenderId: "858471482492",
+  appId: "1:858471482492:web:427948fb684884685875f9",
+  measurementId: "G-REDE998S2L"
+};
+const ADMINS = ["miguelippolito3@gmail.com","miguel.ippolito@grupomitre.com.ar"];
+const CLOUD = !JSON.stringify(FIREBASE_CONFIG).includes("PEGAR_ACA");
+let USER=null, ISADMIN=false, auth=null, dbRef=null;
 
 /* ================= DATOS SEMILLA (editables desde Admin) ================= */
 const SEED = {
@@ -247,6 +268,7 @@ const SEED = {
   ],
   // fechas leídas del chat (parejas confirmadas; campeón sólo donde estaba explícito)
   fechas: [
+    {f:"2026-07-12", parejas:[["Track (Juli)","Rafa"],["Bati","Pati"],["Matso","Toto"],["TIS","Juanchi"],["Chuck","Alba"],["Tapiachu","Chichón"]], campeon:null, pala:null, mvp:null},
     {f:"2026-07-05", parejas:[["Tapiachu","Invitado"],["TIS","Chuck","Laqui"],["Alba","Juanchi"],["Rafa","Calambre","Track (Juli)"],["Matso","Toto"],["Pati","Bati"]], campeon:["Matso","Toto"], pala:["Pati","Bati"], mvp:"Track (Juli)"},
     {f:"2026-06-28", parejas:[["Rafa","Track (Juli)"],["Tapiachu","TIS"],["Matso","Chuck"],["Ema","Bati"]], campeon:null, pala:null},
     {f:"2026-06-21", parejas:[["Maren","Bati"],["Taya","Track (Juli)"],["Alba","Laqui"],["TIS","Ema"]], campeon:["Taya","Track (Juli)"], pala:null},
@@ -282,7 +304,45 @@ const SEED = {
 const LS="padel_espn_v1";
 let DATA=load();
 function load(){ try{const s=JSON.parse(localStorage.getItem(LS)); if(s&&s.jugadores&&s.fechas) return s;}catch(e){} return JSON.parse(JSON.stringify(SEED)); }
-function save(){ try{localStorage.setItem(LS,JSON.stringify(DATA));}catch(e){} }
+function save(){
+  try{localStorage.setItem(LS,JSON.stringify(DATA));}catch(e){}
+  if(CLOUD){
+    if(ISADMIN){
+      setDoc(dbRef,{json:JSON.stringify(DATA),updated:Date.now(),by:USER.email})
+        .then(()=>toast("Guardado en la nube ☁️"))
+        .catch(()=>toast("⚠️ Error al guardar en la nube"));
+    }else{
+      toast(USER?"Solo el admin puede guardar cambios":"Ingresá con Google (solo admin edita)");
+    }
+  }
+}
+
+/* ---- Conexión a la nube ---- */
+if(CLOUD){
+  const fbApp=initializeApp(FIREBASE_CONFIG);
+  auth=getAuth(fbApp);
+  dbRef=doc(getFirestore(fbApp),"app","data");
+  onAuthStateChanged(auth,u=>{USER=u;ISADMIN=!!(u&&ADMINS.includes(u.email));renderAuth();render();});
+  onSnapshot(dbRef,snap=>{
+    if(snap.exists()){
+      try{const d=JSON.parse(snap.data().json); if(d&&d.jugadores&&d.fechas){DATA=d; try{localStorage.setItem(LS,snap.data().json);}catch(e){} render();}}catch(e){}
+    }
+  },err=>{ toast("⚠️ Sin conexión a la nube"); });
+}
+window.fbLogin=async()=>{ try{await signInWithPopup(auth,new GoogleAuthProvider());}catch(e){toast("No se pudo iniciar sesión");} };
+window.fbLogout=async()=>{ await signOut(auth); };
+function renderAuth(){
+  const b=document.getElementById("authBtn");
+  if(!CLOUD){b.classList.add("hidden");return;}
+  b.classList.remove("hidden");
+  if(USER){
+    b.textContent=(ISADMIN?"👑 ":"👤 ")+((USER.displayName||USER.email).split(" ")[0]);
+    b.onclick=()=>{ if(confirm("¿Cerrar sesión de "+USER.email+"?")) window.fbLogout(); };
+  }else{
+    b.textContent="🔑 Ingresar";
+    b.onclick=()=>window.fbLogin();
+  }
+}
 const COL={A:"chA",B:"chB",C:"chC",D:"chD","":"ch0"};
 const COLtx={A:"cA",B:"cB",C:"cC",D:"cD","":""};
 const COPTIT={A:"Cracks",B:"Buenos",C:"Promedio",D:"Valientes"};
@@ -356,7 +416,7 @@ function renderTicker(){
   const arr=Object.values(ind);
   const topJ=[...arr].sort((a,b)=>b.pj-a.pj)[0];
   const topC=[...arr].sort((a,b)=>b.camp-a.camp)[0];
-  const ult=DATA.fechas[0];
+  const ult=DATA.fechas.find(f=>f.campeon)||DATA.fechas[0];
   let bits=[];
   if(ult&&ult.campeon)bits.push(`<span class="rd">🚗 SE LLEVARON EL KIA</span> ${esc(ult.campeon.join(" & "))}`);
   if(ult&&ult.mvp)bits.push(`<span class="rd">🎖️ MVP</span> <b>${esc(ult.mvp)}</b>`);
@@ -372,7 +432,8 @@ function renderTicker(){
 /* ---------- INICIO ---------- */
 function vInicio(){
   const ind=statsInd(), arr=Object.values(ind);
-  const ult=DATA.fechas[0];
+  const prox=(DATA.fechas[0]&&!DATA.fechas[0].campeon)?DATA.fechas[0]:null;
+  const ult=DATA.fechas.find(f=>f.campeon)||DATA.fechas[0];
   const topJ=[...arr].sort((a,b)=>b.pj-a.pj).slice(0,5);
   const topC=[...arr].sort((a,b)=>b.camp-a.camp||b.pj-a.pj).slice(0,5);
   let heroHTML="";
@@ -398,6 +459,10 @@ function vInicio(){
   const totalCamp=DATA.fechas.filter(f=>f.campeon).length;
   return `
   <section>
+    ${prox?`<div class="card pad" style="margin-bottom:12px">
+      <div class="tag" style="margin-bottom:8px;color:var(--A)">🎾 PRÓXIMA FECHA · ${fmtFecha(prox.f)}</div>
+      ${prox.parejas.map((p,i)=>`<div class="row" style="padding:7px 0"><span><b>${i+1})</b> ${esc(p.join(" & "))}</span></div>`).join("")}
+    </div>`:""}
     ${heroHTML}
     <div class="pills" style="margin-top:12px">
       <div class="pill"><div class="n">${totalFechas}</div><div class="k">Fechas</div></div>
@@ -658,8 +723,30 @@ function draw(){
 
 /* ---------- ADMIN ---------- */
 function vAdmin(){
+  if(CLOUD&&!ISADMIN){
+    return `<section>
+      <div class="sechead"><span class="bar"></span><h2>Admin</h2><span class="sub">Acceso restringido</span></div>
+      <div class="card pad" style="text-align:center">
+        <div style="font-size:44px;margin-bottom:8px">🔒</div>
+        <div class="big" style="margin-bottom:6px">Zona del organizador</div>
+        <div class="note" style="margin-bottom:14px">${USER?`Estás logueado como <b>${esc(USER.email)}</b>, pero solo la cuenta admin puede cargar resultados y editar el plantel.`:`Ingresá con Google. Solo la cuenta admin puede editar — el resto puede ver rankings y perfiles.`}</div>
+        ${USER?`<button class="btn ghost" onclick="fbLogout()">Cerrar sesión</button>`:`<button class="btn" onclick="fbLogin()">🔑 Ingresar con Google</button>`}
+      </div>
+    </section>`;
+  }
+  const cloudCard = CLOUD
+    ? `<div class="card pad" style="border-color:#2a6e3f;margin-bottom:12px">
+        <div class="tag" style="color:#4ade80;margin-bottom:6px">☁️ Nube conectada</div>
+        <div class="note">Ingresaste como <b>${esc(USER?USER.email:"")}</b> (admin 👑). Todo lo que guardes acá <b>lo ven todos al instante</b> — ya no hace falta re-subir el archivo a GitHub para actualizar datos.</div>
+        <button class="btn sm block" style="margin-top:10px" id="pushCloud">☁️ Subir todos los datos actuales a la nube</button>
+      </div>`
+    : `<div class="card pad" style="border-color:#6e5b2a;margin-bottom:12px">
+        <div class="tag" style="color:#ffcf4d;margin-bottom:6px">📴 Modo local (sin nube)</div>
+        <div class="note">Los cambios se guardan solo en este dispositivo. Para activar la base de datos compartida y el login con Google, hay que configurar Firebase (pedile las instrucciones a Claude).</div>
+      </div>`;
   return `<section>
     <div class="sechead"><span class="bar"></span><h2>Admin</h2><span class="sub">Cargar resultados</span></div>
+    ${cloudCard}
 
     <div class="card pad">
       <div class="tag" style="margin-bottom:8px">➕ Cargar fecha manual</div>
@@ -724,7 +811,7 @@ function bind(){
   if(VIEW==="inicio"){
     const wa=document.getElementById("waShare");
     if(wa)wa.onclick=()=>{
-      const f=DATA.fechas[0];
+      const f=DATA.fechas.find(x=>x.campeon)||DATA.fechas[0];
       let txt=`🎾 *PÁDEL COPONES BV* · ${fmtFecha(f.f)}\n\n`;
       if(f.campeon)txt+=`🚗🏆 *Se llevaron el Kia:* ${f.campeon.join(" & ")}\n`;
       if(f.pala)txt+=`🥄 *Cuchara de madera:* ${f.pala.join(" & ")}\n`;
@@ -765,6 +852,9 @@ function bind(){
   }
 
   if(VIEW==="admin"){
+    if(CLOUD&&!ISADMIN)return; // vista bloqueada: no hay controles que atar
+    const pc=document.getElementById("pushCloud");
+    if(pc)pc.onclick=()=>save();
     document.getElementById("addFecha").onclick=()=>{
       const f=document.getElementById("afecha").value;
       const pares=parsePairs(document.getElementById("apar").value);
@@ -803,6 +893,7 @@ function bind(){
   const h=location.hash.slice(1);
   if(h){const [v,p]=h.split("=");VIEW=v||"inicio";PARAM=p?decodeURIComponent(p):null;}
   document.querySelectorAll("#nav a").forEach(a=>a.classList.toggle("on",a.dataset.go===VIEW));
+  renderAuth();
   render();
 })();
 </script>
