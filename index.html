@@ -9,6 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Copones BV" />
 <link rel="manifest" href='data:application/manifest+json,{"name":"Copones Buena Vista","short_name":"Copones BV","start_url":".","display":"standalone","background_color":"%230a0a0a","theme_color":"%230a0a0a","icons":[{"src":"data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 192 192%22%3E%3Crect width=%22192%22 height=%22192%22 fill=%22%23d50a0a%22/%3E%3Ctext x=%2296%22 y=%22130%22 font-size=%22110%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22bold%22%3ECB%3C/text%3E%3C/svg%3E","sizes":"192x192","type":"image/svg+xml"}]}' />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🎾%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -203,6 +204,10 @@
   .ptoggle{padding:10px 6px;min-height:40px}
   .ptoggle:active,.jcard:active{transform:scale(.96)}
   #rktable{overflow-x:auto}
+  @keyframes pop{0%{opacity:0;transform:translateY(12px) scale(.94)}100%{opacity:1;transform:none}}
+  .pcard{animation:pop .45s ease both}
+  @keyframes navpop{0%{transform:scale(1)}50%{transform:scale(1.25)}100%{transform:scale(1)}}
+  .nav a.on .ic{animation:navpop .3s ease}
   @media(max-width:560px){
     .topin{gap:8px;padding:8px 10px}
     .brandtxt{font-size:16px}
@@ -264,7 +269,7 @@
    La seguridad la dan las "reglas" de Firestore (solo el admin puede escribir). */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyBWLltxhNx-3XT0u9-KqKb5hYV2k4jZueY",
@@ -277,7 +282,9 @@ const FIREBASE_CONFIG = {
 };
 const ADMINS = ["miguelippolito3@gmail.com","miguel.ippolito@grupomitre.com.ar"];
 const CLOUD = !JSON.stringify(FIREBASE_CONFIG).includes("PEGAR_ACA");
-let USER=null, ISADMIN=false, auth=null, dbRef=null, CLOUDSTATE="conectando";
+let USER=null, ISADMIN=false, auth=null, db=null, dbRef=null, CLOUDSTATE="conectando";
+let MYPLAYER=null; try{MYPLAYER=localStorage.getItem("cb_myplayer")||null;}catch(e){}
+let PROPUESTAS=[], propSub=false;
 
 /* ================= DATOS =================
    Los datos VIVEN EN LA NUBE (Firestore). El index arranca vacío
@@ -305,8 +312,18 @@ function save(){
 if(CLOUD){
   const fbApp=initializeApp(FIREBASE_CONFIG);
   auth=getAuth(fbApp);
-  dbRef=doc(getFirestore(fbApp),"app","data");
-  onAuthStateChanged(auth,u=>{USER=u;ISADMIN=!!(u&&ADMINS.includes(u.email));renderAuth();render();});
+  db=getFirestore(fbApp);
+  dbRef=doc(db,"app","data");
+  onAuthStateChanged(auth,u=>{
+    USER=u;ISADMIN=!!(u&&ADMINS.includes(u.email));
+    if(u){
+      // ⭐ Este soy yo: recupera el jugador vinculado a esta cuenta
+      getDoc(doc(db,"usuarios",u.uid)).then(s=>{ if(s.exists()&&s.data().jugador){MYPLAYER=s.data().jugador;try{localStorage.setItem("cb_myplayer",MYPLAYER);}catch(e){}render();} }).catch(()=>{});
+      // 📝 Carga colaborativa: el admin escucha las propuestas en vivo
+      if(ISADMIN&&!propSub){propSub=true;onSnapshot(collection(db,"propuestas"),qs=>{PROPUESTAS=qs.docs.map(x=>({id:x.id,...x.data()}));if(VIEW==="admin")render();});}
+    }
+    renderAuth();render();
+  });
   getRedirectResult(auth).catch(()=>{}); // cierra el ciclo del login por redirección (celulares)
   onSnapshot(dbRef,snap=>{
     if(snap.exists()){
@@ -352,10 +369,13 @@ function todosLosNombres(){
   DATA.fechas.forEach(f=>f.parejas.forEach(p=>p.forEach(n=>s.add(n))));
   return [...s];
 }
-function statsInd(){
+function allFechas(){ return [...DATA.fechas, ...((DATA.historial||[]).flatMap(t=>t.fechas||[]))].sort((a,b)=>b.f.localeCompare(a.f)); }
+function eachFechaArr(d){ return [d.fechas||[], ...(((d&&d.historial)||[]).map(t=>t.fechas||[]))]; }
+function statsInd(list){
+  list=list||DATA.fechas;
   const m={};
   const get=n=>m[n]||(m[n]={n,pj:0,camp:0,pala:0,mvp:0,comp:{}});
-  DATA.fechas.forEach(f=>{
+  list.forEach(f=>{
     const enFecha=new Set();
     f.parejas.forEach(team=>{
       team.forEach(n=>enFecha.add(n));
@@ -368,9 +388,10 @@ function statsInd(){
   });
   return m;
 }
-function statsPar(){
+function statsPar(list){
+  list=list||DATA.fechas;
   const m={};
-  DATA.fechas.forEach(f=>{
+  list.forEach(f=>{
     f.parejas.forEach(team=>{
       if(team.length!==2) return;
       const [a,b]=team;
@@ -432,6 +453,7 @@ function vInicio(){
   const ult=DATA.fechas.find(f=>f.campeon)||DATA.fechas[0];
   const topJ=[...arr].sort((a,b)=>b.pj-a.pj).slice(0,5);
   const topC=[...arr].sort((a,b)=>b.camp-a.camp||b.pj-a.pj).slice(0,5);
+  const topM=[...arr].filter(x=>x.mvp).sort((a,b)=>b.mvp-a.mvp||b.pj-a.pj).slice(0,5);
   let heroHTML="";
   if(ult){
     if(ult.campeon){
@@ -456,9 +478,11 @@ function vInicio(){
   return `
   <section>
     ${CLOUD&&CLOUDSTATE==="conectando"&&!DATA.fechas.length?`<div class="card pad" style="text-align:center;margin-bottom:12px"><div style="font-size:30px">☁️</div><div class="note">Cargando datos de la nube…</div></div>`:""}
+    ${MYPLAYER?`<button class="btn ghost block" data-perfil="${esc(MYPLAYER)}" style="margin-bottom:12px;justify-content:space-between"><span>⭐ Mi perfil · <b>${esc(MYPLAYER)}</b></span><span>→</span></button>`:""}
     ${prox?`<div class="card pad" style="margin-bottom:12px">
       <div class="tag" style="margin-bottom:8px;color:var(--A)">🎾 PRÓXIMA FECHA · ${fmtFecha(prox.f)}</div>
       ${prox.parejas.map((p,i)=>`<div class="row" style="padding:7px 0"><span><b>${i+1})</b> ${esc(p.join(" & "))}</span></div>`).join("")}
+      ${CLOUD?`<button class="btn block" id="propBtn" style="margin-top:10px;background:var(--card2);border:1px solid var(--line);color:var(--txt)">📝 Proponer resultado (lo aprueba el organizador)</button>`:""}
     </div>`:""}
     ${heroHTML}
     <div class="pills" style="margin-top:12px">
@@ -478,6 +502,10 @@ function vInicio(){
       <div class="tag" style="margin-bottom:6px">🔥 Más presentes</div>
       ${miniRank(topJ,"pj")}
     </div>
+    ${topM.length?`<div class="card pad">
+      <div class="tag" style="margin-bottom:6px">🎖️ MVPs de la temporada</div>
+      ${miniRank(topM,"mvp")}
+    </div>`:""}
     <button class="btn ghost block" style="margin-top:12px" data-go2="ranking">Ver ranking completo →</button>
   </section>
 
@@ -498,10 +526,21 @@ function miniRank(list,field){
 function chip(n){const c=coponDe(n);return `<span class="cchip ${COL[c]}">${c||"·"}</span>`;}
 
 /* ---------- RANKING ---------- */
-let RKTAB="jug";
+let RKTAB="jug", RKSEASON="actual";
+function seasonFechas(){
+  if(RKSEASON==="todas")return allFechas();
+  if(RKSEASON.startsWith("h")){const t=(DATA.historial||[])[+RKSEASON.slice(1)];return t?t.fechas:DATA.fechas;}
+  return DATA.fechas;
+}
 function vRanking(){
+  const hist=DATA.historial||[];
   return `<section>
-    <div class="sechead"><span class="bar"></span><h2>Ranking</h2><span class="sub">Toda la temporada</span></div>
+    <div class="sechead"><span class="bar"></span><h2>Ranking</h2><span class="sub">${RKSEASON==="actual"?"Temporada en curso":RKSEASON==="todas"?"Histórico total":esc((hist[+RKSEASON.slice(1)]||{}).nombre||"")}</span></div>
+    ${hist.length?`<select id="rkseason" style="width:100%;margin-bottom:10px">
+      <option value="actual" ${RKSEASON==="actual"?"selected":""}>🎾 Temporada en curso</option>
+      ${hist.map((t,i)=>`<option value="h${i}" ${RKSEASON==="h"+i?"selected":""}>🏁 ${esc(t.nombre)}</option>`).join("")}
+      <option value="todas" ${RKSEASON==="todas"?"selected":""}>📚 Histórico total</option>
+    </select>`:""}
     <div class="seg" id="rkseg">
       <button data-t="jug" class="${RKTAB==='jug'?'on':''}">Jugadores</button>
       <button data-t="par" class="${RKTAB==='par'?'on':''}">Parejas</button>
@@ -511,7 +550,7 @@ function vRanking(){
   </section>`;
 }
 function tablaJug(){
-  const arr=Object.values(statsInd()).sort((a,b)=>b.camp-a.camp||b.pj-a.pj);
+  const arr=Object.values(statsInd(seasonFechas())).sort((a,b)=>b.camp-a.camp||b.pj-a.pj);
   if(!arr.length)return `<div class="empty">Sin datos</div>`;
   return `<table class="stand"><thead><tr><th>Jugador</th><th>PJ</th><th>🚗</th><th>🎖️</th><th>🥄</th></tr></thead><tbody>
     ${arr.map((p,i)=>`<tr>
@@ -524,7 +563,7 @@ function tablaJug(){
   </tbody></table>`;
 }
 function tablaPar(){
-  const arr=Object.values(statsPar()).sort((a,b)=>b.camp-a.camp||b.veces-a.veces);
+  const arr=Object.values(statsPar(seasonFechas())).sort((a,b)=>b.camp-a.camp||b.veces-a.veces);
   if(!arr.length)return `<div class="empty">Sin datos</div>`;
   return `<table class="stand"><thead><tr><th>Pareja</th><th>Veces</th><th>🏆</th></tr></thead><tbody>
     ${arr.slice(0,40).map((p,i)=>`<tr>
@@ -538,7 +577,7 @@ function tablaPar(){
 /* ---------- JUGADORES (grid) ---------- */
 let PQ="";
 function vJugadores(){
-  const ind=statsInd();
+  const ind=statsInd(allFechas());
   const q=PQ.trim().toLowerCase();
   const match=(n,real)=>!q||n.toLowerCase().includes(q)||(real||"").toLowerCase().includes(q);
   const roster=new Set(DATA.jugadores.map(j=>j.n));
@@ -572,11 +611,12 @@ function copName(c){return c?("Copón "+c):"Invitado/otro";}
 /* ---------- PERFIL ---------- */
 function vPerfil(name){
   if(!name)return vJugadores();
-  const ind=statsInd()[name]||{n:name,pj:0,camp:0,pala:0,comp:{}};
+  const ind=statsInd(allFechas())[name]||{n:name,pj:0,camp:0,pala:0,mvp:0,comp:{}};
   const col=avatarColor(name), c=coponDe(name);
   const comps=Object.entries(ind.comp||{}).sort((a,b)=>b[1]-a[1]).slice(0,3);
-  const fechas=DATA.fechas.filter(f=>f.parejas.some(p=>p.includes(name)));
+  const fechas=allFechas().filter(f=>f.parejas.some(p=>p.includes(name)));
   const winPct=ind.pj?Math.round(ind.camp/ind.pj*100):0;
+  let racha=0; for(const f of DATA.fechas){ if(f.parejas.some(t=>t.includes(name)))racha++; else break; }
   return `<section>
     <button class="btn ghost sm" data-go2="jugadores" style="margin-bottom:14px">← Perfiles</button>
     <div class="card pad">
@@ -590,6 +630,7 @@ function vPerfil(name){
         <div class="pill"><div class="n" style="color:var(--spoon)">${ind.pala}</div><div class="k">🥄 Cucharas</div></div>
       </div>
       <div class="row"><span class="muted">🎖️ MVP del día</span><b class="big" style="color:var(--gold)">${ind.mvp||0}</b></div>
+      ${racha>=2?`<div class="row"><span class="muted">🔥 Racha de asistencia</span><b class="big" style="color:#fb923c">${racha} seguidas</b></div>`:""}
       <div class="row"><span class="muted">Efectividad (Kias / fechas)</span><b class="big">${winPct}%</b></div>
       ${badgesHTML(ind)}
       ${comps.length?`<div class="row" style="display:block;border-bottom:0">
@@ -597,6 +638,9 @@ function vPerfil(name){
         ${comps.map(([n,v])=>`<div class="row"><span class="pname" data-perfil="${esc(n)}">${chip(n)} ${esc(n)}</span><span class="muted">${v} ${v===1?'vez':'veces'}</span></div>`).join("")}
       </div>`:""}
       <button class="btn block" id="share" style="margin-top:14px">📲 Compartir mis estadísticas</button>
+      ${CLOUD?(MYPLAYER===name
+        ?`<div class="note" style="text-align:center;margin-top:10px;color:var(--gold)">⭐ Este sos vos</div>`
+        :`<button class="btn ghost block" id="meBtn" style="margin-top:8px">⭐ Este soy yo</button>`):""}
     </div>
 
     <section>
@@ -633,12 +677,12 @@ function allKnownNames(){
 function fechasDe(n){return DATA.fechas.filter(f=>f.parejas.some(t=>t.includes(n))).length;}
 function mergePlayers(keep,dup){
   if(!keep||!dup||keep===dup)return;
-  DATA.fechas.forEach(f=>{
+  eachFechaArr(DATA).forEach(arr=>arr.forEach(f=>{
     f.parejas=f.parejas.map(t=>{const r=t.map(n=>n===dup?keep:n);return r.filter((n,i)=>r.indexOf(n)===i);});
     if(f.campeon){f.campeon=f.campeon.map(n=>n===dup?keep:n).filter((n,i,a)=>a.indexOf(n)===i);}
     if(f.pala){f.pala=f.pala.map(n=>n===dup?keep:n).filter((n,i,a)=>a.indexOf(n)===i);}
     if(f.mvp===dup)f.mvp=keep;
-  });
+  }));
   const kI=DATA.jugadores.findIndex(j=>j.n===keep), dI=DATA.jugadores.findIndex(j=>j.n===dup);
   if(dI>=0&&kI>=0)DATA.jugadores.splice(dI,1);
   else if(dI>=0&&kI<0)DATA.jugadores[dI].n=keep;
@@ -647,12 +691,12 @@ function mergePlayers(keep,dup){
 }
 function renameInData(d,old,neu){
   (d.jugadores||[]).forEach(j=>{if(j.n===old)j.n=neu;});
-  (d.fechas||[]).forEach(f=>{
+  eachFechaArr(d).forEach(arr=>arr.forEach(f=>{
     f.parejas=f.parejas.map(t=>t.map(n=>n===old?neu:n));
     if(f.campeon)f.campeon=f.campeon.map(n=>n===old?neu:n);
     if(f.pala)f.pala=f.pala.map(n=>n===old?neu:n);
     if(f.mvp===old)f.mvp=neu;
-  });
+  }));
   if(d.bolsa)d.bolsa=d.bolsa.map(n=>n===old?neu:n);
   return d;
 }
@@ -748,7 +792,7 @@ function draw(){
   const courts=Math.max(1,parseInt(document.getElementById("courts").value)||1);
   document.getElementById("pairsOut").innerHTML=`
     <div class="pairwrap">${pairs.map((p,i)=>`
-      <div class="pcard"><div class="no">${i+1}</div>
+      <div class="pcard" style="animation-delay:${i*0.13}s"><div class="no">${i+1}</div>
         <div class="pl"><span class="cchip ${COL[p[0].c]}">${p[0].c||"·"}</span>${esc(p[0].n)}</div>
         <div class="amp">&</div>
         <div class="pl"><span class="cchip ${COL[p[1].c]}">${p[1].c||"·"}</span>${esc(p[1].n)}</div>
@@ -758,7 +802,8 @@ function draw(){
       <button class="btn" id="sharePairs" style="flex:1">📲 Compartir parejas</button>
       <button class="btn ghost" id="saveFecha" style="flex:1">💾 Guardar fecha</button>
     </div>`;
-  let m=`Sorteo con Nº <b>${esc(seedRaw)}</b> · ${pairs.length} parejas · ${courts} canchas.`;
+  if(navigator.vibrate)navigator.vibrate([15,40,15]);
+  let m=`Sorteo con Nº <b>${esc(seedRaw)}</b> · ${pairs.length} parejas · ${courts} canchas. <span style="color:var(--muted)">¿Cuál es el bueno? 🤔</span>`;
   if(sup)m+=`<br><span class="warn">Impar:</span> ${esc(sup.n)} queda de suplente rotativo.`;
   else if(pairs.length>courts)m+=`<br><span class="warn">Ojo:</span> hay ${pairs.length} parejas y ${courts} canchas — algunas esperan turno.`;
   msg.innerHTML=m;
@@ -796,9 +841,20 @@ function vAdmin(){
         <div class="tag" style="color:#ffcf4d;margin-bottom:6px">📴 Modo local (sin nube)</div>
         <div class="note">Los cambios se guardan solo en este dispositivo. Para activar la base de datos compartida y el login con Google, hay que configurar Firebase (pedile las instrucciones a Claude).</div>
       </div>`;
+  const propCard = (CLOUD&&PROPUESTAS.length)
+    ? `<div class="card pad" style="border-color:#7c3aed;margin-bottom:12px">
+        <div class="tag" style="color:#c4b5fd;margin-bottom:8px">📥 Propuestas de resultados (${PROPUESTAS.length})</div>
+        ${PROPUESTAS.map(p=>`<div class="adline" style="flex-wrap:wrap">
+          <span class="an">${fmtFecha(p.f)} · 🚗 ${p.campeon?esc(p.campeon.join(" & ")):"—"} · 🥄 ${p.pala?esc(p.pala.join(" & ")):"—"} · 🎖️ ${p.mvp?esc(p.mvp):"—"}<br><small style="color:var(--muted)">propuso ${esc(p.por||"?")}</small></span>
+          <button data-propok="${esc(p.id)}" title="Aplicar" style="color:#4ade80;font-weight:800;font-size:14px">✔️ Aplicar</button>
+          <button data-propno="${esc(p.id)}" title="Rechazar">🗑️</button>
+        </div>`).join("")}
+      </div>`
+    : "";
   return `<section>
     <div class="sechead"><span class="bar"></span><h2>Admin</h2><span class="sub">Cargar resultados</span></div>
     ${cloudCard}
+    ${propCard}
 
     <div class="card pad">
       <div class="tag" style="margin-bottom:8px">➕ Cargar fecha manual</div>
@@ -835,6 +891,13 @@ function vAdmin(){
         <input id="newj" placeholder="Nuevo jugador" style="flex:1">
         <button class="btn sm" id="addj">Agregar</button>
       </div>
+    </div>
+
+    <div class="card pad" style="margin-top:12px">
+      <div class="tag" style="margin-bottom:8px">🏁 Temporadas</div>
+      <div class="note" style="margin-bottom:10px">Temporada en curso: <b>${DATA.fechas.length} fechas</b>. Al cerrarla, el ranking arranca de cero y la temporada queda guardada — se consulta desde el selector de Ranking. Los perfiles siguen mostrando la carrera completa.</div>
+      ${(DATA.historial||[]).map(t=>{const st=Object.values(statsPar(t.fechas)).sort((a,b)=>b.camp-a.camp)[0];return `<div class="adline"><span class="an">🏁 ${esc(t.nombre)} · ${t.fechas.length} fechas${st&&st.camp?` · 👑 ${esc(st.a)} & ${esc(st.b)}`:""}</span></div>`;}).join("")}
+      <button class="btn ghost sm block" id="cerrarTemp" style="margin-top:6px">🏁 Cerrar temporada y empezar de cero</button>
     </div>
 
     <div class="card pad" style="margin-top:12px">
@@ -900,6 +963,27 @@ function bind(){
       txt+=`\n📊 Ranking completo:\nhttps://miguelippolito3-cloud.github.io/Padel-Copones-2026/`;
       window.open("https://wa.me/?text="+encodeURIComponent(txt),"_blank");
     };
+    const pb=document.getElementById("propBtn");
+    if(pb)pb.onclick=()=>{
+      const f=DATA.fechas[0];
+      if(!f||f.campeon){toast("No hay fecha pendiente de resultado");return;}
+      if(!USER){toast("Primero ingresá con Google (🔑 arriba)");window.fbLogin();return;}
+      const ops=f.parejas.map((p,i)=>`${i+1}) ${p.join(" & ")}`).join("\n");
+      const rc=prompt("🚗 ¿Quién se llevó el Kia? Escribí el número:\n"+ops+"\n(0 = no sé)");
+      if(rc===null)return; const ic=parseInt(rc)-1;
+      const rp2=prompt("🥄 ¿Cuchara de madera? Número:\n"+ops+"\n(0 = no sé)");
+      if(rp2===null)return; const ip=parseInt(rp2)-1;
+      const rm=prompt("🎖️ ¿MVP del día? (nombre, vacío = no sé)","");
+      if(rm===null)return;
+      addDoc(collection(db,"propuestas"),{
+        f:f.f,
+        campeon:(ic>=0&&ic<f.parejas.length)?f.parejas[ic]:null,
+        pala:(ip>=0&&ip<f.parejas.length)?f.parejas[ip]:null,
+        mvp:(rm||"").trim()||null,
+        por:USER.email, ts:Date.now()
+      }).then(()=>toast("📝 ¡Propuesta enviada al organizador!"))
+        .catch(()=>toast("⚠️ No se pudo enviar (faltan las reglas nuevas)"));
+    };
   }
 
   if(VIEW==="jugadores"){
@@ -909,6 +993,8 @@ function bind(){
 
   if(VIEW==="ranking"){
     document.querySelectorAll("#rkseg button").forEach(b=>b.onclick=()=>{RKTAB=b.dataset.t;document.getElementById("rktable").innerHTML=RKTAB==='jug'?tablaJug():tablaPar();document.querySelectorAll("#rkseg button").forEach(x=>x.classList.toggle("on",x.dataset.t===RKTAB));bind();});
+    const rs=document.getElementById("rkseason");
+    if(rs)rs.onchange=()=>{RKSEASON=rs.value;render();};
   }
 
   if(VIEW==="perfil"){
@@ -918,6 +1004,13 @@ function bind(){
       const ind=statsInd()[PARAM]||{pj:0,camp:0};
       const txt=`${PARAM} en Copones Buena Vista 🎾\n${ind.pj} fechas · ${ind.camp} 🏆 títulos\n${url}`;
       try{ if(navigator.share){await navigator.share({title:"Copones BV",text:txt,url});} else {await navigator.clipboard.writeText(txt);toast("Copiado al portapapeles");} }catch(e){}
+    };
+    const me=document.getElementById("meBtn");
+    if(me)me.onclick=()=>{
+      if(!USER){toast("Primero ingresá con Google (🔑 arriba)");window.fbLogin();return;}
+      setDoc(doc(db,"usuarios",USER.uid),{email:USER.email,jugador:PARAM})
+        .then(()=>{MYPLAYER=PARAM;try{localStorage.setItem("cb_myplayer",PARAM);}catch(e){}toast("⭐ ¡Perfil vinculado!");render();})
+        .catch(()=>toast("⚠️ No se pudo vincular (faltan las reglas nuevas)"));
     };
   }
 
@@ -931,7 +1024,7 @@ function bind(){
       const loose=looseNames();const elS=document.getElementById("cnt-S");if(elS)elS.textContent=loose.filter(n=>SEL.has(n)).length+"/"+loose.length;
     };
     updCounts();
-    document.querySelectorAll("[data-tog]").forEach(b=>b.onclick=()=>{const n=b.dataset.tog;if(SEL.has(n)){SEL.delete(n);b.classList.remove("on");}else{SEL.add(n);b.classList.add("on");}updCounts();});
+    document.querySelectorAll("[data-tog]").forEach(b=>b.onclick=()=>{const n=b.dataset.tog;if(navigator.vibrate)navigator.vibrate(8);if(SEL.has(n)){SEL.delete(n);b.classList.remove("on");}else{SEL.add(n);b.classList.add("on");}updCounts();});
     document.getElementById("selAll").onclick=()=>{DATA.jugadores.forEach(j=>{if(j.c)SEL.add(j.n);});route("sorteo");};
     document.getElementById("selNone").onclick=()=>{SEL.clear();route("sorteo");};
     const addSorp=()=>{
@@ -947,6 +1040,28 @@ function bind(){
     if(CLOUD&&!ISADMIN)return; // vista bloqueada: no hay controles que atar
     const pc=document.getElementById("pushCloud");
     if(pc)pc.onclick=()=>save();
+    document.querySelectorAll("[data-propok]").forEach(b=>b.onclick=()=>{
+      const p=PROPUESTAS.find(x=>x.id===b.dataset.propok); if(!p)return;
+      const fe=DATA.fechas.find(x=>x.f===p.f);
+      if(!fe){toast("Esa fecha ya no existe");}
+      else{ fe.campeon=p.campeon||fe.campeon; fe.pala=p.pala||fe.pala; fe.mvp=p.mvp||fe.mvp; save(); }
+      deleteDoc(doc(db,"propuestas",p.id)).catch(()=>{});
+      toast("✔️ Resultado aplicado");
+    });
+    document.querySelectorAll("[data-propno]").forEach(b=>b.onclick=()=>{
+      deleteDoc(doc(db,"propuestas",b.dataset.propno)).then(()=>toast("Propuesta descartada")).catch(()=>{});
+    });
+    const ct=document.getElementById("cerrarTemp");
+    if(ct)ct.onclick=()=>{
+      if(!DATA.fechas.length){toast("No hay fechas para cerrar");return;}
+      const nombre=prompt("Nombre de la temporada a cerrar:","Temporada 2026");
+      if(!nombre)return;
+      if(!confirm(`🏁 ¿Cerrar "${nombre.trim()}" con ${DATA.fechas.length} fechas?\n\nEl ranking actual arranca de cero y la temporada queda guardada en el historial.`))return;
+      DATA.historial=DATA.historial||[];
+      DATA.historial.push({nombre:nombre.trim(),fechas:DATA.fechas});
+      DATA.fechas=[];
+      save();toast("🏁 Temporada cerrada");render();
+    };
     const br=document.getElementById("btnRen");
     if(br)br.onclick=()=>{
       const old=document.getElementById("renSel").value, neu=document.getElementById("renNew").value.trim();
