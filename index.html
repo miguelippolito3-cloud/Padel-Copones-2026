@@ -19,7 +19,8 @@
     --A:#f5c518; --B:#2f7bff; --C:#fb923c; --D:#a78bfa;
     --gold:#ffd34d; --spoon:#8a8f99;
   }
-  *{box-sizing:border-box}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
   html,body{margin:0;padding:0}
   body{
     background:
@@ -141,7 +142,7 @@
   /* sorteo */
   .field{display:flex;flex-direction:column;gap:6px}
   .field label{font-family:"Barlow Condensed";font-weight:700;font-size:12px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase}
-  input,select{background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:11px 12px;font-family:inherit;font-size:15px;font-weight:600}
+  input,select,textarea{background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:11px 12px;font-family:inherit;font-size:16px;font-weight:600}
   input:focus,select:focus{outline:none;border-color:var(--red)}
   .pairwrap{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-top:12px}
   .pcard{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--red);border-radius:12px;padding:12px;position:relative}
@@ -196,6 +197,23 @@
   .toast{position:fixed;left:50%;bottom:86px;transform:translateX(-50%);background:#000;border:1px solid var(--line);color:#fff;padding:10px 16px;border-radius:10px;font-weight:700;font-size:14px;z-index:80;opacity:0;transition:.25s;pointer-events:none}
   .toast.show{opacity:1}
 
+  /* ===== MOBILE / UX ===== */
+  .btn{min-height:44px}
+  .btn.sm{min-height:38px}
+  .ptoggle{padding:10px 6px;min-height:40px}
+  .ptoggle:active,.jcard:active{transform:scale(.96)}
+  #rktable{overflow-x:auto}
+  @media(max-width:560px){
+    .topin{gap:8px;padding:8px 10px}
+    .brandtxt{font-size:16px}
+    .brandtxt small{font-size:9px;letter-spacing:.2em}
+    .live{display:none}
+    #themeBtn{margin-left:auto}
+    .sechead h2{font-size:20px}
+    .pill .n{font-size:25px}
+    .wrap{padding:0 10px}
+  }
+
   /* ===== MODO CLARO ===== */
   body.light{
     --bg:#eef1f6; --bg2:#e3e7ee; --card:#ffffff; --card2:#e9edf3; --line:#d3d9e2;
@@ -245,7 +263,7 @@
    Estas claves NO son secretas: se pueden publicar tranquilas.
    La seguridad la dan las "reglas" de Firestore (solo el admin puede escribir). */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const FIREBASE_CONFIG = {
@@ -262,68 +280,14 @@ const CLOUD = !JSON.stringify(FIREBASE_CONFIG).includes("PEGAR_ACA");
 let USER=null, ISADMIN=false, auth=null, dbRef=null, CLOUDSTATE="conectando";
 
 /* ================= DATOS =================
-   Los datos VIVEN EN LA NUBE (Firestore). El index arranca vacío y se llena solo.
-   MIGRACION es una copia congelada de los datos oficiales: solo se usa una vez,
-   con el botón "Cargar datos oficiales" de Admin. NO editar datos acá. */
+   Los datos VIVEN EN LA NUBE (Firestore). El index arranca vacío
+   y se llena solo desde la base de datos. Acá no hay datos para editar. */
 const SEED = { jugadores: [], fechas: [] };
-const MIGRACION = {
-  jugadores: [
-    // COPÓN A · CRACKS
-    {n:"Chico",c:"A",real:"Lucas Chico Chico · Boy Boy"},{n:"Don (Diegui)",c:"A",real:"Diego Martínez · Don Johnson"},
-    {n:"Matso",c:"A",real:"Maxi Burtin"},{n:"Track (Juli)",c:"A",real:"Julián Tramontano · Dr"},
-    {n:"Juanchi",c:"A",real:"Juanchi Gebbie · Desganado · Pelusa · Jugoso"},{n:"Laqui",c:"A",real:"Laqui · Pjcha"},
-    {n:"Gato",c:"A",real:"Gastón López Soler"},{n:"Maren",c:"A",real:"Martín Marenzi"},
-    {n:"Carli",c:"A",real:"Carlos Mohap"},{n:"Negro Mon",c:"A",real:"Daniel Mon"},{n:"Garzo",c:"A",real:"Garzo Hurling"},
-    // COPÓN B · BUENOS
-    {n:"TIS",c:"B",real:"Tomás Sanguinetti"},{n:"Alba",c:"B",real:"Lucas Albarracín · El Mágico"},
-    {n:"Pati",c:"B",real:"Sebastián Scally · El Patán"},{n:"Tapiachu",c:"B",real:"Patricio Tramontano · Pachu"},
-    {n:"MP",c:"B",real:"Mariano Posse"},{n:"Teo",c:"B",real:"Mateo Brady · La Tapioca"},
-    {n:"Taya",c:"B",real:"El Taya"},{n:"Guille",c:"B",real:"Guille"},{n:"Ema",c:"B",real:"Ema Alemán"},
-    // COPÓN C · PROMEDIO
-    {n:"Rafa",c:"C",real:"Mike · Pezón · Shadow"},{n:"Calambre",c:"C",real:"Federico MacKinson · Ficky"},
-    {n:"Bati",c:"C",real:"Hernán Martinelli · Batata"},{n:"Toto",c:"C",real:"Juan Ignacio Mezzotero"},
-    {n:"Alejo",c:"C",real:"El Persa Vera · Alejito · Verde"},{n:"Trucho",c:"C",real:"Alex Kruszewski"},
-    // COPÓN D · VALIENTES
-    {n:"Mambo",c:"D",real:"Mambo"},{n:"Nico Mon",c:"D",real:"Nico Mon"}
-  ],
-  // fechas leídas del chat (parejas confirmadas; campeón sólo donde estaba explícito)
-  fechas: [
-    {f:"2026-07-12", parejas:[["Track (Juli)","Rafa"],["Bati","Pati"],["Matso","Toto"],["TIS","Juanchi"],["Chuck","Alba"],["Tapiachu","Chichón"]], campeon:null, pala:null, mvp:null},
-    {f:"2026-07-05", parejas:[["Tapiachu","Invitado"],["TIS","Chuck","Laqui"],["Alba","Juanchi"],["Rafa","Calambre","Track (Juli)"],["Matso","Toto"],["Pati","Bati"]], campeon:["Matso","Toto"], pala:["Pati","Bati"], mvp:"Track (Juli)"},
-    {f:"2026-06-28", parejas:[["Rafa","Track (Juli)"],["Tapiachu","TIS"],["Matso","Chuck"],["Ema","Bati"]], campeon:null, pala:null},
-    {f:"2026-06-21", parejas:[["Maren","Bati"],["Taya","Track (Juli)"],["Alba","Laqui"],["TIS","Ema"]], campeon:["Taya","Track (Juli)"], pala:null},
-    {f:"2026-06-07", parejas:[["Track (Juli)","Toto"],["Matso","Rafa"],["TIS","Maren"],["Negro Mon","Ema"]], campeon:null, pala:null},
-    {f:"2026-05-23", parejas:[["Toto","Pati"],["Charly","Alba"],["Chuck","Track (Juli)"],["Trucho","Gato"],["Rafa","MP"],["Bati","Tapiachu"]], campeon:null, pala:null},
-    {f:"2026-05-17", parejas:[["Invitado","Tapiachu"],["Copito","Toto"],["TIS","Charly"],["Rafa","Track (Juli)"],["Calambre","Pati"],["Bati","Chuck"]], campeon:null, pala:null},
-    {f:"2026-05-10", parejas:[["Alba","Pati"],["Track (Juli)","Tapiachu"],["Copito","Taya"],["Charly","MP"],["Maren","Toto"],["Bati","Matso"],["Rafa","Ema"],["Negro Mon","Calambre"]], campeon:["Bati","Matso"], pala:["Track (Juli)","Tapiachu"]},
-    {f:"2026-05-03", parejas:[["Taya","Matso"],["Track (Juli)","Tapiachu"],["Maren","Rafa"],["Toto","Gato"],["Charly","Copito"],["Calambre","Bati"]], campeon:["Track (Juli)","Tapiachu"], pala:null},
-    {f:"2026-04-26", parejas:[["Alejo","Alba"],["Ema","Pati"],["Trucho","Track (Juli)"],["Copito","Calambre"],["Matso","Chuck"],["Charly","Juanchi"]], campeon:["Copito","Calambre"], pala:null},
-    {f:"2026-04-19", parejas:[["Charly","Alba"],["Invitado","Bati"],["Track (Juli)","Toto"],["Calambre","Tapiachu"],["Ema","Taya"],["MP","Rafa"]], campeon:null, pala:null},
-    {f:"2026-04-12", parejas:[["Track (Juli)","Bati"],["Charly","Tapiachu"],["TIS","Don (Diegui)"],["Negro Mon","Calambre"]], campeon:null, pala:null},
-    {f:"2026-03-27", parejas:[["TIS","Longo"],["Calambre","Tapiachu"],["Negro Mon","Nico Mon"],["Gato","Rafa"],["Copito","Trucho"],["Pati","Bati"],["Alejo","Taya"],["Toto","Ema"]], campeon:null, pala:null},
-    {f:"2026-03-21", parejas:[["Track (Juli)","Trucho"],["Tapiachu","Toto"],["Juanchi","Taya"],["Teo","Calambre"]], campeon:["Track (Juli)","Trucho"], pala:null},
-    {f:"2026-03-14", parejas:[["Don (Diegui)","Calambre"],["Matso","Rafa"],["Carli","Trucho"],["Laqui","TIS"],["Garzo","Toto"],["Track (Juli)","Alba"],["Ema","Tapiachu"],["MP","Bati"]], campeon:null, pala:null},
-    {f:"2026-02-27", parejas:[["Invitado","Tapiachu"],["Alejo","Garzo"],["Gato","Rafa"],["Alba","Matso"],["Calambre","Track (Juli)"],["Bati","Don (Diegui)"],["Chico","Pati"],["TIS","MP"]], campeon:null, pala:null},
-    {f:"2026-02-22", parejas:[["Bati","Tapiachu"],["Track (Juli)","Rafa"],["Chico","TIS"],["Alejo","Gato"],["Invitado","Garzo"],["Juanchi","Pati"]], campeon:null, pala:null},
-    {f:"2026-02-08", parejas:[["Chico","Rafa"],["Toto","Don (Diegui)"],["Alejo","Laqui"],["Alba","Track (Juli)"],["Taya","Calambre"]], campeon:null, pala:null},
-    {f:"2026-02-01", parejas:[["Alba","Invitado"],["Don (Diegui)","Calambre"],["Rafa","Track (Juli)"],["TIS","Pati"]], campeon:["Don (Diegui)","Calambre"], pala:null},
-    {f:"2026-01-25", parejas:[["Garzo","Gasti"],["Pati","Taya"],["Teo","Calambre"],["Tapiachu","TIS"]], campeon:null, pala:null},
-    {f:"2026-01-18", parejas:[["TIS","Invitado"],["Gato","Taya"],["Don (Diegui)","Pati"],["Alba","Garzo"]], campeon:null, pala:null},
-    {f:"2026-01-11", parejas:[["Maren","Toto"],["Gato","Garzo"],["TIS","Calambre"],["Tapiachu","Pati"]], campeon:null, pala:null},
-    {f:"2026-01-04", parejas:[["Maren","Alejo"],["Gato","Tapiachu"],["Matso","Alba"],["Pati","Calambre"],["Laqui","Toto"],["TIS","Invitado"],["Taya","Juanma"]], campeon:null, pala:null},
-    {f:"2025-12-28", parejas:[["Matso","Mambo"],["Gato","Toto"],["Chico","Pati"]], campeon:["Matso","Mambo"], pala:null},
-    {f:"2025-12-21", parejas:[["Matso","Toto"],["Gato","Tapiachu"],["Track (Juli)","Alejo"],["Juampi","Alba"],["TIS","MP"],["Juanchi","Calambre"]], campeon:null, pala:null},
-    {f:"2025-12-14", parejas:[["Alejo","Invitado"],["Carli","Toto"],["Maren","Calambre"],["Don (Diegui)","Tapiachu"],["Alba","Matso"],["Track (Juli)","TIS"],["Juanchi","Pati"],["Laqui","MP"]], campeon:["Track (Juli)","TIS"], pala:null},
-    {f:"2025-12-07", parejas:[["Carli","Calambre"],["TIS","Chico"],["Track (Juli)","Juampi"],["Tapiachu","Juanchi"],["Alba","Don (Diegui)"],["MP","Teo"],["Laqui","Alejo"]], campeon:null, pala:null},
-    {f:"2025-11-30", parejas:[["Matso","Teo"],["Tapiachu","Chico"],["Alejo","Don (Diegui)"],["Taya","Track (Juli)"],["TIS","Guille"],["MP","Juanchi"],["Negro Mon","Invitado"]], campeon:null, pala:null},
-    {f:"2025-11-15", parejas:[["Alejo","Calambre"],["Tapiachu","Laqui"],["TIS","Juanchi"],["Rafa","Track (Juli)"]], campeon:null, pala:null}
-  ]
-};
 
 /* ================= ESTADO ================= */
 const LS="padel_espn_v1";
 let DATA=load();
-function load(){ try{const s=JSON.parse(localStorage.getItem(LS)); if(s&&s.jugadores&&s.fechas) return s;}catch(e){} return JSON.parse(JSON.stringify(SEED)); }
+function load(){ try{const s=JSON.parse(localStorage.getItem(LS)); if(s&&s.jugadores&&s.fechas) return normalizeData(s);}catch(e){} return JSON.parse(JSON.stringify(SEED)); }
 function save(){
   try{localStorage.setItem(LS,JSON.stringify(DATA));}catch(e){}
   if(CLOUD){
@@ -343,17 +307,25 @@ if(CLOUD){
   auth=getAuth(fbApp);
   dbRef=doc(getFirestore(fbApp),"app","data");
   onAuthStateChanged(auth,u=>{USER=u;ISADMIN=!!(u&&ADMINS.includes(u.email));renderAuth();render();});
+  getRedirectResult(auth).catch(()=>{}); // cierra el ciclo del login por redirección (celulares)
   onSnapshot(dbRef,snap=>{
     if(snap.exists()){
       CLOUDSTATE="ok";
-      try{const d=JSON.parse(snap.data().json); if(d&&d.jugadores&&d.fechas){DATA=d; try{localStorage.setItem(LS,snap.data().json);}catch(e){} }}catch(e){}
+      try{const d=JSON.parse(snap.data().json); if(d&&d.jugadores&&d.fechas){DATA=normalizeData(d); try{localStorage.setItem(LS,JSON.stringify(DATA));}catch(e){} }}catch(e){}
     }else{
       CLOUDSTATE="vacia";
     }
     render();
   },err=>{ CLOUDSTATE="error"; toast("⚠️ Sin conexión a la nube"); });
 }
-window.fbLogin=async()=>{ try{await signInWithPopup(auth,new GoogleAuthProvider());}catch(e){toast("No se pudo iniciar sesión");} };
+window.fbLogin=async()=>{
+  try{ await signInWithPopup(auth,new GoogleAuthProvider()); }
+  catch(e){
+    // en celulares el popup suele estar bloqueado: probamos con redirección
+    try{ await signInWithRedirect(auth,new GoogleAuthProvider()); }
+    catch(e2){ toast("No se pudo iniciar sesión"); }
+  }
+};
 window.fbLogout=async()=>{ await signOut(auth); };
 function renderAuth(){
   const b=document.getElementById("authBtn");
@@ -483,6 +455,7 @@ function vInicio(){
   const totalCamp=DATA.fechas.filter(f=>f.campeon).length;
   return `
   <section>
+    ${CLOUD&&CLOUDSTATE==="conectando"&&!DATA.fechas.length?`<div class="card pad" style="text-align:center;margin-bottom:12px"><div style="font-size:30px">☁️</div><div class="note">Cargando datos de la nube…</div></div>`:""}
     ${prox?`<div class="card pad" style="margin-bottom:12px">
       <div class="tag" style="margin-bottom:8px;color:var(--A)">🎾 PRÓXIMA FECHA · ${fmtFecha(prox.f)}</div>
       ${prox.parejas.map((p,i)=>`<div class="row" style="padding:7px 0"><span><b>${i+1})</b> ${esc(p.join(" & "))}</span></div>`).join("")}
@@ -672,6 +645,22 @@ function mergePlayers(keep,dup){
   if(DATA.bolsa)DATA.bolsa=DATA.bolsa.filter(n=>n!==dup);
   save();
 }
+function renameInData(d,old,neu){
+  (d.jugadores||[]).forEach(j=>{if(j.n===old)j.n=neu;});
+  (d.fechas||[]).forEach(f=>{
+    f.parejas=f.parejas.map(t=>t.map(n=>n===old?neu:n));
+    if(f.campeon)f.campeon=f.campeon.map(n=>n===old?neu:n);
+    if(f.pala)f.pala=f.pala.map(n=>n===old?neu:n);
+    if(f.mvp===old)f.mvp=neu;
+  });
+  if(d.bolsa)d.bolsa=d.bolsa.map(n=>n===old?neu:n);
+  return d;
+}
+const RENOMBRES=[["Rafa","Mike Rafa"]]; // correcciones automáticas de una sola vez
+function normalizeData(d){
+  RENOMBRES.forEach(([o,n])=>{ if(d&&d.jugadores&&d.jugadores.some(j=>j.n===o)&&!d.jugadores.some(j=>j.n===n)) renameInData(d,o,n); });
+  return d;
+}
 
 /* ---------- LOGROS ---------- */
 function badgesHTML(ind){
@@ -728,7 +717,7 @@ function vSorteo(){
           <div class="sh" style="color:#22c55e">🎁 Sorpresas<small id="cnt-S"></small></div>
           ${looseNames().map(n=>`<button class="ptoggle k-S ${SEL.has(n)?'on':''}" data-tog="${esc(n)}">${esc(n)}</button>`).join("")||'<div class="note" style="font-size:12px;margin-bottom:6px">—</div>'}
           <div style="display:flex;gap:5px;margin-top:6px">
-            <input id="newsorp" placeholder="Nuevo…" style="flex:1;min-width:0;padding:7px 8px;font-size:12px">
+            <input id="newsorp" placeholder="Nuevo…" style="flex:1;min-width:0;padding:8px">
             <button class="btn sm" id="addsorp" style="padding:7px 11px">+</button>
           </div>
         </div>
@@ -802,7 +791,6 @@ function vAdmin(){
         <div class="tag" style="color:#4ade80;margin-bottom:6px">☁️ Nube conectada · ${CLOUDSTATE==="ok"?"✓ con datos":CLOUDSTATE==="vacia"?"⚠️ VACÍA":CLOUDSTATE==="error"?"⚠️ error":"…"}</div>
         <div class="note">Ingresaste como <b>${esc(USER?USER.email:"")}</b> (admin 👑). Los datos viven en la base de datos: todo lo que guardes <b>lo ven todos al instante</b>, sin tocar GitHub.</div>
         <button class="btn sm block" style="margin-top:10px" id="pushCloud">☁️ Subir los datos de este dispositivo a la nube</button>
-        <button class="btn ghost sm block" style="margin-top:8px" id="migrar">📦 Cargar datos oficiales (migración — usar una sola vez)</button>
       </div>`
     : `<div class="card pad" style="border-color:#6e5b2a;margin-bottom:12px">
         <div class="tag" style="color:#ffcf4d;margin-bottom:6px">📴 Modo local (sin nube)</div>
@@ -817,7 +805,7 @@ function vAdmin(){
       <div class="note" style="margin-bottom:10px">Formato por línea: <b>JugadorA, JugadorB</b> (una pareja por línea).</div>
       <div class="field"><label>Fecha</label><input id="afecha" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
       <div class="field" style="margin-top:8px"><label>Parejas</label>
-        <textarea id="apar" rows="6" style="background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:11px;font-family:inherit;font-size:14px" placeholder="Mike, Julian&#10;TIS, Batata&#10;Toto, Gato"></textarea></div>
+        <textarea id="apar" rows="6" style="width:100%" placeholder="Mike, Julian&#10;TIS, Batata&#10;Toto, Gato"></textarea></div>
       <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
         <div class="field" style="flex:1;min-width:140px"><label>🚗 Kia / Campeón</label><input id="acamp" placeholder="Matso, Toto"></div>
         <div class="field" style="flex:1;min-width:140px"><label>🥄 Cuchara</label><input id="apala" placeholder="Pati, Bati"></div>
@@ -850,6 +838,16 @@ function vAdmin(){
     </div>
 
     <div class="card pad" style="margin-top:12px">
+      <div class="tag" style="margin-bottom:8px">✏️ Renombrar jugador</div>
+      <div class="note" style="margin-bottom:10px">Cambia el nombre en todo el historial (fechas, Kias, cucharas, MVP). Los apodos del perfil no se pierden.</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end">
+        <div class="field" style="flex:1;min-width:140px"><label>Jugador</label><select id="renSel"><option value="">Elegir…</option>${allKnownNames().map(n=>`<option>${esc(n)}</option>`).join("")}</select></div>
+        <div class="field" style="flex:1;min-width:140px"><label>Nuevo nombre</label><input id="renNew" placeholder="Nuevo nombre…"></div>
+        <button class="btn sm" id="btnRen">Renombrar</button>
+      </div>
+    </div>
+
+    <div class="card pad" style="margin-top:12px">
       <div class="tag" style="margin-bottom:8px">🧬 Unir jugadores duplicados</div>
       <div class="note" style="margin-bottom:10px">Si una misma persona quedó con dos nombres (ej: <b>Tapiachu</b> y <b>Pachu</b>), acá los juntás: todas las fechas, Kias, cucharas y MVP del duplicado pasan al que queda. Sirve también para los sorpresa.</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end">
@@ -871,12 +869,11 @@ function vAdmin(){
 
     <div class="card pad" style="margin-top:12px">
       <div class="tag" style="margin-bottom:8px">🔗 Compartir con el grupo</div>
-      <div class="note" style="margin-bottom:10px">Para que <b>todos vean el mismo ranking</b>, exportá los datos y reemplazá el bloque <b>SEED</b> del archivo <b>index.html</b> en GitHub. Así queda publicado para todos.</div>
+      <div class="note" style="margin-bottom:10px">Los datos viven en la nube y todos ven lo mismo. Estos botones son para hacer <b>copias de seguridad</b> (Exportar) o recuperar una copia (Importar).</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn sm" id="expData">⬇️ Exportar datos (JSON)</button>
         <button class="btn ghost sm" id="copyData">📋 Copiar</button>
         <button class="btn ghost sm" id="impData">⬆️ Importar</button>
-        <button class="btn ghost sm" id="resetData">♻️ Restaurar</button>
       </div>
       <input id="impFile" type="file" accept="application/json" class="hidden">
     </div>
@@ -950,11 +947,13 @@ function bind(){
     if(CLOUD&&!ISADMIN)return; // vista bloqueada: no hay controles que atar
     const pc=document.getElementById("pushCloud");
     if(pc)pc.onclick=()=>save();
-    const mg=document.getElementById("migrar");
-    if(mg)mg.onclick=()=>{
-      if(!confirm("📦 Esto reemplaza TODO lo que hay en la nube por los datos oficiales (28 fechas, plantel con apodos).\n\nUsalo si la nube tiene datos viejos o incompletos. ¿Continuar?"))return;
-      DATA=JSON.parse(JSON.stringify(MIGRACION));
-      save();render();
+    const br=document.getElementById("btnRen");
+    if(br)br.onclick=()=>{
+      const old=document.getElementById("renSel").value, neu=document.getElementById("renNew").value.trim();
+      if(!old||!neu){toast("Completá jugador y nuevo nombre");return;}
+      if(allKnownNames().includes(neu)){toast("Ese nombre ya existe — usá Unir");return;}
+      if(!confirm(`¿Renombrar "${old}" a "${neu}" en todo el historial?`))return;
+      renameInData(DATA,old,neu);save();toast(`${old} → ${neu} ✓`);render();
     };
     const bm=document.getElementById("btnMerge");
     if(bm)bm.onclick=()=>{
@@ -1002,7 +1001,6 @@ function bind(){
     document.getElementById("copyData").onclick=async()=>{try{await navigator.clipboard.writeText(JSON.stringify(DATA,null,2));toast("Datos copiados");}catch(e){toast("No se pudo copiar");}};
     document.getElementById("impData").onclick=()=>document.getElementById("impFile").click();
     document.getElementById("impFile").onchange=e=>{const file=e.target.files[0];if(!file)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(d.jugadores&&d.fechas){DATA=d;save();toast("Datos importados");render();}else toast("Archivo inválido");}catch(err){toast("Archivo inválido");}};r.readAsText(file);};
-    document.getElementById("resetData").onclick=()=>{if(confirm("¿Restaurar los datos oficiales (migración)? Reemplaza lo que hay ahora.")){DATA=JSON.parse(JSON.stringify(MIGRACION));save();render();}};
   }
 }
 
