@@ -42,7 +42,7 @@
   .wrap{max-width:720px;margin:0 auto;padding:0 14px}
 
   /* Top bar ESPN */
-  .top{position:sticky;top:0;z-index:40;background:linear-gradient(180deg,#000,#0a0b0d);border-bottom:1px solid var(--line)}
+  .top{position:sticky;top:0;z-index:40;background:linear-gradient(180deg,#000,#0a0b0d);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top)}
   .topin{max-width:720px;margin:0 auto;display:flex;align-items:center;gap:10px;padding:9px 14px}
   .brandmark{background:linear-gradient(135deg,var(--red),var(--C) 90%);color:#fff;font-family:"Anton";font-size:18px;padding:4px 9px;border-radius:5px;letter-spacing:.02em;line-height:1;box-shadow:0 2px 10px rgba(226,16,42,.35)}
   .brandtxt{font-family:"Anton";font-size:19px;letter-spacing:.02em;line-height:1}
@@ -449,7 +449,10 @@ function renderTicker(){
 /* ---------- INICIO ---------- */
 function vInicio(){
   const ind=statsInd(), arr=Object.values(ind);
-  const prox=(DATA.fechas[0]&&!DATA.fechas[0].campeon)?DATA.fechas[0]:null;
+  const h=new Date(), hoyS=h.getFullYear()+"-"+String(h.getMonth()+1).padStart(2,"0")+"-"+String(h.getDate()).padStart(2,"0");
+  const f0=DATA.fechas[0];
+  const pend=(f0&&!f0.campeon&&f0.f<hoyS)?f0:null;   // ya se jugó y falta el resultado
+  const prox=(f0&&!f0.campeon&&f0.f>=hoyS)?f0:null;  // todavía no se jugó
   const ult=DATA.fechas.find(f=>f.campeon)||DATA.fechas[0];
   const topJ=[...arr].sort((a,b)=>b.pj-a.pj).slice(0,5);
   const topC=[...arr].sort((a,b)=>b.camp-a.camp||b.pj-a.pj).slice(0,5);
@@ -479,6 +482,13 @@ function vInicio(){
   <section>
     ${CLOUD&&CLOUDSTATE==="conectando"&&!DATA.fechas.length?`<div class="card pad" style="text-align:center;margin-bottom:12px"><div style="font-size:30px">☁️</div><div class="note">Cargando datos de la nube…</div></div>`:""}
     ${MYPLAYER?`<button class="btn ghost block" data-perfil="${esc(MYPLAYER)}" style="margin-bottom:12px;justify-content:space-between"><span>⭐ Mi perfil · <b>${esc(MYPLAYER)}</b></span><span>→</span></button>`:""}
+    ${pend?`<div class="card pad" style="margin-bottom:12px;border-color:var(--red);box-shadow:0 0 14px rgba(226,16,42,.25)">
+      <div class="tag" style="margin-bottom:8px;color:var(--red2)">⚠️ FALTA EL RESULTADO · ${fmtFecha(pend.f)}</div>
+      <div class="note" style="margin-bottom:10px">Ya se jugó esta fecha y el ranking la está esperando. ¿Quién se llevó el Kia? 🚗</div>
+      ${ISADMIN
+        ?`<button class="btn block" id="loadResBtn">👑 Cargar resultado ahora</button>`
+        :(CLOUD?`<button class="btn block" id="propBtn">📝 Proponer resultado (lo aprueba el organizador)</button>`:"")}
+    </div>`:""}
     ${prox?`<div class="card pad" style="margin-bottom:12px">
       <div class="tag" style="margin-bottom:8px;color:var(--A)">🎾 PRÓXIMA FECHA · ${fmtFecha(prox.f)}</div>
       ${prox.parejas.map((p,i)=>`<div class="row" style="padding:7px 0"><span><b>${i+1})</b> ${esc(p.join(" & "))}</span></div>`).join("")}
@@ -675,6 +685,61 @@ function allKnownNames(){
   return [...s].sort((a,b)=>a.localeCompare(b));
 }
 function fechasDe(n){return DATA.fechas.filter(f=>f.parejas.some(t=>t.includes(n))).length;}
+
+/* ---------- LECTOR DE LISTAS DE WHATSAPP ---------- */
+const RX_ACENTOS=new RegExp("["+String.fromCharCode(0x0300)+"-"+String.fromCharCode(0x036f)+"]","g");
+const RX_INVISIBLES=new RegExp("["+String.fromCharCode(0x200b)+"-"+String.fromCharCode(0x200f)+String.fromCharCode(0x2060)+"-"+String.fromCharCode(0x2063)+String.fromCharCode(0xfeff)+String.fromCharCode(0x00a0)+"]","g");
+function normName(s){return String(s).toLowerCase().normalize("NFD").replace(RX_ACENTOS,"").replace(/[^a-z0-9]/g,"");}
+function lev1(a,b){ // ¿difieren en una sola letra? (tolerancia de tipeo)
+  if(a===b)return true;
+  if(Math.abs(a.length-b.length)>1)return false;
+  let i=0,j=0,ed=0;
+  while(i<a.length&&j<b.length){
+    if(a[i]===b[j]){i++;j++;continue;}
+    ed++; if(ed>1)return false;
+    if(a.length>b.length)i++; else if(b.length>a.length)j++; else{i++;j++;}
+  }
+  return ed+(a.length-i)+(b.length-j)<=1;
+}
+function playerTokens(j){
+  const t=new Set([normName(j.n)]);
+  j.n.split(/[\s()\/·]+/).forEach(w=>{if(w.length>2)t.add(normName(w));});
+  (j.real||"").split("·").forEach(a=>{const na=normName(a);if(na)t.add(na);a.split(/\s+/).forEach(w=>{if(w.length>2)t.add(normName(w));});});
+  return t;
+}
+function matchPlayer(raw){
+  const q=normName(raw); if(!q||q.length<2)return null;
+  // 1º: coincidencia exacta (nombre o apodo)
+  for(const j of DATA.jugadores){ if(playerTokens(j).has(q)) return j.n; }
+  for(const n of looseNames()){ if(normName(n)===q) return n; }
+  // 2º: tolerancia de una letra (Emma≈Ema)
+  if(q.length>=3){
+    for(const j of DATA.jugadores){ for(const t of playerTokens(j)){ if(t.length>=3&&lev1(t,q)) return j.n; } }
+    for(const n of looseNames()){ const t=normName(n); if(t.length>=3&&lev1(t,q)) return n; }
+  }
+  return null;
+}
+function cleanLine(l){
+  return String(l).replace(RX_INVISIBLES," ")
+    .replace(/^\s*\d+\s*[\.\)\-–—]?\s*/,"")
+    .replace(/\(\*+\)|\*+/g,"")
+    .replace(/[✅🎾🥎👍✔️]/g,"")
+    .trim();
+}
+function esEncabezado(l){ return !l || /^(domingo|sabado|sábado|lista|convocados|padel|pádel)/i.test(l) || /\d{1,2}\/\d{1,2}/.test(l) || !/[a-záéíóúñ]/i.test(l); }
+
+/* ---------- CARGA RÁPIDA DE RESULTADO (admin) ---------- */
+function cargarResultado(f){
+  const opciones=f.parejas.map((p,idx)=>`${idx+1}) ${p.join(" & ")}`).join("\n");
+  const r=prompt("🚗 ¿Qué pareja se llevó el Kia? Escribí el número:\n"+opciones+"\n(0 = sin campeón)");
+  if(r===null)return;const idx=parseInt(r)-1;
+  f.campeon=(idx>=0&&idx<f.parejas.length)?f.parejas[idx]:null;
+  const rp=prompt("🥄 ¿Y la cuchara de madera? Número de pareja:\n"+opciones+"\n(0 = nadie)");
+  if(rp!==null){const ip=parseInt(rp)-1;f.pala=(ip>=0&&ip<f.parejas.length)?f.parejas[ip]:null;}
+  const rm=prompt("🎖️ ¿MVP del día? (nombre exacto, vacío = nadie)",f.mvp||"");
+  if(rm!==null)f.mvp=rm.trim()||null;
+  save();toast("Resultado cargado ✓");render();
+}
 function mergePlayers(keep,dup){
   if(!keep||!dup||keep===dup)return;
   eachFechaArr(DATA).forEach(arr=>arr.forEach(f=>{
@@ -742,6 +807,13 @@ function vSorteo(){
         <button class="btn" id="btnDraw">🎾 Sortear</button>
         <button class="btn ghost sm" id="btnSeed">Otro Nº</button>
       </div>
+    </div>
+
+    <div class="card pad" style="margin-top:12px">
+      <div class="tag" style="margin-bottom:8px">📋 Pegar lista de WhatsApp</div>
+      <div class="note" style="margin-bottom:8px">Pegá el mensaje con la lista numerada de convocados y se marcan solos (reconoce apodos: Mike, Track, Pachu…).</div>
+      <textarea id="pasteList" rows="4" style="width:100%" placeholder="Domingo 12/7&#10;1. Mike&#10;2. Track&#10;3. Pachu&#10;4. Chuck…"></textarea>
+      <button class="btn sm block" id="parseList" style="margin-top:8px">✨ Leer lista y marcar presentes</button>
     </div>
 
     <div class="card pad" style="margin-top:12px">
@@ -858,10 +930,10 @@ function vAdmin(){
 
     <div class="card pad">
       <div class="tag" style="margin-bottom:8px">➕ Cargar fecha manual</div>
-      <div class="note" style="margin-bottom:10px">Formato por línea: <b>JugadorA, JugadorB</b> (una pareja por línea).</div>
+      <div class="note" style="margin-bottom:10px">Pegá directo el mensaje de WhatsApp del sorteo: una pareja por línea, con <b>/</b>, <b>coma</b>, <b>y</b> o <b>guión</b> (ej: "1) Alba/Invitado"). Reconoce apodos.</div>
       <div class="field"><label>Fecha</label><input id="afecha" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
       <div class="field" style="margin-top:8px"><label>Parejas</label>
-        <textarea id="apar" rows="6" style="width:100%" placeholder="Mike, Julian&#10;TIS, Batata&#10;Toto, Gato"></textarea></div>
+        <textarea id="apar" rows="6" style="width:100%" placeholder="1) Mike/Track&#10;2) Bati y Pati&#10;3) Matso, Toto"></textarea></div>
       <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
         <div class="field" style="flex:1;min-width:140px"><label>🚗 Kia / Campeón</label><input id="acamp" placeholder="Matso, Toto"></div>
         <div class="field" style="flex:1;min-width:140px"><label>🥄 Cuchara</label><input id="apala" placeholder="Pati, Bati"></div>
@@ -943,7 +1015,10 @@ function vAdmin(){
   </section>`;
 }
 function parsePairs(txt){
-  return txt.split("\n").map(l=>l.trim()).filter(Boolean).map(l=>l.split(",").map(s=>s.trim()).filter(Boolean)).filter(p=>p.length>=2);
+  return txt.split("\n").map(cleanLine).filter(l=>l&&!esEncabezado(l)&&!/^parejas/i.test(l)).map(l=>
+    l.split(/\s*(?:,|\/|&|\+|-|–|—)\s*|\s+y\s+/i).map(s=>s.trim()).filter(Boolean)
+      .map(s=>matchPlayer(s)||s)
+  ).filter(p=>p.length>=2&&p.length<=3);
 }
 function parseDuo(s){const p=(s||"").split(",").map(x=>x.trim()).filter(Boolean);return p.length===2?p:null;}
 
@@ -984,6 +1059,8 @@ function bind(){
       }).then(()=>toast("📝 ¡Propuesta enviada al organizador!"))
         .catch(()=>toast("⚠️ No se pudo enviar (faltan las reglas nuevas)"));
     };
+    const lr=document.getElementById("loadResBtn");
+    if(lr)lr.onclick=()=>cargarResultado(DATA.fechas[0]);
   }
 
   if(VIEW==="jugadores"){
@@ -1034,6 +1111,24 @@ function bind(){
     };
     document.getElementById("addsorp").onclick=addSorp;
     document.getElementById("newsorp").addEventListener("keydown",e=>{if(e.key==="Enter")addSorp();});
+    document.getElementById("parseList").onclick=()=>{
+      const txt=document.getElementById("pasteList").value;
+      if(!txt.trim()){toast("Pegá la lista primero");return;}
+      const noRec=[]; let ok=0;
+      txt.split("\n").map(cleanLine).forEach(l=>{
+        if(esEncabezado(l))return;
+        const m=matchPlayer(l);
+        if(m){SEL.add(m);ok++;}
+        else noRec.push(l);
+      });
+      if(noRec.length&&confirm(`Reconocí ${ok} jugadores ✓\n\nNo reconocí: ${noRec.join(", ")}\n\n¿Los agrego como jugadores sorpresa?`)){
+        DATA.bolsa=DATA.bolsa||[];
+        noRec.forEach(n=>{if(!allKnownNames().includes(n)){DATA.bolsa.push(n);}SEL.add(n);});
+        save();
+      }
+      route("sorteo");
+      toast(`✨ ${SEL.size} presentes marcados`);
+    };
   }
 
   if(VIEW==="admin"){
@@ -1097,18 +1192,7 @@ function bind(){
       save();toast("Fecha agregada");render();
     };
     document.querySelectorAll("[data-delf]").forEach(b=>b.onclick=()=>{DATA.fechas.splice(+b.dataset.delf,1);save();render();});
-    document.querySelectorAll("[data-editcamp]").forEach(b=>b.onclick=()=>{
-      const i=+b.dataset.editcamp,f=DATA.fechas[i];
-      const opciones=f.parejas.map((p,idx)=>`${idx+1}) ${p.join(" & ")}`).join("\n");
-      const r=prompt("🚗 ¿Qué pareja se llevó el Kia? Escribí el número:\n"+opciones+"\n(0 = sin campeón)");
-      if(r===null)return;const idx=parseInt(r)-1;
-      f.campeon=(idx>=0&&idx<f.parejas.length)?f.parejas[idx]:null;
-      const rp=prompt("🥄 ¿Y la cuchara de madera? Número de pareja:\n"+opciones+"\n(0 = nadie)");
-      if(rp!==null){const ip=parseInt(rp)-1;f.pala=(ip>=0&&ip<f.parejas.length)?f.parejas[ip]:null;}
-      const rm=prompt("🎖️ ¿MVP del día? (nombre exacto, vacío = nadie)",f.mvp||"");
-      if(rm!==null)f.mvp=rm.trim()||null;
-      save();toast("Actualizado");render();
-    });
+    document.querySelectorAll("[data-editcamp]").forEach(b=>b.onclick=()=>cargarResultado(DATA.fechas[+b.dataset.editcamp]));
     document.querySelectorAll("[data-cop]").forEach(s=>s.onchange=()=>{DATA.jugadores[+s.dataset.cop].c=s.value;save();});
     document.querySelectorAll("[data-delj]").forEach(b=>b.onclick=()=>{DATA.jugadores.splice(+b.dataset.delj,1);save();render();});
     document.getElementById("addj").onclick=()=>{const v=document.getElementById("newj").value.trim();if(!v)return;DATA.jugadores.push({n:v,c:""});save();render();};
