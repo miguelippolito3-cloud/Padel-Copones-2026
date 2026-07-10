@@ -285,6 +285,8 @@ const CLOUD = !JSON.stringify(FIREBASE_CONFIG).includes("PEGAR_ACA");
 let USER=null, ISADMIN=false, auth=null, db=null, dbRef=null, CLOUDSTATE="conectando";
 let MYPLAYER=null; try{MYPLAYER=localStorage.getItem("cb_myplayer")||null;}catch(e){}
 let PROPUESTAS=[], propSub=false;
+let USUARIOS=[], SORTEO_FECHA=null;
+const CANCHAS_ABONO=2; // canchas fijas del abono de los domingos
 
 /* ================= DATOS =================
    Los datos VIVEN EN LA NUBE (Firestore). El index arranca vacío
@@ -317,10 +319,16 @@ if(CLOUD){
   onAuthStateChanged(auth,u=>{
     USER=u;ISADMIN=!!(u&&ADMINS.includes(u.email));
     if(u){
+      // registra el ingreso (para el panel de usuarios del admin)
+      setDoc(doc(db,"usuarios",u.uid),{email:u.email,nombre:u.displayName||"",ultimoIngreso:Date.now()},{merge:true}).catch(()=>{});
       // ⭐ Este soy yo: recupera el jugador vinculado a esta cuenta
       getDoc(doc(db,"usuarios",u.uid)).then(s=>{ if(s.exists()&&s.data().jugador){MYPLAYER=s.data().jugador;try{localStorage.setItem("cb_myplayer",MYPLAYER);}catch(e){}render();} }).catch(()=>{});
-      // 📝 Carga colaborativa: el admin escucha las propuestas en vivo
-      if(ISADMIN&&!propSub){propSub=true;onSnapshot(collection(db,"propuestas"),qs=>{PROPUESTAS=qs.docs.map(x=>({id:x.id,...x.data()}));if(VIEW==="admin")render();});}
+      // 📝 Carga colaborativa + 👥 usuarios: el admin escucha en vivo
+      if(ISADMIN&&!propSub){
+        propSub=true;
+        onSnapshot(collection(db,"propuestas"),qs=>{PROPUESTAS=qs.docs.map(x=>({id:x.id,...x.data()}));if(VIEW==="admin")render();});
+        onSnapshot(collection(db,"usuarios"),qs=>{USUARIOS=qs.docs.map(x=>({id:x.id,...x.data()}));if(VIEW==="admin")render();});
+      }
     }
     renderAuth();render();
   });
@@ -740,6 +748,28 @@ function cargarResultado(f){
   if(rm!==null)f.mvp=rm.trim()||null;
   save();toast("Resultado cargado ✓");render();
 }
+
+/* ---------- CONVOCATORIA: parejas, canchas y fecha ---------- */
+function proxDomingo(){
+  const d=new Date(); d.setDate(d.getDate()+((7-d.getDay())%7));
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+function resumenConvocados(){
+  const n=SEL.size; if(!n)return;
+  const pairs=Math.floor(n/2), sup=n%2, nec=Math.max(1,Math.ceil(pairs/2));
+  const ci=document.getElementById("courts"); if(ci)ci.value=nec;
+  const falta=nec-CANCHAS_ABONO;
+  const msg=document.getElementById("drawMsg");
+  if(!msg)return;
+  msg.innerHTML=`📋 <b>${n} convocados</b> → <b>${pairs} parejas</b>${sup?` + 1 suplente rotativo`:""} → hacen falta <b>${nec} cancha${nec===1?"":"s"}</b>.<br>`+
+    (falta>0
+      ?`<span class="warn">⚠️ Con las ${CANCHAS_ABONO} del abono, falta reservar ${falta} más.</span>`
+      :`<span style="color:#4ade80">✓ Con las ${CANCHAS_ABONO} del abono estás cubierto.</span>`)+
+    (SORTEO_FECHA?`<br>📅 Fecha detectada en el mensaje: <b>${fmtFecha(SORTEO_FECHA)}</b>`:"")+
+    `<br><button class="btn" id="drawNow" style="margin-top:10px">🎾 Sortear ahora</button>`;
+  const dn=document.getElementById("drawNow"); if(dn)dn.onclick=()=>draw();
+  window.scrollTo({top:0,behavior:"smooth"});
+}
 function mergePlayers(keep,dup){
   if(!keep||!dup||keep===dup)return;
   eachFechaArr(DATA).forEach(arr=>arr.forEach(f=>{
@@ -884,9 +914,13 @@ function draw(){
     try{ if(navigator.share){await navigator.share({title:"Parejas del domingo",text:txt});} else {await navigator.clipboard.writeText(txt);toast("Parejas copiadas");} }catch(e){}
   };
   document.getElementById("saveFecha").onclick=()=>{
-    const hoy=new Date().toISOString().slice(0,10);
-    DATA.fechas.unshift({f:hoy,parejas:LASTPAIRS,campeon:null,pala:null});
-    save();toast("Fecha guardada");go("admin");
+    const f=SORTEO_FECHA||proxDomingo();
+    if(DATA.fechas.some(x=>x.f===f)&&!confirm(`Ya hay una fecha guardada el ${fmtFecha(f)}. ¿Agregar otra igual?`))return;
+    DATA.fechas.unshift({f,parejas:LASTPAIRS,campeon:null,pala:null,mvp:null});
+    DATA.fechas.sort((a,b)=>b.f.localeCompare(a.f));
+    save();
+    toast(`📅 Fecha del ${fmtFecha(f)} guardada — después solo cargás el resultado`);
+    go("inicio");
   };
 }
 
@@ -963,6 +997,18 @@ function vAdmin(){
         <input id="newj" placeholder="Nuevo jugador" style="flex:1">
         <button class="btn sm" id="addj">Agregar</button>
       </div>
+    </div>
+
+    <div class="card pad" style="margin-top:12px">
+      <div class="tag" style="margin-bottom:8px">👥 Usuarios logueados (${USUARIOS.length})</div>
+      <div class="note" style="margin-bottom:8px">Cuentas de Google que entraron a la app, con qué jugador se vincularon (⭐) y su último ingreso.</div>
+      ${USUARIOS.length
+        ?[...USUARIOS].sort((a,b)=>(b.ultimoIngreso||0)-(a.ultimoIngreso||0)).map(u=>`<div class="adline">
+            <span class="an">${u.jugador?`⭐ <b>${esc(u.jugador)}</b>`:`<span style="color:var(--muted)">sin vincular</span>`}
+            <small style="color:var(--muted)">· ${esc(u.email||u.nombre||"?")}${u.ultimoIngreso?` · último ingreso: ${fmtFecha(new Date(u.ultimoIngreso).toISOString().slice(0,10))}`:""}</small></span>
+          </div>`).join("")
+        :'<div class="empty" style="padding:10px">Todavía no entró nadie logueado</div>'}
+      <div class="note" style="margin-top:6px">Vinculados: <b>${USUARIOS.filter(u=>u.jugador).length}</b> de ${USUARIOS.length} · Jugadores del plantel: ${DATA.jugadores.length}</div>
     </div>
 
     <div class="card pad" style="margin-top:12px">
@@ -1085,7 +1131,7 @@ function bind(){
     const me=document.getElementById("meBtn");
     if(me)me.onclick=()=>{
       if(!USER){toast("Primero ingresá con Google (🔑 arriba)");window.fbLogin();return;}
-      setDoc(doc(db,"usuarios",USER.uid),{email:USER.email,jugador:PARAM})
+      setDoc(doc(db,"usuarios",USER.uid),{email:USER.email,jugador:PARAM,vinculadoEl:Date.now()},{merge:true})
         .then(()=>{MYPLAYER=PARAM;try{localStorage.setItem("cb_myplayer",PARAM);}catch(e){}toast("⭐ ¡Perfil vinculado!");render();})
         .catch(()=>toast("⚠️ No se pudo vincular (faltan las reglas nuevas)"));
     };
@@ -1126,8 +1172,20 @@ function bind(){
         noRec.forEach(n=>{if(!allKnownNames().includes(n)){DATA.bolsa.push(n);}SEL.add(n);});
         save();
       }
+      const dm=txt.match(/(\d{1,2})\/(\d{1,2})/);
+      if(dm&&+dm[1]>=1&&+dm[1]<=31&&+dm[2]>=1&&+dm[2]<=12){
+        let y=new Date().getFullYear();
+        let iso=y+"-"+String(+dm[2]).padStart(2,"0")+"-"+String(+dm[1]).padStart(2,"0");
+        const hoy=new Date().toISOString().slice(0,10);
+        if(iso<hoy){ // si ya pasó hace mucho, era del año que viene
+          const dif=(new Date(hoy)-new Date(iso))/86400000;
+          if(dif>60)iso=(y+1)+iso.slice(4);
+        }
+        SORTEO_FECHA=iso;
+      }else{SORTEO_FECHA=null;}
       route("sorteo");
       toast(`✨ ${SEL.size} presentes marcados`);
+      resumenConvocados();
     };
   }
 
