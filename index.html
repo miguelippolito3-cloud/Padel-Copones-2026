@@ -149,6 +149,9 @@
   .pcard{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--red);border-radius:12px;padding:12px;position:relative}
   .pcard .no{position:absolute;top:9px;right:12px;font-family:"Anton";font-size:20px;color:#3a3f49}
   .pl{display:flex;align-items:center;gap:9px;font-weight:700;font-size:15px;padding:4px 0}
+  .pl.swapable{cursor:pointer;border-radius:8px;padding:4px 6px;margin:0 -6px;transition:.12s}
+  .pl.swapable:active{transform:scale(.97)}
+  .pl.swapsel{outline:2px dashed var(--A);outline-offset:1px;background:rgba(245,197,24,.12)}
   .amp{color:var(--muted);font-family:"Anton";font-size:15px;padding-left:2px}
   .sortcols{display:grid;grid-template-columns:repeat(5,1fr);gap:9px}
   @media(max-width:700px){.sortcols{grid-template-columns:repeat(2,1fr)}}
@@ -477,8 +480,8 @@ function vInicio(){
   const ind=statsInd(), arr=Object.values(ind);
   const h=new Date(), hoyS=h.getFullYear()+"-"+String(h.getMonth()+1).padStart(2,"0")+"-"+String(h.getDate()).padStart(2,"0");
   const f0=DATA.fechas[0];
-  const pend=(f0&&!f0.campeon&&f0.f<hoyS)?f0:null;   // ya se jugó y falta el resultado
-  const prox=(f0&&!f0.campeon&&f0.f>=hoyS)?f0:null;  // todavía no se jugó
+  const pend=(f0&&f0.f<hoyS&&faltantesDe(f0).length)?f0:null; // ya se jugó y falta algún dato
+  const prox=(f0&&!f0.campeon&&f0.f>=hoyS)?f0:null;           // todavía no se jugó
   const ult=DATA.fechas.find(f=>f.campeon)||DATA.fechas[0];
   const topJ=[...arr].sort((a,b)=>b.pj-a.pj).slice(0,5);
   const topC=[...arr].sort((a,b)=>b.camp-a.camp||b.pj-a.pj).slice(0,5);
@@ -493,6 +496,7 @@ function vInicio(){
           ${ult.pala?`<div class="tag">🥄 Cuchara de madera: <b style="color:var(--txt)">${esc(ult.pala.join(" & "))}</b></div>`:""}
           ${ult.mvp?`<div class="tag">🎖️ MVP: <b style="color:var(--gold)">${esc(ult.mvp)}</b></div>`:""}
           ${ult.sinCafe&&ult.sinCafe.length?`<div class="tag">🏃 Sin café: <b style="color:var(--red2)">${esc(ult.sinCafe.join(", "))}</b></div>`:""}
+          <div class="tag">${ult.confirmada?'<span style="color:#4ade80">✅ Fecha confirmada por el organizador</span>':'<span style="color:#ffcf4d">⏳ A confirmar por el organizador</span>'}</div>
         </div>
         <button class="btn block" id="waShare" style="margin-top:14px;background:#25D366;color:#0a0b0d">📲 Mandar resultados al grupo</button>
       </div>`;
@@ -510,11 +514,11 @@ function vInicio(){
     ${CLOUD&&CLOUDSTATE==="conectando"&&!DATA.fechas.length?`<div class="card pad" style="text-align:center;margin-bottom:12px"><div style="font-size:30px">☁️</div><div class="note">Cargando datos de la nube…</div></div>`:""}
     ${MYPLAYER?`<button class="btn ghost block" data-perfil="${esc(MYPLAYER)}" style="margin-bottom:12px;justify-content:space-between"><span>⭐ Mi perfil · <b>${esc(MYPLAYER)}</b></span><span>→</span></button>`:""}
     ${pend?`<div class="card pad" style="margin-bottom:12px;border-color:var(--red);box-shadow:0 0 14px rgba(226,16,42,.25)">
-      <div class="tag" style="margin-bottom:8px;color:var(--red2)">⚠️ FALTA EL RESULTADO · ${fmtFecha(pend.f)}</div>
-      <div class="note" style="margin-bottom:10px">Ya se jugó esta fecha y el ranking la está esperando. ¿Quién se llevó el Kia? 🚗</div>
+      <div class="tag" style="margin-bottom:8px;color:var(--red2)">⚠️ FECHA INCOMPLETA · ${fmtFecha(pend.f)}</div>
+      <div class="note" style="margin-bottom:10px">Ya se jugó y solo falta cargar: <b>${faltantesTxt(pend)}</b>.${pend.campeon?"":" ¿Quién se llevó el Kia? 🚗"} Se pregunta únicamente lo que falta.</div>
       ${ISADMIN
-        ?`<button class="btn block" id="loadResBtn">👑 Cargar resultado ahora</button>`
-        :(CLOUD?`<button class="btn block" id="propBtn">📝 Proponer resultado (lo aprueba el organizador)</button>`:"")}
+        ?`<button class="btn block" id="loadResBtn">👑 Cargar lo que falta</button>`
+        :(CLOUD?`<button class="btn block" id="propBtn">📝 Cargar lo que falta (lo confirma el organizador)</button>`:"")}
     </div>`:""}
     ${prox?`<div class="card pad" style="margin-bottom:12px">
       <div class="tag" style="margin-bottom:8px;color:var(--A)">🎾 PRÓXIMA FECHA · ${fmtFecha(prox.f)}</div>
@@ -765,17 +769,44 @@ function parseCafe(s){ // "Chuck, Toto" → nombres reconocidos; "" → todos se
   const t=(s||"").trim(); if(!t)return [];
   return t.split(/\s*(?:,|\/|&|\+|-|–|—)\s*|\s+y\s+/i).map(x=>x.trim()).filter(Boolean).map(x=>matchPlayer(x)||x);
 }
+function faltantesDe(f){ // qué datos le faltan a una fecha ("nadie" se guarda como false, así no se vuelve a preguntar)
+  const faltan=[];
+  if(!f.campeon)faltan.push("campeon");
+  if(f.pala===undefined||f.pala===null)faltan.push("pala");
+  if(f.mvp===undefined||f.mvp===null)faltan.push("mvp");
+  if(!Array.isArray(f.sinCafe))faltan.push("cafe");
+  return faltan;
+}
+function faltantesTxt(f){
+  const nom={campeon:"🚗 campeón",pala:"🥄 cuchara",mvp:"🎖️ MVP",cafe:"☕ café"};
+  return faltantesDe(f).map(k=>nom[k]).join(" · ");
+}
 function cargarResultado(f){
   const opciones=f.parejas.map((p,idx)=>`${idx+1}) ${p.join(" & ")}`).join("\n");
-  const r=prompt("🚗 ¿Qué pareja se llevó el Kia? Escribí el número:\n"+opciones+"\n(0 = sin campeón)");
-  if(r===null)return;const idx=parseInt(r)-1;
-  f.campeon=(idx>=0&&idx<f.parejas.length)?f.parejas[idx]:null;
-  const rp=prompt("🥄 ¿Y la cuchara de madera? Número de pareja:\n"+opciones+"\n(0 = nadie)");
-  if(rp!==null){const ip=parseInt(rp)-1;f.pala=(ip>=0&&ip<f.parejas.length)?f.parejas[ip]:null;}
-  const rm=prompt("🎖️ ¿MVP del día? (nombre exacto, vacío = nadie)",f.mvp||"");
-  if(rm!==null)f.mvp=rm.trim()||null;
-  const rc=prompt("☕ ¿Alguien se rajó SIN quedarse al café? (nombres separados por coma · vacío = se quedaron todos)",(f.sinCafe||[]).join(", "));
-  if(rc!==null)f.sinCafe=parseCafe(rc);
+  let faltan=faltantesDe(f);
+  if(!faltan.length){ // ya está todo: recién ahí ofrece corregir todo de nuevo
+    if(!confirm(`La fecha del ${fmtFecha(f.f)} ya tiene todo cargado ✓\n\n¿Querés corregir y volver a cargar todo?`))return;
+    faltan=["campeon","pala","mvp","cafe"];
+  }
+  let cambios=0;
+  if(faltan.includes("campeon")){
+    const r=prompt("🚗 ¿Qué pareja se llevó el Kia? Escribí el número:\n"+opciones+"\n(0 = sin campeón)");
+    if(r!==null){const idx=parseInt(r)-1;f.campeon=(idx>=0&&idx<f.parejas.length)?f.parejas[idx]:null;cambios++;}
+  }
+  if(faltan.includes("pala")){
+    const rp=prompt("🥄 ¿Y la cuchara de madera? Número de pareja:\n"+opciones+"\n(0 = nadie)");
+    if(rp!==null){const ip=parseInt(rp)-1;f.pala=(ip>=0&&ip<f.parejas.length)?f.parejas[ip]:false;cambios++;}
+  }
+  if(faltan.includes("mvp")){
+    const rm=prompt("🎖️ ¿MVP del día? (nombre exacto, vacío = nadie)",f.mvp||"");
+    if(rm!==null){f.mvp=rm.trim()||false;cambios++;}
+  }
+  if(faltan.includes("cafe")){
+    const rc=prompt("☕ ¿Alguien se rajó SIN quedarse al café? (nombres separados por coma · vacío = se quedaron todos)",(f.sinCafe||[]).join(", "));
+    if(rc!==null){f.sinCafe=parseCafe(rc);cambios++;}
+  }
+  if(!cambios)return;
+  f.confirmada=true; // la carga directa siempre la hace un admin
   save();toast("Resultado cargado ✓");render();
 }
 
@@ -961,10 +992,7 @@ function drawManual(){ // parejas ya armadas a mano → solo se sortea el fixtur
 }
 function revelar(orden,{sup,problemas,seedRaw,manual}){
   const msg=document.getElementById("drawMsg");
-  LASTPAIRS=orden.map(p=>p.map(x=>x.n));
   const courts=Math.max(1,parseInt(document.getElementById("courts").value)||1);
-  const teams=orden.map((p,i)=>({id:i+1,label:p.map(x=>x.n).join(" & ")}));
-  const rounds=buildRounds(teams);
 
   // 🥁 bolillero con suspenso (más corto si las parejas ya se conocen)
   const out=document.getElementById("pairsOut");
@@ -980,49 +1008,69 @@ function revelar(orden,{sup,problemas,seedRaw,manual}){
 
   setTimeout(()=>{
     clearInterval(iv);
-    out.innerHTML=`
-    <div class="pairwrap">${orden.map((p,i)=>`
-      <div class="pcard" style="animation-delay:${i*0.3}s"><div class="no">${i+1}</div>
-        ${p.map(x=>`<div class="pl"><span class="cchip ${COL[x.c]||"ch0"}">${x.c||"·"}</span>${esc(x.n)}</div>`).join('<div class="amp">&</div>')}
-      </div>`).join("")}
-    </div>
-    <div class="card pad" style="margin-top:12px;animation:pop .45s ${(orden.length*0.3+0.2).toFixed(1)}s both">
-      <div class="tag" style="margin-bottom:2px">🆚 Cruces por cancha</div>
-      ${rounds.slice(0,3).map((ms,ri)=>`
-        <div class="tag" style="color:var(--A);margin:10px 0 2px">Ronda ${ri+1}</div>
-        ${ms.map((m,mi)=>m[0]&&m[1]
-          ?`<div class="row" style="padding:6px 0"><span><b>${mi<courts?"Cancha "+(mi+1):"⏳ Espera"}:</b> ${esc(m[0].label)} <span style="color:var(--red2);font-family:'Anton',Impact,sans-serif"> VS </span> ${esc(m[1].label)}</span></div>`
-          :`<div class="row" style="padding:6px 0"><span class="muted"><b>Libre:</b> ${esc((m[0]||m[1]).label)} descansa</span></div>`).join("")}`).join("")}
-      ${rounds.length>3?`<div class="note" style="margin-top:8px">…y ${rounds.length-3} ronda${rounds.length-3===1?"":"s"} más si el cuerpo aguanta ☕</div>`:""}
-    </div>
-    <div style="display:flex;gap:8px;margin-top:14px">
-      <button class="btn" id="sharePairs" style="flex:1">📲 Compartir</button>
-      <button class="btn ghost" id="saveFecha" style="flex:1">💾 Guardar fecha</button>
-    </div>`;
     if(navigator.vibrate)navigator.vibrate([15,40,15,40,80]);
-    let m=manual
+    let baseMsg=manual
       ?`Fixture sorteado con Nº <b>${esc(seedRaw)}</b> · ${orden.length} parejas (armadas a mano) · ${courts} canchas.`
       :`Sorteo con Nº <b>${esc(seedRaw)}</b> · ${orden.length} parejas · ${courts} canchas. <span style="color:var(--muted)">¿Cuál es el bueno? 🤔</span>`;
-    if(sup)m+=`<br><span class="warn">Impar:</span> ${esc(sup.n)} queda de suplente rotativo.`;
-    if(orden.length>courts*2)m+=`<br><span class="warn">Ojo:</span> hay más parejas que lugares — algunas esperan turno.`;
-    if(problemas.length)m+=`<br><span class="warn">⚠️ No alcanzan los C/D:</span> ${problemas.map(p=>`<b>${esc(p[0].n)} & ${esc(p[1].n)}</b>`).join(", ")} quedó como pareja fuerte. Recalificá copones en Admin o sumá un C/D.`;
-    msg.innerHTML=m;
-    document.getElementById("sharePairs").onclick=()=>{
-      let txt="🎾🔥 *PAREJAS DEL DOMINGO*\nCopones Buena Vista\n\n"+LASTPAIRS.map((p,i)=>`*${i+1})* ${p.join(" & ")}`).join("\n");
-      txt+="\n\n🆚 *1ª ronda:*\n"+rounds[0].map((m,mi)=>m[0]&&m[1]?`${mi<courts?"Cancha "+(mi+1):"⏳ Espera"}: ${m[0].label} vs ${m[1].label}`:`Libre: ${(m[0]||m[1]).label}`).join("\n");
-      txt+=`\n\n🔀 Sorteo transparente · Nº de la suerte: *${seedRaw}*\n¿Cuál es el bueno? 🤔`;
-      txt+=`\n\n👉 *Seguí el fixture, el ranking y tu perfil en la app:*\n${APP_URL}\n\n_Nos vemos el domingo 8:30 ☕🎾_`;
-      shareWA(txt);
+    if(sup)baseMsg+=`<br><span class="warn">Impar:</span> ${esc(sup.n)} queda de suplente rotativo.`;
+    if(orden.length>courts*2)baseMsg+=`<br><span class="warn">Ojo:</span> hay más parejas que lugares — algunas esperan turno.`;
+    if(problemas.length)baseMsg+=`<br><span class="warn">⚠️ No alcanzan los C/D:</span> ${problemas.map(p=>`<b>${esc(p[0].n)} & ${esc(p[1].n)}</b>`).join(", ")} quedó como pareja fuerte. Recalificá copones en Admin o sumá un C/D.`;
+    let selSwap=null, edited=false;
+
+    const paint=(first)=>{ // pinta parejas + cruces; se re-ejecuta en cada intercambio
+      LASTPAIRS=orden.map(p=>p.map(x=>x.n));
+      const teams=orden.map((p,i)=>({id:i+1,label:p.map(x=>x.n).join(" & ")}));
+      const rounds=buildRounds(teams);
+      out.innerHTML=`
+      <div class="pairwrap">${orden.map((p,i)=>`
+        <div class="pcard" style="animation-delay:${first?(i*0.3).toFixed(1):0}s"><div class="no">${i+1}</div>
+          ${p.map((x,j)=>`<div class="pl swapable" data-swap="${i}:${j}"><span class="cchip ${COL[x.c]||"ch0"}">${x.c||"·"}</span>${esc(x.n)}</div>`).join('<div class="amp">&</div>')}
+        </div>`).join("")}
+      </div>
+      <div class="note" style="margin-top:8px;font-size:12px">✏️ ¿Quedó alguien mal parado? <b>Tocá un nombre y después otro</b> para intercambiarlos — los cruces se rearman solos.</div>
+      <div class="card pad" style="margin-top:12px;${first?`animation:pop .45s ${(orden.length*0.3+0.2).toFixed(1)}s both`:""}">
+        <div class="tag" style="margin-bottom:2px">🆚 Cruces por cancha</div>
+        ${rounds.slice(0,3).map((ms,ri)=>`
+          <div class="tag" style="color:var(--A);margin:10px 0 2px">Ronda ${ri+1}</div>
+          ${ms.map((m,mi)=>m[0]&&m[1]
+            ?`<div class="row" style="padding:6px 0"><span><b>${mi<courts?"Cancha "+(mi+1):"⏳ Espera"}:</b> ${esc(m[0].label)} <span style="color:var(--red2);font-family:'Anton',Impact,sans-serif"> VS </span> ${esc(m[1].label)}</span></div>`
+            :`<div class="row" style="padding:6px 0"><span class="muted"><b>Libre:</b> ${esc((m[0]||m[1]).label)} descansa</span></div>`).join("")}`).join("")}
+        ${rounds.length>3?`<div class="note" style="margin-top:8px">…y ${rounds.length-3} ronda${rounds.length-3===1?"":"s"} más si el cuerpo aguanta ☕</div>`:""}
+      </div>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button class="btn" id="sharePairs" style="flex:1">📲 Compartir</button>
+        <button class="btn ghost" id="saveFecha" style="flex:1">💾 Guardar fecha</button>
+      </div>`;
+      out.querySelectorAll("[data-swap]").forEach(el=>el.onclick=()=>{
+        const [i,j]=el.dataset.swap.split(":").map(Number);
+        if(!selSwap){selSwap=[i,j];el.classList.add("swapsel");return;}
+        const [i0,j0]=selSwap;
+        if(i0===i&&j0===j){selSwap=null;el.classList.remove("swapsel");return;}
+        const t=orden[i0][j0];orden[i0][j0]=orden[i][j];orden[i][j]=t;
+        selSwap=null;edited=true;
+        if(navigator.vibrate)navigator.vibrate(15);
+        paint(false);
+        msg.innerHTML=baseMsg+`<br>✏️ <b>Parejas editadas a mano</b> — cruces recalculados.`;
+      });
+      document.getElementById("sharePairs").onclick=()=>{
+        let txt="🎾🔥 *PAREJAS DEL DOMINGO*\nCopones Buena Vista\n\n"+LASTPAIRS.map((p,i)=>`*${i+1})* ${p.join(" & ")}`).join("\n");
+        txt+="\n\n🆚 *1ª ronda:*\n"+rounds[0].map((m,mi)=>m[0]&&m[1]?`${mi<courts?"Cancha "+(mi+1):"⏳ Espera"}: ${m[0].label} vs ${m[1].label}`:`Libre: ${(m[0]||m[1]).label}`).join("\n");
+        txt+=`\n\n🔀 Sorteo transparente · Nº de la suerte: *${seedRaw}*${edited?" · _con retoques a mano_":""}\n¿Cuál es el bueno? 🤔`;
+        txt+=`\n\n👉 *Seguí el fixture, el ranking y tu perfil en la app:*\n${APP_URL}\n\n_Nos vemos el domingo 8:30 ☕🎾_`;
+        shareWA(txt);
+      };
+      document.getElementById("saveFecha").onclick=()=>{
+        const f=SORTEO_FECHA||proxDomingo();
+        if(DATA.fechas.some(x=>x.f===f)&&!confirm(`Ya hay una fecha guardada el ${fmtFecha(f)}. ¿Agregar otra igual?`))return;
+        DATA.fechas.unshift({f,parejas:LASTPAIRS,campeon:null,pala:null,mvp:null});
+        DATA.fechas.sort((a,b)=>b.f.localeCompare(a.f));
+        save();
+        toast(`📅 Fecha del ${fmtFecha(f)} guardada — después solo cargás el resultado`);
+        go("inicio");
+      };
     };
-    document.getElementById("saveFecha").onclick=()=>{
-      const f=SORTEO_FECHA||proxDomingo();
-      if(DATA.fechas.some(x=>x.f===f)&&!confirm(`Ya hay una fecha guardada el ${fmtFecha(f)}. ¿Agregar otra igual?`))return;
-      DATA.fechas.unshift({f,parejas:LASTPAIRS,campeon:null,pala:null,mvp:null});
-      DATA.fechas.sort((a,b)=>b.f.localeCompare(a.f));
-      save();
-      toast(`📅 Fecha del ${fmtFecha(f)} guardada — después solo cargás el resultado`);
-      go("inicio");
-    };
+    paint(true);
+    msg.innerHTML=baseMsg;
   },manual?1100:1900);
 }
 
@@ -1052,11 +1100,17 @@ function vAdmin(){
   const propCard = (CLOUD&&PROPUESTAS.length)
     ? `<div class="card pad" style="border-color:#7c3aed;margin-bottom:12px">
         <div class="tag" style="color:#c4b5fd;margin-bottom:8px">📥 Propuestas de resultados (${PROPUESTAS.length})</div>
-        ${PROPUESTAS.map(p=>`<div class="adline" style="flex-wrap:wrap">
-          <span class="an">${fmtFecha(p.f)} · 🚗 ${p.campeon?esc(p.campeon.join(" & ")):"—"} · 🥄 ${p.pala?esc(p.pala.join(" & ")):"—"} · 🎖️ ${p.mvp?esc(p.mvp):"—"} · 🏃 ${p.sinCafe&&p.sinCafe.length?esc(p.sinCafe.join(", ")):"nadie"}<br><small style="color:var(--muted)">propuso ${esc(p.por||"?")}</small></span>
-          <button data-propok="${esc(p.id)}" title="Aplicar" style="color:#4ade80;font-weight:800;font-size:14px">✔️ Aplicar</button>
+        ${PROPUESTAS.map(p=>{
+          const bits=[];
+          if(p.campeon)bits.push(`🚗 ${esc(p.campeon.join(" & "))}`);
+          if(p.pala)bits.push(`🥄 ${esc(p.pala.join(" & "))}`);
+          if(p.mvp)bits.push(`🎖️ ${esc(p.mvp)}`);
+          if(Array.isArray(p.sinCafe))bits.push(p.sinCafe.length?`🏃 ${esc(p.sinCafe.join(", "))}`:"☕ se quedaron todos");
+          return `<div class="adline" style="flex-wrap:wrap">
+          <span class="an">${fmtFecha(p.f)} · ${bits.join(" · ")||"sin datos"}<br><small style="color:var(--muted)">propuso ${esc(p.por||"?")}</small></span>
+          <button data-propok="${esc(p.id)}" title="Confirmar" style="color:#4ade80;font-weight:800;font-size:14px">✔️ Confirmar</button>
           <button data-propno="${esc(p.id)}" title="Rechazar">🗑️</button>
-        </div>`).join("")}
+        </div>`;}).join("")}
       </div>`
     : "";
   return `<section>
@@ -1082,8 +1136,8 @@ function vAdmin(){
     <div class="card pad" style="margin-top:12px">
       <div class="tag" style="margin-bottom:8px">📅 Fechas cargadas (${DATA.fechas.length})</div>
       ${DATA.fechas.map((f,i)=>`<div class="adline">
-        <span class="an">${fmtFecha(f.f)} · ${f.parejas.length} parejas ${f.campeon?'🏆':''}</span>
-        <button data-editcamp="${i}" title="Marcar campeón">👑</button>
+        <span class="an">${fmtFecha(f.f)} · ${f.parejas.length} parejas ${f.campeon?'🏆':''}${f.confirmada?'✅':''}${faltantesDe(f).length?` <small style="color:#ffcf4d">· falta: ${faltantesTxt(f)}</small>`:''}</span>
+        <button data-editcamp="${i}" title="Cargar/corregir resultado">👑</button>
         <button data-delf="${i}" title="Borrar">🗑️</button>
       </div>`).join("")||'<div class="empty">Sin fechas</div>'}
     </div>
@@ -1209,25 +1263,35 @@ function bind(){
     const pb=document.getElementById("propBtn");
     if(pb)pb.onclick=()=>{
       const f=DATA.fechas[0];
-      if(!f||f.campeon){toast("No hay fecha pendiente de resultado");return;}
+      if(!f||!faltantesDe(f).length){toast("No hay nada pendiente de cargar");return;}
       if(!USER){toast("Primero ingresá con Google (🔑 arriba)");window.fbLogin();return;}
+      const faltan=faltantesDe(f); // solo se pregunta lo que falta
       const ops=f.parejas.map((p,i)=>`${i+1}) ${p.join(" & ")}`).join("\n");
-      const rc=prompt("🚗 ¿Quién se llevó el Kia? Escribí el número:\n"+ops+"\n(0 = no sé)");
-      if(rc===null)return; const ic=parseInt(rc)-1;
-      const rp2=prompt("🥄 ¿Cuchara de madera? Número:\n"+ops+"\n(0 = no sé)");
-      if(rp2===null)return; const ip=parseInt(rp2)-1;
-      const rm=prompt("🎖️ ¿MVP del día? (nombre, vacío = no sé)","");
-      if(rm===null)return;
-      const rcafe=prompt("☕ ¿Alguien se rajó SIN quedarse al café? (nombres con coma · vacío = se quedaron todos)","");
-      if(rcafe===null)return;
-      addDoc(collection(db,"propuestas"),{
-        f:f.f,
-        campeon:(ic>=0&&ic<f.parejas.length)?f.parejas[ic]:null,
-        pala:(ip>=0&&ip<f.parejas.length)?f.parejas[ip]:null,
-        mvp:(rm||"").trim()||null,
-        sinCafe:parseCafe(rcafe),
-        por:USER.email, ts:Date.now()
-      }).then(()=>toast("📝 ¡Propuesta enviada al organizador!"))
+      const prop={f:f.f,por:USER.email,ts:Date.now()};
+      let cambios=0;
+      if(faltan.includes("campeon")){
+        const rc=prompt("🚗 ¿Quién se llevó el Kia? Escribí el número:\n"+ops+"\n(0 = no sé)");
+        if(rc===null)return; const ic=parseInt(rc)-1;
+        if(ic>=0&&ic<f.parejas.length){prop.campeon=f.parejas[ic];cambios++;}
+      }
+      if(faltan.includes("pala")){
+        const rp2=prompt("🥄 ¿Cuchara de madera? Número:\n"+ops+"\n(0 = no sé)");
+        if(rp2===null)return; const ip=parseInt(rp2)-1;
+        if(ip>=0&&ip<f.parejas.length){prop.pala=f.parejas[ip];cambios++;}
+      }
+      if(faltan.includes("mvp")){
+        const rm=prompt("🎖️ ¿MVP del día? (nombre, vacío = no sé)","");
+        if(rm===null)return;
+        if(rm.trim()){prop.mvp=rm.trim();cambios++;}
+      }
+      if(faltan.includes("cafe")){
+        const rcafe=prompt("☕ ¿Alguien se rajó SIN quedarse al café? (nombres con coma · vacío = se quedaron todos)","");
+        if(rcafe===null)return;
+        prop.sinCafe=parseCafe(rcafe);cambios++;
+      }
+      if(!cambios){toast("No cargaste ningún dato");return;}
+      addDoc(collection(db,"propuestas"),prop)
+        .then(()=>toast("📝 ¡Enviado! Lo confirma el organizador"))
         .catch(()=>toast("⚠️ No se pudo enviar (faltan las reglas nuevas)"));
     };
     const lr=document.getElementById("loadResBtn");
@@ -1331,9 +1395,9 @@ function bind(){
       const p=PROPUESTAS.find(x=>x.id===b.dataset.propok); if(!p)return;
       const fe=DATA.fechas.find(x=>x.f===p.f);
       if(!fe){toast("Esa fecha ya no existe");}
-      else{ fe.campeon=p.campeon||fe.campeon; fe.pala=p.pala||fe.pala; fe.mvp=p.mvp||fe.mvp; if(Array.isArray(p.sinCafe))fe.sinCafe=p.sinCafe; save(); }
+      else{ fe.campeon=p.campeon||fe.campeon; fe.pala=p.pala||fe.pala; fe.mvp=p.mvp||fe.mvp; if(Array.isArray(p.sinCafe))fe.sinCafe=p.sinCafe; fe.confirmada=true; save(); }
       deleteDoc(doc(db,"propuestas",p.id)).catch(()=>{});
-      toast("✔️ Resultado aplicado");
+      toast("✔️ Resultado confirmado");
     });
     document.querySelectorAll("[data-propno]").forEach(b=>b.onclick=()=>{
       deleteDoc(doc(db,"propuestas",b.dataset.propno)).then(()=>toast("Propuesta descartada")).catch(()=>{});
@@ -1398,6 +1462,7 @@ function bind(){
       // el dato del café solo se registra si hay resultado o si se anotó a alguien (una fecha futura no suma cafés)
       const cafeTxt=document.getElementById("acafe").value;
       if(cafeTxt.trim()||nueva.campeon)nueva.sinCafe=parseCafe(cafeTxt);
+      if(nueva.campeon)nueva.confirmada=true; // la carga la hace un admin
       DATA.fechas.unshift(nueva);
       DATA.fechas.sort((a,b)=>b.f.localeCompare(a.f));
       save();toast("Fecha agregada");render();
