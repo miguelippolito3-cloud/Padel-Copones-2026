@@ -281,6 +281,8 @@ const FIREBASE_CONFIG = {
   measurementId: "G-REDE998S2L"
 };
 const ADMINS = ["miguelippolito3@gmail.com","miguel.ippolito@grupomitre.com.ar"];
+const APP_URL="https://miguelippolito3-cloud.github.io/Padel-Copones-2026/";
+function shareWA(txt){ window.open("https://wa.me/?text="+encodeURIComponent(txt),"_blank"); }
 const CLOUD = !JSON.stringify(FIREBASE_CONFIG).includes("PEGAR_ACA");
 let USER=null, ISADMIN=false, auth=null, db=null, dbRef=null, CLOUDSTATE="conectando";
 let MYPLAYER=null; try{MYPLAYER=localStorage.getItem("cb_myplayer")||null;}catch(e){}
@@ -1005,11 +1007,12 @@ function revelar(orden,{sup,problemas,seedRaw,manual}){
     if(orden.length>courts*2)m+=`<br><span class="warn">Ojo:</span> hay más parejas que lugares — algunas esperan turno.`;
     if(problemas.length)m+=`<br><span class="warn">⚠️ No alcanzan los C/D:</span> ${problemas.map(p=>`<b>${esc(p[0].n)} & ${esc(p[1].n)}</b>`).join(", ")} quedó como pareja fuerte. Recalificá copones en Admin o sumá un C/D.`;
     msg.innerHTML=m;
-    document.getElementById("sharePairs").onclick=async()=>{
-      let txt="🎾 PAREJAS DEL DOMINGO · Copones Buena Vista\n\n"+LASTPAIRS.map((p,i)=>`${i+1}) ${p.join(" & ")}`).join("\n");
-      txt+="\n\n🆚 1ª ronda:\n"+rounds[0].map((m,mi)=>m[0]&&m[1]?`${mi<courts?"Cancha "+(mi+1):"Espera"}: ${m[0].label} vs ${m[1].label}`:`Libre: ${(m[0]||m[1]).label}`).join("\n");
-      txt+=`\n\nSorteo transparente · Nº ${seedRaw} · ¿Cuál es el bueno? 🤔`;
-      try{ if(navigator.share){await navigator.share({title:"Parejas del domingo",text:txt});} else {await navigator.clipboard.writeText(txt);toast("Copiado para pegar en WhatsApp");} }catch(e){}
+    document.getElementById("sharePairs").onclick=()=>{
+      let txt="🎾🔥 *PAREJAS DEL DOMINGO*\nCopones Buena Vista\n\n"+LASTPAIRS.map((p,i)=>`*${i+1})* ${p.join(" & ")}`).join("\n");
+      txt+="\n\n🆚 *1ª ronda:*\n"+rounds[0].map((m,mi)=>m[0]&&m[1]?`${mi<courts?"Cancha "+(mi+1):"⏳ Espera"}: ${m[0].label} vs ${m[1].label}`:`Libre: ${(m[0]||m[1]).label}`).join("\n");
+      txt+=`\n\n🔀 Sorteo transparente · Nº de la suerte: *${seedRaw}*\n¿Cuál es el bueno? 🤔`;
+      txt+=`\n\n👉 *Seguí el fixture, el ranking y tu perfil en la app:*\n${APP_URL}\n\n_Nos vemos el domingo 8:30 ☕🎾_`;
+      shareWA(txt);
     };
     document.getElementById("saveFecha").onclick=()=>{
       const f=SORTEO_FECHA||proxDomingo();
@@ -1187,13 +1190,21 @@ function bind(){
     const wa=document.getElementById("waShare");
     if(wa)wa.onclick=()=>{
       const f=DATA.fechas.find(x=>x.campeon)||DATA.fechas[0];
-      let txt=`🎾 *PÁDEL COPONES BV* · ${fmtFecha(f.f)}\n\n`;
-      if(f.campeon)txt+=`🚗🏆 *Se llevaron el Kia:* ${f.campeon.join(" & ")}\n`;
+      const st=statsInd();
+      let txt=`🎾🔥 *PÁDEL COPONES BV*\n📅 Resultados del ${fmtFecha(f.f)}\n\n`;
+      if(f.campeon){
+        txt+=`🚗🏆 *SE LLEVARON EL KIA:*\n${f.campeon.join(" & ")}\n`;
+        const kias=Math.max(...f.campeon.map(n=>(st[n]||{}).camp||0));
+        if(kias>1)txt+=`_(ya van ${kias} Kias en la temporada 😱)_\n`;
+        txt+=`\n`;
+      }
       if(f.pala)txt+=`🥄 *Cuchara de madera:* ${f.pala.join(" & ")}\n`;
       if(f.mvp)txt+=`🎖️ *MVP del día:* ${f.mvp}\n`;
-      if(f.sinCafe&&f.sinCafe.length)txt+=`🏃 *Se rajaron sin café:* ${f.sinCafe.join(", ")}\n`;
-      txt+=`\n📊 Ranking completo:\nhttps://miguelippolito3-cloud.github.io/Padel-Copones-2026/`;
-      window.open("https://wa.me/?text="+encodeURIComponent(txt),"_blank");
+      if(Array.isArray(f.sinCafe))txt+=f.sinCafe.length
+        ?`🏃 *Se rajaron sin café:* ${f.sinCafe.join(", ")} 👀\n`
+        :`☕ *Café:* se quedaron todos 👏\n`;
+      txt+=`\n👉 *Mirá el ranking, tu perfil y tus logros en la app:*\n${APP_URL}\n\n_Copones Buena Vista · Domingos 8:30 🎾_`;
+      shareWA(txt);
     };
     const pb=document.getElementById("propBtn");
     if(pb)pb.onclick=()=>{
