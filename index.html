@@ -294,6 +294,7 @@ const CANCHAS_ABONO=2; // canchas fijas del abono de los domingos
 const SEED = { jugadores: [], fechas: [] };
 
 /* ================= ESTADO ================= */
+const RENOMBRES=[["Rafa","Mike Rafa"]]; // correcciones automáticas de una sola vez (antes de load(): normalizeData la usa)
 const LS="padel_espn_v1";
 let DATA=load();
 function load(){ try{const s=JSON.parse(localStorage.getItem(LS)); if(s&&s.jugadores&&s.fechas) return normalizeData(s);}catch(e){} return JSON.parse(JSON.stringify(SEED)); }
@@ -391,7 +392,7 @@ function eachFechaArr(d){ return [d.fechas||[], ...(((d&&d.historial)||[]).map(t
 function statsInd(list){
   list=list||DATA.fechas;
   const m={};
-  const get=n=>m[n]||(m[n]={n,pj:0,camp:0,pala:0,mvp:0,comp:{}});
+  const get=n=>m[n]||(m[n]={n,pj:0,camp:0,pala:0,mvp:0,cafe:0,nocafe:0,cafeReg:0,comp:{}});
   list.forEach(f=>{
     const enFecha=new Set();
     f.parejas.forEach(team=>{
@@ -402,6 +403,10 @@ function statsInd(list){
     if(f.campeon){f.campeon.forEach(n=>get(n).camp++);}
     if(f.pala){f.pala.forEach(n=>get(n).pala++);}
     if(f.mvp){get(f.mvp).mvp++;}
+    // ☕ solo cuenta en fechas donde se registró el dato (sinCafe existe)
+    if(Array.isArray(f.sinCafe)){
+      enFecha.forEach(n=>{const g=get(n);g.cafeReg++;if(f.sinCafe.includes(n))g.nocafe++;else g.cafe++;});
+    }
   });
   return m;
 }
@@ -457,6 +462,8 @@ function renderTicker(){
   if(ult&&ult.pala)bits.push(`<span class="rd">🥄 CUCHARA</span> ${esc(ult.pala.join(" & "))}`);
   if(topC&&topC.camp)bits.push(`<span class="rd">👑 MÁS KIAS</span> <b>${esc(topC.n)}</b> (${topC.camp})`);
   if(topJ)bits.push(`<span class="rd">🔥 MÁS PRESENTE</span> <b>${esc(topJ.n)}</b> (${topJ.pj} fechas)`);
+  const topR=[...arr].sort((a,b)=>b.nocafe-a.nocafe)[0];
+  if(topR&&topR.nocafe)bits.push(`<span class="rd">🏃 SE RAJA SIN CAFÉ</span> <b>${esc(topR.n)}</b> (${topR.nocafe})`);
   bits.push(`<b>${DATA.fechas.length}</b> fechas registradas`);
   bits.push(`<b>${todosLosNombres().length}</b> jugadores`);
   const line=bits.join(" &nbsp;•&nbsp; ");
@@ -483,6 +490,7 @@ function vInicio(){
         <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:12px">
           ${ult.pala?`<div class="tag">🥄 Cuchara de madera: <b style="color:var(--txt)">${esc(ult.pala.join(" & "))}</b></div>`:""}
           ${ult.mvp?`<div class="tag">🎖️ MVP: <b style="color:var(--gold)">${esc(ult.mvp)}</b></div>`:""}
+          ${ult.sinCafe&&ult.sinCafe.length?`<div class="tag">🏃 Sin café: <b style="color:var(--red2)">${esc(ult.sinCafe.join(", "))}</b></div>`:""}
         </div>
         <button class="btn block" id="waShare" style="margin-top:14px;background:#25D366;color:#0a0b0d">📲 Mandar resultados al grupo</button>
       </div>`;
@@ -573,19 +581,21 @@ function vRanking(){
       <button data-t="par" class="${RKTAB==='par'?'on':''}">Parejas</button>
     </div>
     <div class="card" id="rktable">${RKTAB==='jug'?tablaJug():tablaPar()}</div>
-    <div class="note" style="margin-top:10px">PJ = fechas jugadas · 🚗 = Kias (campeonatos) · 🎖️ = MVP del día · 🥄 = cucharas de madera. Tocá un nombre para ver su perfil.</div>
+    <div class="note" style="margin-top:10px">PJ = fechas jugadas · 🚗 = Kias (campeonatos) · 🎖️ = MVP del día · 🥄 = cucharas de madera · ☕ = se quedó al café · 🏃 = se rajó sin café. Tocá un nombre para ver su perfil.</div>
   </section>`;
 }
 function tablaJug(){
   const arr=Object.values(statsInd(seasonFechas())).sort((a,b)=>b.camp-a.camp||b.pj-a.pj);
   if(!arr.length)return `<div class="empty">Sin datos</div>`;
-  return `<table class="stand"><thead><tr><th>Jugador</th><th>PJ</th><th>🚗</th><th>🎖️</th><th>🥄</th></tr></thead><tbody>
+  return `<table class="stand"><thead><tr><th>Jugador</th><th>PJ</th><th>🚗</th><th>🎖️</th><th>🥄</th><th>☕</th><th>🏃</th></tr></thead><tbody>
     ${arr.map((p,i)=>`<tr>
       <td><span class="rk ${i<3?'g'+(i+1):''}">${i+1}</span><span class="pname" data-perfil="${esc(p.n)}">${chip(p.n)} ${esc(p.n)}</span></td>
       <td style="text-align:right"><span class="big">${p.pj}</span></td>
       <td style="text-align:right;color:var(--gold);font-weight:800">${p.camp||"·"}</td>
       <td style="text-align:right;color:var(--A);font-weight:800">${p.mvp||"·"}</td>
       <td style="text-align:right;color:var(--spoon)">${p.pala||"·"}</td>
+      <td style="text-align:right;color:#4ade80;font-weight:800">${p.cafe||"·"}</td>
+      <td style="text-align:right;color:var(--red2);font-weight:800">${p.nocafe||"·"}</td>
     </tr>`).join("")}
   </tbody></table>`;
 }
@@ -658,6 +668,8 @@ function vPerfil(name){
       </div>
       <div class="row"><span class="muted">🎖️ MVP del día</span><b class="big" style="color:var(--gold)">${ind.mvp||0}</b></div>
       ${racha>=2?`<div class="row"><span class="muted">🔥 Racha de asistencia</span><b class="big" style="color:#fb923c">${racha} seguidas</b></div>`:""}
+      ${ind.cafeReg?`<div class="row"><span class="muted">☕ Se quedó al café</span><b class="big" style="color:#4ade80">${ind.cafe}/${ind.cafeReg}</b></div>`:""}
+      ${ind.nocafe?`<div class="row"><span class="muted">🏃 Se rajó sin café</span><b class="big" style="color:var(--red2)">${ind.nocafe}</b></div>`:""}
       <div class="row"><span class="muted">Efectividad (Kias / fechas)</span><b class="big">${winPct}%</b></div>
       ${badgesHTML(ind)}
       ${comps.length?`<div class="row" style="display:block;border-bottom:0">
@@ -677,9 +689,10 @@ function vPerfil(name){
         const comp=team.filter(x=>x!==name).join(" & ")||"—";
         const fueCamp=f.campeon&&f.campeon.includes(name);
         const fuePala=f.pala&&f.pala.includes(name);
+        const seRajo=Array.isArray(f.sinCafe)&&f.sinCafe.includes(name);
         return `<div class="card pad" style="display:flex;align-items:center;gap:12px">
           <div style="font-size:22px">${fueCamp?"🏆":fuePala?"🥄":"🎾"}</div>
-          <div style="flex:1"><b>con ${esc(comp)}</b><div class="tag" style="margin-top:2px">${fmtFecha(f.f)}${fueCamp?' · Campeón':fuePala?' · Pala de madera':''}</div></div>
+          <div style="flex:1"><b>con ${esc(comp)}</b><div class="tag" style="margin-top:2px">${fmtFecha(f.f)}${fueCamp?' · Campeón':fuePala?' · Pala de madera':''}${seRajo?' · 🏃 sin café':''}</div></div>
         </div>`;
       }).join(""):`<div class="empty">Sin fechas registradas</div>`}
     </section>
@@ -746,6 +759,10 @@ function cleanLine(l){
 function esEncabezado(l){ return !l || /^(domingo|sabado|sábado|lista|convocados|padel|pádel)/i.test(l) || /\d{1,2}\/\d{1,2}/.test(l) || !/[a-záéíóúñ]/i.test(l); }
 
 /* ---------- CARGA RÁPIDA DE RESULTADO (admin) ---------- */
+function parseCafe(s){ // "Chuck, Toto" → nombres reconocidos; "" → todos se quedaron
+  const t=(s||"").trim(); if(!t)return [];
+  return t.split(/\s*(?:,|\/|&|\+|-|–|—)\s*|\s+y\s+/i).map(x=>x.trim()).filter(Boolean).map(x=>matchPlayer(x)||x);
+}
 function cargarResultado(f){
   const opciones=f.parejas.map((p,idx)=>`${idx+1}) ${p.join(" & ")}`).join("\n");
   const r=prompt("🚗 ¿Qué pareja se llevó el Kia? Escribí el número:\n"+opciones+"\n(0 = sin campeón)");
@@ -755,6 +772,8 @@ function cargarResultado(f){
   if(rp!==null){const ip=parseInt(rp)-1;f.pala=(ip>=0&&ip<f.parejas.length)?f.parejas[ip]:null;}
   const rm=prompt("🎖️ ¿MVP del día? (nombre exacto, vacío = nadie)",f.mvp||"");
   if(rm!==null)f.mvp=rm.trim()||null;
+  const rc=prompt("☕ ¿Alguien se rajó SIN quedarse al café? (nombres separados por coma · vacío = se quedaron todos)",(f.sinCafe||[]).join(", "));
+  if(rc!==null)f.sinCafe=parseCafe(rc);
   save();toast("Resultado cargado ✓");render();
 }
 
@@ -763,8 +782,9 @@ function proxDomingo(){
   const d=new Date(); d.setDate(d.getDate()+((7-d.getDay())%7));
   return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
 }
-function resumenConvocados(){
-  const n=SEL.size; if(!n)return;
+function resumenConvocados(scrollTop){
+  const n=SEL.size;
+  if(!n){const m=document.getElementById("drawMsg");if(m)m.innerHTML="";return;}
   const pairs=Math.floor(n/2), sup=n%2, nec=Math.max(1,Math.ceil(pairs/2));
   const ci=document.getElementById("courts"); if(ci)ci.value=nec;
   const falta=nec-CANCHAS_ABONO;
@@ -777,7 +797,7 @@ function resumenConvocados(){
     (SORTEO_FECHA?`<br>📅 Fecha detectada en el mensaje: <b>${fmtFecha(SORTEO_FECHA)}</b>`:"")+
     `<br><button class="btn" id="drawNow" style="margin-top:10px">🎾 Sortear ahora</button>`;
   const dn=document.getElementById("drawNow"); if(dn)dn.onclick=()=>draw();
-  window.scrollTo({top:0,behavior:"smooth"});
+  if(scrollTop)window.scrollTo({top:0,behavior:"smooth"});
 }
 function mergePlayers(keep,dup){
   if(!keep||!dup||keep===dup)return;
@@ -786,6 +806,7 @@ function mergePlayers(keep,dup){
     if(f.campeon){f.campeon=f.campeon.map(n=>n===dup?keep:n).filter((n,i,a)=>a.indexOf(n)===i);}
     if(f.pala){f.pala=f.pala.map(n=>n===dup?keep:n).filter((n,i,a)=>a.indexOf(n)===i);}
     if(f.mvp===dup)f.mvp=keep;
+    if(f.sinCafe){f.sinCafe=f.sinCafe.map(n=>n===dup?keep:n).filter((n,i,a)=>a.indexOf(n)===i);}
   }));
   const kI=DATA.jugadores.findIndex(j=>j.n===keep), dI=DATA.jugadores.findIndex(j=>j.n===dup);
   if(dI>=0&&kI>=0)DATA.jugadores.splice(dI,1);
@@ -801,12 +822,12 @@ function renameInData(d,old,neu){
     if(f.campeon)f.campeon=f.campeon.map(n=>n===old?neu:n);
     if(f.pala)f.pala=f.pala.map(n=>n===old?neu:n);
     if(f.mvp===old)f.mvp=neu;
+    if(f.sinCafe)f.sinCafe=f.sinCafe.map(n=>n===old?neu:n);
   }));
   if(d.bolsa)d.bolsa=d.bolsa.map(n=>n===old?neu:n);
   if(d.bolsaCop&&d.bolsaCop[old]!==undefined){d.bolsaCop[neu]=d.bolsaCop[old];delete d.bolsaCop[old];}
   return d;
 }
-const RENOMBRES=[["Rafa","Mike Rafa"]]; // correcciones automáticas de una sola vez
 function normalizeData(d){
   RENOMBRES.forEach(([o,n])=>{ if(d&&d.jugadores&&d.jugadores.some(j=>j.n===o)&&!d.jugadores.some(j=>j.n===n)) renameInData(d,o,n); });
   return d;
@@ -818,8 +839,10 @@ function badgesHTML(ind){
   if(ind.camp>=1)b.push(["🚗","Se llevó el Kia"]);
   if(ind.camp>=3)b.push(["🏎️","Concesionaria Kia (3+)"]);
   if(ind.mvp>=1)b.push(["🎖️","MVP del día"]);
-  if(ind.pj>=5)b.push(["☕","Fana del cafecito (5+ fechas)"]);
+  if(ind.pj>=5)b.push(["📅","Habitué (5+ fechas)"]);
   if(ind.pj>=12)b.push(["🔥","No falta nunca (12+ fechas)"]);
+  if(ind.cafe>=5&&!ind.nocafe)b.push(["☕","Fana del cafecito (nunca se lo pierde)"]);
+  if(ind.nocafe>=3)b.push(["🏃","Rajador serial (3+ sin café)"]);
   if(ind.pala>=1)b.push(["🥄","Catador de Blindex"]);
   if(ind.camp===0&&ind.pj>=8)b.push(["🧊","Bola fría (8+ fechas sin Kia)"]);
   if(!b.length)return "";
@@ -855,6 +878,13 @@ function vSorteo(){
       <div class="note" style="margin-bottom:8px">Pegá el mensaje con la lista numerada de convocados y se marcan solos (reconoce apodos: Mike, Track, Pachu…).</div>
       <textarea id="pasteList" rows="4" style="width:100%" placeholder="Domingo 12/7&#10;1. Mike&#10;2. Track&#10;3. Pachu&#10;4. Chuck…"></textarea>
       <button class="btn sm block" id="parseList" style="margin-top:8px">✨ Leer lista y marcar presentes</button>
+    </div>
+
+    <div class="card pad" style="margin-top:12px">
+      <div class="tag" style="margin-bottom:8px">✍️ Ya tengo las parejas</div>
+      <div class="note" style="margin-bottom:8px">¿Las parejas ya vienen armadas? Pegalas acá — una por línea, con <b>/</b>, <b>coma</b> o <b>y</b> — y sorteo solamente el <b>fixture de cruces por cancha</b>, con el mismo Nº de la suerte. Reconoce apodos.</div>
+      <textarea id="manualPairs" rows="4" style="width:100%" placeholder="1) Mike / Track&#10;2) Bati y Pati&#10;3) Matso, Toto"></textarea>
+      <button class="btn sm block" id="btnManual" style="margin-top:8px">🆚 Sortear fixture con estas parejas</button>
     </div>
 
     <div class="card pad" style="margin-top:12px">
@@ -897,12 +927,12 @@ function buildRounds(teams){ // fixture todos-contra-todos (método del círculo
   }
   return rounds;
 }
+function seedHash(seedRaw){ let seed=0;for(let i=0;i<seedRaw.length;i++)seed=(seed*31+seedRaw.charCodeAt(i))|0; return seed>>>0; }
 function draw(){
   const seedRaw=(document.getElementById("seed").value||"").trim();
   const msg=document.getElementById("drawMsg");
   if(!seedRaw){msg.innerHTML='<span class="warn">Poné un Nº de la suerte.</span>';return;}
-  let seed=0;for(let i=0;i<seedRaw.length;i++)seed=(seed*31+seedRaw.charCodeAt(i))|0;
-  const rnd=mulberry32(seed>>>0);
+  const rnd=mulberry32(seedHash(seedRaw));
   let all=[...SEL].map(n=>({n,c:coponDe(n),k:rnd()}));
   if(all.length<2){msg.innerHTML='<span class="warn">Marcá al menos 2 jugadores.</span>';document.getElementById("pairsOut").innerHTML="";return;}
   const rk=p=>{const i="ABCD".indexOf(p.c);return i>=0?i:1;}; // sin copón declarado = nivel B
@@ -915,18 +945,33 @@ function draw(){
   while(pool.length>=2)pairs.push([pool.shift(),pool.pop()]);
   const problemas=pairs.filter(([a,b])=>(a.c==="A"||b.c==="A")&&rk(a)<=1&&rk(b)<=1);
   const orden=shuffle(pairs,rnd); // orden de anuncio
-  LASTPAIRS=orden.map(p=>[p[0].n,p[1].n]);
+  revelar(orden,{sup,problemas,seedRaw,manual:false});
+}
+function drawManual(){ // parejas ya armadas a mano → solo se sortea el fixture
+  const msg=document.getElementById("drawMsg");
+  const pares=parsePairs(document.getElementById("manualPairs").value);
+  if(pares.length<2){msg.innerHTML='<span class="warn">Pegá al menos 2 parejas (una por línea).</span>';return;}
+  let seedRaw=(document.getElementById("seed").value||"").trim();
+  if(!seedRaw){seedRaw=String(1000+Math.floor(Math.random()*8999));document.getElementById("seed").value=seedRaw;}
+  const rnd=mulberry32(seedHash(seedRaw));
+  const orden=shuffle(pares.map(p=>p.map(n=>({n,c:coponDe(n)}))),rnd);
+  revelar(orden,{sup:null,problemas:[],seedRaw,manual:true});
+}
+function revelar(orden,{sup,problemas,seedRaw,manual}){
+  const msg=document.getElementById("drawMsg");
+  LASTPAIRS=orden.map(p=>p.map(x=>x.n));
   const courts=Math.max(1,parseInt(document.getElementById("courts").value)||1);
-  const teams=orden.map((p,i)=>({id:i+1,label:p[0].n+" & "+p[1].n}));
+  const teams=orden.map((p,i)=>({id:i+1,label:p.map(x=>x.n).join(" & ")}));
   const rounds=buildRounds(teams);
 
-  // 🥁 bolillero con suspenso
+  // 🥁 bolillero con suspenso (más corto si las parejas ya se conocen)
   const out=document.getElementById("pairsOut");
-  const nombres=all.map(x=>x.n).concat(sup?[sup.n]:[]);
+  const nombres=orden.flat().map(x=>x.n).concat(sup?[sup.n]:[]);
   out.innerHTML=`<div class="card pad" style="text-align:center;margin-top:12px">
     <div style="font-size:44px">🥁</div>
     <div id="drumName" style="font-family:'Anton',Impact,sans-serif;font-size:28px;min-height:34px;margin-top:6px">…</div>
-    <div class="note">Sorteo transparente en curso · bolas a la misma temperatura…</div></div>`;
+    <div class="note">${manual?"Sorteando los cruces por cancha…":"Sorteo transparente en curso · bolas a la misma temperatura…"}</div></div>`;
+  out.scrollIntoView({behavior:"smooth",block:"center"});
   msg.innerHTML="🥁 🥁 🥁";
   if(navigator.vibrate)navigator.vibrate([10,80,10,80,10,80,10]);
   const iv=setInterval(()=>{const el=document.getElementById("drumName");if(el)el.textContent=nombres[Math.floor(Math.random()*nombres.length)];},85);
@@ -936,9 +981,7 @@ function draw(){
     out.innerHTML=`
     <div class="pairwrap">${orden.map((p,i)=>`
       <div class="pcard" style="animation-delay:${i*0.3}s"><div class="no">${i+1}</div>
-        <div class="pl"><span class="cchip ${COL[p[0].c]||"ch0"}">${p[0].c||"·"}</span>${esc(p[0].n)}</div>
-        <div class="amp">&</div>
-        <div class="pl"><span class="cchip ${COL[p[1].c]||"ch0"}">${p[1].c||"·"}</span>${esc(p[1].n)}</div>
+        ${p.map(x=>`<div class="pl"><span class="cchip ${COL[x.c]||"ch0"}">${x.c||"·"}</span>${esc(x.n)}</div>`).join('<div class="amp">&</div>')}
       </div>`).join("")}
     </div>
     <div class="card pad" style="margin-top:12px;animation:pop .45s ${(orden.length*0.3+0.2).toFixed(1)}s both">
@@ -955,13 +998,15 @@ function draw(){
       <button class="btn ghost" id="saveFecha" style="flex:1">💾 Guardar fecha</button>
     </div>`;
     if(navigator.vibrate)navigator.vibrate([15,40,15,40,80]);
-    let m=`Sorteo con Nº <b>${esc(seedRaw)}</b> · ${orden.length} parejas · ${courts} canchas. <span style="color:var(--muted)">¿Cuál es el bueno? 🤔</span>`;
+    let m=manual
+      ?`Fixture sorteado con Nº <b>${esc(seedRaw)}</b> · ${orden.length} parejas (armadas a mano) · ${courts} canchas.`
+      :`Sorteo con Nº <b>${esc(seedRaw)}</b> · ${orden.length} parejas · ${courts} canchas. <span style="color:var(--muted)">¿Cuál es el bueno? 🤔</span>`;
     if(sup)m+=`<br><span class="warn">Impar:</span> ${esc(sup.n)} queda de suplente rotativo.`;
     if(orden.length>courts*2)m+=`<br><span class="warn">Ojo:</span> hay más parejas que lugares — algunas esperan turno.`;
     if(problemas.length)m+=`<br><span class="warn">⚠️ No alcanzan los C/D:</span> ${problemas.map(p=>`<b>${esc(p[0].n)} & ${esc(p[1].n)}</b>`).join(", ")} quedó como pareja fuerte. Recalificá copones en Admin o sumá un C/D.`;
     msg.innerHTML=m;
     document.getElementById("sharePairs").onclick=async()=>{
-      let txt="🎾 PAREJAS DEL DOMINGO · Copones Buena Vista\n\n"+LASTPAIRS.map((p,i)=>`${i+1}) ${p[0]} & ${p[1]}`).join("\n");
+      let txt="🎾 PAREJAS DEL DOMINGO · Copones Buena Vista\n\n"+LASTPAIRS.map((p,i)=>`${i+1}) ${p.join(" & ")}`).join("\n");
       txt+="\n\n🆚 1ª ronda:\n"+rounds[0].map((m,mi)=>m[0]&&m[1]?`${mi<courts?"Cancha "+(mi+1):"Espera"}: ${m[0].label} vs ${m[1].label}`:`Libre: ${(m[0]||m[1]).label}`).join("\n");
       txt+=`\n\nSorteo transparente · Nº ${seedRaw} · ¿Cuál es el bueno? 🤔`;
       try{ if(navigator.share){await navigator.share({title:"Parejas del domingo",text:txt});} else {await navigator.clipboard.writeText(txt);toast("Copiado para pegar en WhatsApp");} }catch(e){}
@@ -975,7 +1020,7 @@ function draw(){
       toast(`📅 Fecha del ${fmtFecha(f)} guardada — después solo cargás el resultado`);
       go("inicio");
     };
-  },1900);
+  },manual?1100:1900);
 }
 
 /* ---------- ADMIN ---------- */
@@ -1005,7 +1050,7 @@ function vAdmin(){
     ? `<div class="card pad" style="border-color:#7c3aed;margin-bottom:12px">
         <div class="tag" style="color:#c4b5fd;margin-bottom:8px">📥 Propuestas de resultados (${PROPUESTAS.length})</div>
         ${PROPUESTAS.map(p=>`<div class="adline" style="flex-wrap:wrap">
-          <span class="an">${fmtFecha(p.f)} · 🚗 ${p.campeon?esc(p.campeon.join(" & ")):"—"} · 🥄 ${p.pala?esc(p.pala.join(" & ")):"—"} · 🎖️ ${p.mvp?esc(p.mvp):"—"}<br><small style="color:var(--muted)">propuso ${esc(p.por||"?")}</small></span>
+          <span class="an">${fmtFecha(p.f)} · 🚗 ${p.campeon?esc(p.campeon.join(" & ")):"—"} · 🥄 ${p.pala?esc(p.pala.join(" & ")):"—"} · 🎖️ ${p.mvp?esc(p.mvp):"—"} · 🏃 ${p.sinCafe&&p.sinCafe.length?esc(p.sinCafe.join(", ")):"nadie"}<br><small style="color:var(--muted)">propuso ${esc(p.por||"?")}</small></span>
           <button data-propok="${esc(p.id)}" title="Aplicar" style="color:#4ade80;font-weight:800;font-size:14px">✔️ Aplicar</button>
           <button data-propno="${esc(p.id)}" title="Rechazar">🗑️</button>
         </div>`).join("")}
@@ -1026,6 +1071,7 @@ function vAdmin(){
         <div class="field" style="flex:1;min-width:140px"><label>🚗 Kia / Campeón</label><input id="acamp" placeholder="Matso, Toto"></div>
         <div class="field" style="flex:1;min-width:140px"><label>🥄 Cuchara</label><input id="apala" placeholder="Pati, Bati"></div>
         <div class="field" style="flex:1;min-width:140px"><label>🎖️ MVP</label><input id="amvp" placeholder="Track (Juli)"></div>
+        <div class="field" style="flex:1;min-width:140px"><label>🏃 Se rajaron sin café</label><input id="acafe" placeholder="Chuck, Toto (vacío = se quedaron todos)"></div>
       </div>
       <button class="btn block" id="addFecha" style="margin-top:12px">Guardar fecha</button>
     </div>
@@ -1145,6 +1191,7 @@ function bind(){
       if(f.campeon)txt+=`🚗🏆 *Se llevaron el Kia:* ${f.campeon.join(" & ")}\n`;
       if(f.pala)txt+=`🥄 *Cuchara de madera:* ${f.pala.join(" & ")}\n`;
       if(f.mvp)txt+=`🎖️ *MVP del día:* ${f.mvp}\n`;
+      if(f.sinCafe&&f.sinCafe.length)txt+=`🏃 *Se rajaron sin café:* ${f.sinCafe.join(", ")}\n`;
       txt+=`\n📊 Ranking completo:\nhttps://miguelippolito3-cloud.github.io/Padel-Copones-2026/`;
       window.open("https://wa.me/?text="+encodeURIComponent(txt),"_blank");
     };
@@ -1160,11 +1207,14 @@ function bind(){
       if(rp2===null)return; const ip=parseInt(rp2)-1;
       const rm=prompt("🎖️ ¿MVP del día? (nombre, vacío = no sé)","");
       if(rm===null)return;
+      const rcafe=prompt("☕ ¿Alguien se rajó SIN quedarse al café? (nombres con coma · vacío = se quedaron todos)","");
+      if(rcafe===null)return;
       addDoc(collection(db,"propuestas"),{
         f:f.f,
         campeon:(ic>=0&&ic<f.parejas.length)?f.parejas[ic]:null,
         pala:(ip>=0&&ip<f.parejas.length)?f.parejas[ip]:null,
         mvp:(rm||"").trim()||null,
+        sinCafe:parseCafe(rcafe),
         por:USER.email, ts:Date.now()
       }).then(()=>toast("📝 ¡Propuesta enviada al organizador!"))
         .catch(()=>toast("⚠️ No se pudo enviar (faltan las reglas nuevas)"));
@@ -1205,13 +1255,15 @@ function bind(){
     if(!document.getElementById("seed").value)document.getElementById("seed").value=String(1000+Math.floor(Math.random()*8999));
     document.getElementById("btnSeed").onclick=()=>{document.getElementById("seed").value=String(1000+Math.floor(Math.random()*8999));};
     document.getElementById("btnDraw").onclick=draw;
+    document.getElementById("seed").addEventListener("keydown",e=>{if(e.key==="Enter")draw();});
+    document.getElementById("btnManual").onclick=drawManual;
     const updCounts=()=>{
       document.getElementById("selcount").textContent=SEL.size;
       ["A","B","C","D"].forEach(c=>{const js=DATA.jugadores.filter(j=>j.c===c);const sel=js.filter(j=>SEL.has(j.n)).length;const el=document.getElementById("cnt-"+c);if(el)el.textContent=sel+"/"+js.length;});
       const loose=looseNames();const elS=document.getElementById("cnt-S");if(elS)elS.textContent=loose.filter(n=>SEL.has(n)).length+"/"+loose.length;
     };
     updCounts();
-    document.querySelectorAll("[data-tog]").forEach(b=>b.onclick=()=>{const n=b.dataset.tog;if(navigator.vibrate)navigator.vibrate(8);if(SEL.has(n)){SEL.delete(n);b.classList.remove("on");}else{SEL.add(n);b.classList.add("on");}updCounts();});
+    document.querySelectorAll("[data-tog]").forEach(b=>b.onclick=()=>{const n=b.dataset.tog;if(navigator.vibrate)navigator.vibrate(8);if(SEL.has(n)){SEL.delete(n);b.classList.remove("on");}else{SEL.add(n);b.classList.add("on");}updCounts();resumenConvocados(false);});
     document.getElementById("selAll").onclick=()=>{DATA.jugadores.forEach(j=>{if(j.c)SEL.add(j.n);});route("sorteo");};
     document.getElementById("selNone").onclick=()=>{SEL.clear();route("sorteo");};
     const addSorp=()=>{
@@ -1256,7 +1308,7 @@ function bind(){
       }else{SORTEO_FECHA=null;}
       route("sorteo");
       toast(`✨ ${SEL.size} presentes marcados`);
-      resumenConvocados();
+      resumenConvocados(true);
     };
   }
 
@@ -1268,7 +1320,7 @@ function bind(){
       const p=PROPUESTAS.find(x=>x.id===b.dataset.propok); if(!p)return;
       const fe=DATA.fechas.find(x=>x.f===p.f);
       if(!fe){toast("Esa fecha ya no existe");}
-      else{ fe.campeon=p.campeon||fe.campeon; fe.pala=p.pala||fe.pala; fe.mvp=p.mvp||fe.mvp; save(); }
+      else{ fe.campeon=p.campeon||fe.campeon; fe.pala=p.pala||fe.pala; fe.mvp=p.mvp||fe.mvp; if(Array.isArray(p.sinCafe))fe.sinCafe=p.sinCafe; save(); }
       deleteDoc(doc(db,"propuestas",p.id)).catch(()=>{});
       toast("✔️ Resultado aplicado");
     });
@@ -1331,14 +1383,26 @@ function bind(){
       const pares=parsePairs(document.getElementById("apar").value);
       if(!f||!pares.length){toast("Falta fecha o parejas");return;}
       const mvpVal=document.getElementById("amvp").value.trim();
-      DATA.fechas.unshift({f,parejas:pares,campeon:parseDuo(document.getElementById("acamp").value),pala:parseDuo(document.getElementById("apala").value),mvp:mvpVal||null});
+      const nueva={f,parejas:pares,campeon:parseDuo(document.getElementById("acamp").value),pala:parseDuo(document.getElementById("apala").value),mvp:mvpVal||null};
+      // el dato del café solo se registra si hay resultado o si se anotó a alguien (una fecha futura no suma cafés)
+      const cafeTxt=document.getElementById("acafe").value;
+      if(cafeTxt.trim()||nueva.campeon)nueva.sinCafe=parseCafe(cafeTxt);
+      DATA.fechas.unshift(nueva);
       DATA.fechas.sort((a,b)=>b.f.localeCompare(a.f));
       save();toast("Fecha agregada");render();
     };
-    document.querySelectorAll("[data-delf]").forEach(b=>b.onclick=()=>{DATA.fechas.splice(+b.dataset.delf,1);save();render();});
+    document.querySelectorAll("[data-delf]").forEach(b=>b.onclick=()=>{
+      const f=DATA.fechas[+b.dataset.delf]; if(!f)return;
+      if(!confirm(`🗑️ ¿Borrar la fecha del ${fmtFecha(f.f)} (${f.parejas.length} parejas)?\n\nEsto no se puede deshacer.`))return;
+      DATA.fechas.splice(+b.dataset.delf,1);save();render();
+    });
     document.querySelectorAll("[data-editcamp]").forEach(b=>b.onclick=()=>cargarResultado(DATA.fechas[+b.dataset.editcamp]));
     document.querySelectorAll("[data-cop]").forEach(s=>s.onchange=()=>{DATA.jugadores[+s.dataset.cop].c=s.value;save();});
-    document.querySelectorAll("[data-delj]").forEach(b=>b.onclick=()=>{DATA.jugadores.splice(+b.dataset.delj,1);save();render();});
+    document.querySelectorAll("[data-delj]").forEach(b=>b.onclick=()=>{
+      const j=DATA.jugadores[+b.dataset.delj]; if(!j)return;
+      if(!confirm(`🗑️ ¿Sacar a ${j.n} del plantel?\n\nSu historial de fechas no se borra: va a aparecer como jugador sorpresa.`))return;
+      DATA.jugadores.splice(+b.dataset.delj,1);save();render();
+    });
     document.getElementById("addj").onclick=()=>{const v=document.getElementById("newj").value.trim();if(!v)return;DATA.jugadores.push({n:v,c:""});save();render();};
     document.getElementById("expData").onclick=()=>{const blob=new Blob([JSON.stringify(DATA,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="copones-datos.json";a.click();toast("Datos exportados ✓");};
     document.getElementById("copyData").onclick=async()=>{try{await navigator.clipboard.writeText(JSON.stringify(DATA,null,2));toast("Datos copiados");}catch(e){toast("No se pudo copiar");}};
