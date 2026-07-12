@@ -350,7 +350,7 @@ if(CLOUD){
 }
 function subAdmin(){ // suscripciones en vivo que solo necesita el admin
   if(propSub)return; propSub=true;
-  onSnapshot(collection(db,"propuestas"),qs=>{PROPUESTAS=qs.docs.map(x=>({id:x.id,...x.data()}));if(VIEW==="admin")render();});
+  onSnapshot(collection(db,"propuestas"),qs=>{PROPUESTAS=qs.docs.map(x=>({id:x.id,...x.data()}));if(VIEW==="admin"||VIEW==="inicio")render();});
   onSnapshot(collection(db,"usuarios"),qs=>{USUARIOS=qs.docs.map(x=>({id:x.id,...x.data()}));if(VIEW==="admin")render();});
   onSnapshot(collection(db,"admins"),qs=>{COADMINS=qs.docs.map(x=>({id:x.id,...x.data()}));if(VIEW==="admin")render();});
 }
@@ -513,6 +513,11 @@ function vInicio(){
   <section>
     ${CLOUD&&CLOUDSTATE==="conectando"&&!DATA.fechas.length?`<div class="card pad" style="text-align:center;margin-bottom:12px"><div style="font-size:30px">☁️</div><div class="note">Cargando datos de la nube…</div></div>`:""}
     ${MYPLAYER?`<button class="btn ghost block" data-perfil="${esc(MYPLAYER)}" style="margin-bottom:12px;justify-content:space-between"><span>⭐ Mi perfil · <b>${esc(MYPLAYER)}</b></span><span>→</span></button>`:""}
+    ${ISADMIN&&CLOUD&&PROPUESTAS.length?`<div class="card pad" style="margin-bottom:12px;border-color:#7c3aed;box-shadow:0 0 14px rgba(124,58,237,.25)">
+      <div class="tag" style="margin-bottom:8px;color:#c4b5fd">📥 ${PROPUESTAS.length===1?"HAY 1 PROPUESTA":"HAY "+PROPUESTAS.length+" PROPUESTAS"} ESPERANDO TU CONFIRMACIÓN</div>
+      <div class="note" style="margin-bottom:10px">Alguien del grupo cargó datos de una fecha. Revisalos y confirmalos con un toque.</div>
+      <button class="btn block" data-go2="admin" style="background:#7c3aed">👑 Revisar y confirmar</button>
+    </div>`:""}
     ${pend?`<div class="card pad" style="margin-bottom:12px;border-color:var(--red);box-shadow:0 0 14px rgba(226,16,42,.25)">
       <div class="tag" style="margin-bottom:8px;color:var(--red2)">⚠️ FECHA INCOMPLETA · ${fmtFecha(pend.f)}</div>
       <div class="note" style="margin-bottom:10px">Ya se jugó y solo falta cargar: <b>${faltantesTxt(pend)}</b>.${pend.campeon?"":" ¿Quién se llevó el Kia? 🚗"} Se pregunta únicamente lo que falta.</div>
@@ -784,8 +789,11 @@ function faltantesTxt(f){
 function cargarResultado(f){
   const opciones=f.parejas.map((p,idx)=>`${idx+1}) ${p.join(" & ")}`).join("\n");
   let faltan=faltantesDe(f);
-  if(!faltan.length){ // ya está todo: recién ahí ofrece corregir todo de nuevo
-    if(!confirm(`La fecha del ${fmtFecha(f.f)} ya tiene todo cargado ✓\n\n¿Querés corregir y volver a cargar todo?`))return;
+  let corrigiendo=false;
+  const antes={campeon:f.campeon||null,pala:(f.pala===undefined?null:f.pala),mvp:(f.mvp===undefined?null:f.mvp),sinCafe:Array.isArray(f.sinCafe)?f.sinCafe.slice():null};
+  if(!faltan.length){ // ya está todo: corregir = reescribir la historia, con respaldo
+    if(!confirm(`🕰️ ¡Momento! La fecha del ${fmtFecha(f.f)} ya está completa y estás por REESCRIBIR LA HISTORIA.\n\nTranqui: la versión actual queda guardada en el historial de cambios, con fecha y autor. Acá nada se pierde… pero todo se sabe 😏\n\n¿Le entramos?`))return;
+    corrigiendo=true;
     faltan=["campeon","pala","mvp","cafe"];
   }
   let cambios=0;
@@ -806,8 +814,11 @@ function cargarResultado(f){
     if(rc!==null){f.sinCafe=parseCafe(rc);cambios++;}
   }
   if(!cambios)return;
+  if(corrigiendo){ // respaldo: versión anterior + quién la cambió
+    (f.versiones||(f.versiones=[])).push({ts:Date.now(),por:(USER&&USER.email)||"admin (este dispositivo)",antes});
+  }
   f.confirmada=true; // la carga directa siempre la hace un admin
-  save();toast("Resultado cargado ✓");render();
+  save();toast(corrigiendo?"🕰️ Corregido — la versión anterior quedó en el historial":"Resultado cargado ✓");render();
 }
 
 /* ---------- CONVOCATORIA: parejas, canchas y fecha ---------- */
@@ -1137,6 +1148,7 @@ function vAdmin(){
       <div class="tag" style="margin-bottom:8px">📅 Fechas cargadas (${DATA.fechas.length})</div>
       ${DATA.fechas.map((f,i)=>`<div class="adline">
         <span class="an">${fmtFecha(f.f)} · ${f.parejas.length} parejas ${f.campeon?'🏆':''}${f.confirmada?'✅':''}${faltantesDe(f).length?` <small style="color:#ffcf4d">· falta: ${faltantesTxt(f)}</small>`:''}</span>
+        ${f.versiones&&f.versiones.length?`<button data-hist="${i}" title="Historial de cambios">🕓</button>`:''}
         <button data-editcamp="${i}" title="Cargar/corregir resultado">👑</button>
         <button data-delf="${i}" title="Borrar">🗑️</button>
       </div>`).join("")||'<div class="empty">Sin fechas</div>'}
@@ -1291,7 +1303,7 @@ function bind(){
       }
       if(!cambios){toast("No cargaste ningún dato");return;}
       addDoc(collection(db,"propuestas"),prop)
-        .then(()=>toast("📝 ¡Enviado! Lo confirma el organizador"))
+        .then(()=>toast("📝 ¡Enviado! Le aparece al organizador en su Inicio para confirmarlo"))
         .catch(()=>toast("⚠️ No se pudo enviar (faltan las reglas nuevas)"));
     };
     const lr=document.getElementById("loadResBtn");
@@ -1473,6 +1485,15 @@ function bind(){
       DATA.fechas.splice(+b.dataset.delf,1);save();render();
     });
     document.querySelectorAll("[data-editcamp]").forEach(b=>b.onclick=()=>cargarResultado(DATA.fechas[+b.dataset.editcamp]));
+    document.querySelectorAll("[data-hist]").forEach(b=>b.onclick=()=>{
+      const f=DATA.fechas[+b.dataset.hist]; if(!f||!f.versiones)return;
+      const lineas=[...f.versiones].reverse().map(v=>{
+        const d=new Date(v.ts), t=`${d.getDate()}/${d.getMonth()+1} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+        const a=v.antes||{};
+        return `• ${t} · lo cambió ${v.por}\n  Decía: 🚗 ${a.campeon?a.campeon.join(" & "):"—"} · 🥄 ${a.pala?a.pala.join(" & "):"—"} · 🎖️ ${a.mvp||"—"} · ☕ ${Array.isArray(a.sinCafe)?(a.sinCafe.length?"se rajaron "+a.sinCafe.join(", "):"se quedaron todos"):"—"}`;
+      });
+      alert(`🕰️ Historial de cambios · ${fmtFecha(f.f)}\n(la versión vigente es la que se ve en la app)\n\n${lineas.join("\n\n")}`);
+    });
     document.querySelectorAll("[data-cop]").forEach(s=>s.onchange=()=>{DATA.jugadores[+s.dataset.cop].c=s.value;save();});
     document.querySelectorAll("[data-delj]").forEach(b=>b.onclick=()=>{
       const j=DATA.jugadores[+b.dataset.delj]; if(!j)return;
