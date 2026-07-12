@@ -285,7 +285,7 @@ const CLOUD = !JSON.stringify(FIREBASE_CONFIG).includes("PEGAR_ACA");
 let USER=null, ISADMIN=false, auth=null, db=null, dbRef=null, CLOUDSTATE="conectando";
 let MYPLAYER=null; try{MYPLAYER=localStorage.getItem("cb_myplayer")||null;}catch(e){}
 let PROPUESTAS=[], propSub=false;
-let USUARIOS=[], SORTEO_FECHA=null;
+let USUARIOS=[], COADMINS=[], SORTEO_FECHA=null;
 const CANCHAS_ABONO=2; // canchas fijas del abono de los domingos
 
 /* ================= DATOS =================
@@ -323,12 +323,11 @@ if(CLOUD){
       setDoc(doc(db,"usuarios",u.uid),{email:u.email,nombre:u.displayName||"",ultimoIngreso:Date.now()},{merge:true}).catch(()=>{});
       // ⭐ Este soy yo: recupera el jugador vinculado a esta cuenta
       getDoc(doc(db,"usuarios",u.uid)).then(s=>{ if(s.exists()&&s.data().jugador){MYPLAYER=s.data().jugador;try{localStorage.setItem("cb_myplayer",MYPLAYER);}catch(e){}render();} }).catch(()=>{});
-      // 📝 Carga colaborativa + 👥 usuarios: el admin escucha en vivo
-      if(ISADMIN&&!propSub){
-        propSub=true;
-        onSnapshot(collection(db,"propuestas"),qs=>{PROPUESTAS=qs.docs.map(x=>({id:x.id,...x.data()}));if(VIEW==="admin")render();});
-        onSnapshot(collection(db,"usuarios"),qs=>{USUARIOS=qs.docs.map(x=>({id:x.id,...x.data()}));if(VIEW==="admin")render();});
+      // 👑 co-admins: si no es dueño, chequea la lista dinámica
+      if(!ISADMIN){
+        getDoc(doc(db,"admins",(u.email||"").toLowerCase())).then(s=>{ if(s.exists()){ISADMIN=true;subAdmin();renderAuth();render();} }).catch(()=>{});
       }
+      if(ISADMIN)subAdmin();
     }
     renderAuth();render();
   });
@@ -342,6 +341,12 @@ if(CLOUD){
     }
     render();
   },err=>{ CLOUDSTATE="error"; toast("⚠️ Sin conexión a la nube"); });
+}
+function subAdmin(){ // suscripciones en vivo que solo necesita el admin
+  if(propSub)return; propSub=true;
+  onSnapshot(collection(db,"propuestas"),qs=>{PROPUESTAS=qs.docs.map(x=>({id:x.id,...x.data()}));if(VIEW==="admin")render();});
+  onSnapshot(collection(db,"usuarios"),qs=>{USUARIOS=qs.docs.map(x=>({id:x.id,...x.data()}));if(VIEW==="admin")render();});
+  onSnapshot(collection(db,"admins"),qs=>{COADMINS=qs.docs.map(x=>({id:x.id,...x.data()}));if(VIEW==="admin")render();});
 }
 window.fbLogin=async()=>{
   try{ await signInWithPopup(auth,new GoogleAuthProvider()); }
@@ -371,7 +376,11 @@ function realDe(n){const j=DATA.jugadores.find(x=>x.n===n);return j?(j.real||"")
 
 /* ================= HELPERS ================= */
 function key(a,b){return [a,b].sort().join(" ‑ ");}
-function coponDe(n){ const j=DATA.jugadores.find(x=>x.n===n); return j?j.c:""; }
+function coponDe(n){ const j=DATA.jugadores.find(x=>x.n===n); if(j)return j.c; return (DATA.bolsaCop&&DATA.bolsaCop[n])||""; }
+function pedirCopon(nombre){
+  const r=(prompt(`¿Qué copón es ${nombre}?\nA = Crack · B = Bueno · C = Promedio · D = Valiente\n(Enter = B)`,"B")||"B").trim().toUpperCase();
+  return "ABCD".includes(r)?r:"B";
+}
 function todosLosNombres(){
   const s=new Set(DATA.jugadores.map(j=>j.n));
   DATA.fechas.forEach(f=>f.parejas.forEach(p=>p.forEach(n=>s.add(n))));
@@ -782,6 +791,7 @@ function mergePlayers(keep,dup){
   if(dI>=0&&kI>=0)DATA.jugadores.splice(dI,1);
   else if(dI>=0&&kI<0)DATA.jugadores[dI].n=keep;
   if(DATA.bolsa)DATA.bolsa=DATA.bolsa.filter(n=>n!==dup);
+  if(DATA.bolsaCop)delete DATA.bolsaCop[dup];
   save();
 }
 function renameInData(d,old,neu){
@@ -793,6 +803,7 @@ function renameInData(d,old,neu){
     if(f.mvp===old)f.mvp=neu;
   }));
   if(d.bolsa)d.bolsa=d.bolsa.map(n=>n===old?neu:n);
+  if(d.bolsaCop&&d.bolsaCop[old]!==undefined){d.bolsaCop[neu]=d.bolsaCop[old];delete d.bolsaCop[old];}
   return d;
 }
 const RENOMBRES=[["Rafa","Mike Rafa"]]; // correcciones automáticas de una sola vez
@@ -861,7 +872,7 @@ function vSorteo(){
         }).join("")}
         <div class="sortcol co-S">
           <div class="sh" style="color:#22c55e">🎁 Sorpresas<small id="cnt-S"></small></div>
-          ${looseNames().map(n=>`<button class="ptoggle k-S ${SEL.has(n)?'on':''}" data-tog="${esc(n)}">${esc(n)}</button>`).join("")||'<div class="note" style="font-size:12px;margin-bottom:6px">—</div>'}
+          ${looseNames().map(n=>`<button class="ptoggle k-S ${SEL.has(n)?'on':''}" data-tog="${esc(n)}">${esc(n)}${coponDe(n)?` <small style="opacity:.75">(${coponDe(n)})</small>`:""}</button>`).join("")||'<div class="note" style="font-size:12px;margin-bottom:6px">—</div>'}
           <div style="display:flex;gap:5px;margin-top:6px">
             <input id="newsorp" placeholder="Nuevo…" style="flex:1;min-width:0;padding:8px">
             <button class="btn sm" id="addsorp" style="padding:7px 11px">+</button>
@@ -875,53 +886,96 @@ function vSorteo(){
     <div id="pairsOut"></div>
   </section>`;
 }
+function buildRounds(teams){ // fixture todos-contra-todos (método del círculo)
+  let list=teams.slice(); if(list.length%2)list.push(null);
+  const R=Math.max(1,list.length-1), half=list.length/2; let arr=list.slice(); const rounds=[];
+  for(let r=0;r<R;r++){
+    const ms=[];
+    for(let i=0;i<half;i++)ms.push([arr[i],arr[arr.length-1-i]]);
+    rounds.push(ms.filter(m=>m[0]||m[1]));
+    const fixed=arr[0], rest=arr.slice(1); rest.unshift(rest.pop()); arr=[fixed,...rest];
+  }
+  return rounds;
+}
 function draw(){
   const seedRaw=(document.getElementById("seed").value||"").trim();
   const msg=document.getElementById("drawMsg");
   if(!seedRaw){msg.innerHTML='<span class="warn">Poné un Nº de la suerte.</span>';return;}
   let seed=0;for(let i=0;i<seedRaw.length;i++)seed=(seed*31+seedRaw.charCodeAt(i))|0;
   const rnd=mulberry32(seed>>>0);
-  let all=[...SEL].map(n=>({n,c:coponDe(n)}));
+  let all=[...SEL].map(n=>({n,c:coponDe(n),k:rnd()}));
   if(all.length<2){msg.innerHTML='<span class="warn">Marcá al menos 2 jugadores.</span>';document.getElementById("pairsOut").innerHTML="";return;}
-  const rankC=c=>("ABCD".indexOf(c)>=0?"ABCD".indexOf(c):1); // sorpresa / sin copón = nivel B
-  all=all.map(p=>({...p,k:rnd()})).sort((a,b)=>rankC(a.c)-rankC(b.c)||a.k-b.k);
+  const rk=p=>{const i="ABCD".indexOf(p.c);return i>=0?i:1;}; // sin copón declarado = nivel B
+  all.sort((a,b)=>rk(a)-rk(b)||a.k-b.k);
   let sup=null;
   if(all.length%2){sup=all.splice(Math.floor(all.length/2),1)[0];}
-  const half=all.length/2;
-  const fuertes=shuffle(all.slice(0,half),rnd), flojos=shuffle(all.slice(half),rnd);
-  const pairs=[];for(let i=0;i<half;i++)pairs.push([fuertes[i],flojos[i]]);
-  LASTPAIRS=pairs.map(p=>[p[0].n,p[1].n]);
+  // REGLA: el mejor disponible SIEMPRE con el más flojo disponible.
+  // Así los A se llevan a los D y C, y los B quedan a lo sumo entre ellos.
+  const pool=all.slice(), pairs=[];
+  while(pool.length>=2)pairs.push([pool.shift(),pool.pop()]);
+  const problemas=pairs.filter(([a,b])=>(a.c==="A"||b.c==="A")&&rk(a)<=1&&rk(b)<=1);
+  const orden=shuffle(pairs,rnd); // orden de anuncio
+  LASTPAIRS=orden.map(p=>[p[0].n,p[1].n]);
   const courts=Math.max(1,parseInt(document.getElementById("courts").value)||1);
-  document.getElementById("pairsOut").innerHTML=`
-    <div class="pairwrap">${pairs.map((p,i)=>`
-      <div class="pcard" style="animation-delay:${i*0.13}s"><div class="no">${i+1}</div>
-        <div class="pl"><span class="cchip ${COL[p[0].c]}">${p[0].c||"·"}</span>${esc(p[0].n)}</div>
+  const teams=orden.map((p,i)=>({id:i+1,label:p[0].n+" & "+p[1].n}));
+  const rounds=buildRounds(teams);
+
+  // 🥁 bolillero con suspenso
+  const out=document.getElementById("pairsOut");
+  const nombres=all.map(x=>x.n).concat(sup?[sup.n]:[]);
+  out.innerHTML=`<div class="card pad" style="text-align:center;margin-top:12px">
+    <div style="font-size:44px">🥁</div>
+    <div id="drumName" style="font-family:'Anton',Impact,sans-serif;font-size:28px;min-height:34px;margin-top:6px">…</div>
+    <div class="note">Sorteo transparente en curso · bolas a la misma temperatura…</div></div>`;
+  msg.innerHTML="🥁 🥁 🥁";
+  if(navigator.vibrate)navigator.vibrate([10,80,10,80,10,80,10]);
+  const iv=setInterval(()=>{const el=document.getElementById("drumName");if(el)el.textContent=nombres[Math.floor(Math.random()*nombres.length)];},85);
+
+  setTimeout(()=>{
+    clearInterval(iv);
+    out.innerHTML=`
+    <div class="pairwrap">${orden.map((p,i)=>`
+      <div class="pcard" style="animation-delay:${i*0.3}s"><div class="no">${i+1}</div>
+        <div class="pl"><span class="cchip ${COL[p[0].c]||"ch0"}">${p[0].c||"·"}</span>${esc(p[0].n)}</div>
         <div class="amp">&</div>
-        <div class="pl"><span class="cchip ${COL[p[1].c]}">${p[1].c||"·"}</span>${esc(p[1].n)}</div>
+        <div class="pl"><span class="cchip ${COL[p[1].c]||"ch0"}">${p[1].c||"·"}</span>${esc(p[1].n)}</div>
       </div>`).join("")}
     </div>
+    <div class="card pad" style="margin-top:12px;animation:pop .45s ${(orden.length*0.3+0.2).toFixed(1)}s both">
+      <div class="tag" style="margin-bottom:2px">🆚 Cruces por cancha</div>
+      ${rounds.slice(0,3).map((ms,ri)=>`
+        <div class="tag" style="color:var(--A);margin:10px 0 2px">Ronda ${ri+1}</div>
+        ${ms.map((m,mi)=>m[0]&&m[1]
+          ?`<div class="row" style="padding:6px 0"><span><b>${mi<courts?"Cancha "+(mi+1):"⏳ Espera"}:</b> ${esc(m[0].label)} <span style="color:var(--red2);font-family:'Anton',Impact,sans-serif"> VS </span> ${esc(m[1].label)}</span></div>`
+          :`<div class="row" style="padding:6px 0"><span class="muted"><b>Libre:</b> ${esc((m[0]||m[1]).label)} descansa</span></div>`).join("")}`).join("")}
+      ${rounds.length>3?`<div class="note" style="margin-top:8px">…y ${rounds.length-3} ronda${rounds.length-3===1?"":"s"} más si el cuerpo aguanta ☕</div>`:""}
+    </div>
     <div style="display:flex;gap:8px;margin-top:14px">
-      <button class="btn" id="sharePairs" style="flex:1">📲 Compartir parejas</button>
+      <button class="btn" id="sharePairs" style="flex:1">📲 Compartir</button>
       <button class="btn ghost" id="saveFecha" style="flex:1">💾 Guardar fecha</button>
     </div>`;
-  if(navigator.vibrate)navigator.vibrate([15,40,15]);
-  let m=`Sorteo con Nº <b>${esc(seedRaw)}</b> · ${pairs.length} parejas · ${courts} canchas. <span style="color:var(--muted)">¿Cuál es el bueno? 🤔</span>`;
-  if(sup)m+=`<br><span class="warn">Impar:</span> ${esc(sup.n)} queda de suplente rotativo.`;
-  else if(pairs.length>courts)m+=`<br><span class="warn">Ojo:</span> hay ${pairs.length} parejas y ${courts} canchas — algunas esperan turno.`;
-  msg.innerHTML=m;
-  document.getElementById("sharePairs").onclick=async()=>{
-    const txt="🎾 PAREJAS DEL DOMINGO · Copones Buena Vista\n\n"+LASTPAIRS.map((p,i)=>`${i+1}) ${p[0]} & ${p[1]}`).join("\n")+`\n\nSorteo transparente · Nº ${seedRaw}`;
-    try{ if(navigator.share){await navigator.share({title:"Parejas del domingo",text:txt});} else {await navigator.clipboard.writeText(txt);toast("Parejas copiadas");} }catch(e){}
-  };
-  document.getElementById("saveFecha").onclick=()=>{
-    const f=SORTEO_FECHA||proxDomingo();
-    if(DATA.fechas.some(x=>x.f===f)&&!confirm(`Ya hay una fecha guardada el ${fmtFecha(f)}. ¿Agregar otra igual?`))return;
-    DATA.fechas.unshift({f,parejas:LASTPAIRS,campeon:null,pala:null,mvp:null});
-    DATA.fechas.sort((a,b)=>b.f.localeCompare(a.f));
-    save();
-    toast(`📅 Fecha del ${fmtFecha(f)} guardada — después solo cargás el resultado`);
-    go("inicio");
-  };
+    if(navigator.vibrate)navigator.vibrate([15,40,15,40,80]);
+    let m=`Sorteo con Nº <b>${esc(seedRaw)}</b> · ${orden.length} parejas · ${courts} canchas. <span style="color:var(--muted)">¿Cuál es el bueno? 🤔</span>`;
+    if(sup)m+=`<br><span class="warn">Impar:</span> ${esc(sup.n)} queda de suplente rotativo.`;
+    if(orden.length>courts*2)m+=`<br><span class="warn">Ojo:</span> hay más parejas que lugares — algunas esperan turno.`;
+    if(problemas.length)m+=`<br><span class="warn">⚠️ No alcanzan los C/D:</span> ${problemas.map(p=>`<b>${esc(p[0].n)} & ${esc(p[1].n)}</b>`).join(", ")} quedó como pareja fuerte. Recalificá copones en Admin o sumá un C/D.`;
+    msg.innerHTML=m;
+    document.getElementById("sharePairs").onclick=async()=>{
+      let txt="🎾 PAREJAS DEL DOMINGO · Copones Buena Vista\n\n"+LASTPAIRS.map((p,i)=>`${i+1}) ${p[0]} & ${p[1]}`).join("\n");
+      txt+="\n\n🆚 1ª ronda:\n"+rounds[0].map((m,mi)=>m[0]&&m[1]?`${mi<courts?"Cancha "+(mi+1):"Espera"}: ${m[0].label} vs ${m[1].label}`:`Libre: ${(m[0]||m[1]).label}`).join("\n");
+      txt+=`\n\nSorteo transparente · Nº ${seedRaw} · ¿Cuál es el bueno? 🤔`;
+      try{ if(navigator.share){await navigator.share({title:"Parejas del domingo",text:txt});} else {await navigator.clipboard.writeText(txt);toast("Copiado para pegar en WhatsApp");} }catch(e){}
+    };
+    document.getElementById("saveFecha").onclick=()=>{
+      const f=SORTEO_FECHA||proxDomingo();
+      if(DATA.fechas.some(x=>x.f===f)&&!confirm(`Ya hay una fecha guardada el ${fmtFecha(f)}. ¿Agregar otra igual?`))return;
+      DATA.fechas.unshift({f,parejas:LASTPAIRS,campeon:null,pala:null,mvp:null});
+      DATA.fechas.sort((a,b)=>b.f.localeCompare(a.f));
+      save();
+      toast(`📅 Fecha del ${fmtFecha(f)} guardada — después solo cargás el resultado`);
+      go("inicio");
+    };
+  },1900);
 }
 
 /* ---------- ADMIN ---------- */
@@ -1012,6 +1066,16 @@ function vAdmin(){
     </div>
 
     <div class="card pad" style="margin-top:12px">
+      <div class="tag" style="margin-bottom:8px">👑 Co-administradores (${COADMINS.length})</div>
+      <div class="note" style="margin-bottom:8px">Pueden hacer todo lo del Admin: sortear, cargar resultados, recalificar copones, dar altas. ${USER&&ADMINS.includes(USER.email)?"Solo vos podés agregarlos o quitarlos.":"Solo el dueño puede agregarlos o quitarlos."}</div>
+      ${COADMINS.map(a=>`<div class="adline"><span class="an">👑 ${esc(a.email||a.id)}</span>${USER&&ADMINS.includes(USER.email)?`<button data-deladmin="${esc(a.id)}" title="Quitar">🗑️</button>`:""}</div>`).join("")||'<div class="empty" style="padding:10px">Sin co-admins todavía</div>'}
+      ${USER&&ADMINS.includes(USER.email)?`<div style="display:flex;gap:8px;margin-top:8px">
+        <input id="newAdmin" type="email" placeholder="mail-de-google@gmail.com" style="flex:1;min-width:0">
+        <button class="btn sm" id="addAdmin">Agregar</button>
+      </div>`:""}
+    </div>
+
+    <div class="card pad" style="margin-top:12px">
       <div class="tag" style="margin-bottom:8px">🏁 Temporadas</div>
       <div class="note" style="margin-bottom:10px">Temporada en curso: <b>${DATA.fechas.length} fechas</b>. Al cerrarla, el ranking arranca de cero y la temporada queda guardada — se consulta desde el selector de Ranking. Los perfiles siguen mostrando la carrera completa.</div>
       ${(DATA.historial||[]).map(t=>{const st=Object.values(statsPar(t.fechas)).sort((a,b)=>b.camp-a.camp)[0];return `<div class="adline"><span class="an">🏁 ${esc(t.nombre)} · ${t.fechas.length} fechas${st&&st.camp?` · 👑 ${esc(st.a)} & ${esc(st.b)}`:""}</span></div>`;}).join("")}
@@ -1041,11 +1105,11 @@ function vAdmin(){
     <div class="card pad" style="margin-top:12px">
       <div class="tag" style="margin-bottom:8px">🎁 Jugadores sorpresa detectados (${looseNames().length})</div>
       <div class="note" style="margin-bottom:10px">Nombres que jugaron alguna fecha pero no están en el plantel. Elegí copón y dalos de alta — o unilos a un jugador existente con la herramienta de arriba. Ojo: <b>"Invitado"</b> es el comodín genérico, conviene dejarlo como está.</div>
-      ${looseNames().map(n=>`<div class="adline">
+      ${looseNames().map(n=>{const def=coponDe(n)||"B";return `<div class="adline">
         <span class="an">${esc(n)} <small style="color:var(--muted)">· ${fechasDe(n)} fecha${fechasDe(n)===1?"":"s"}</small></span>
-        <select data-altacop="${esc(n)}">${["A","B","C","D"].map(c=>`<option ${c==="B"?"selected":""}>${c}</option>`).join("")}</select>
-        <button data-alta="${esc(n)}" title="Dar de alta" style="color:#4ade80;font-size:14px;font-weight:800">⬆️ Alta</button>
-      </div>`).join("")||'<div class="empty" style="padding:10px">No hay sorpresas sueltos 🎉</div>'}
+        <select data-altacop="${esc(n)}">${["A","B","C","D"].map(c=>`<option ${c===def?"selected":""}>${c}</option>`).join("")}</select>
+        <button data-alta="${esc(n)}" title="Dar de alta como jugador estable" style="color:#4ade80;font-size:14px;font-weight:800">⬆️ Alta</button>
+      </div>`;}).join("")||'<div class="empty" style="padding:10px">No hay sorpresas sueltos 🎉</div>'}
     </div>
 
     <div class="card pad" style="margin-top:12px">
@@ -1153,7 +1217,11 @@ function bind(){
     const addSorp=()=>{
       const inp=document.getElementById("newsorp");const v=inp.value.trim();if(!v)return;
       if(allKnownNames().includes(v)){toast("Ese nombre ya existe");return;}
-      (DATA.bolsa||(DATA.bolsa=[])).push(v);SEL.add(v);save();route("sorteo");
+      const c=pedirCopon(v);
+      (DATA.bolsa||(DATA.bolsa=[])).push(v);
+      (DATA.bolsaCop||(DATA.bolsaCop={}))[v]=c;
+      SEL.add(v);save();route("sorteo");
+      toast(`🎁 ${v} agregado como copón ${c}`);
     };
     document.getElementById("addsorp").onclick=addSorp;
     document.getElementById("newsorp").addEventListener("keydown",e=>{if(e.key==="Enter")addSorp();});
@@ -1167,9 +1235,12 @@ function bind(){
         if(m){SEL.add(m);ok++;}
         else noRec.push(l);
       });
-      if(noRec.length&&confirm(`Reconocí ${ok} jugadores ✓\n\nNo reconocí: ${noRec.join(", ")}\n\n¿Los agrego como jugadores sorpresa?`)){
-        DATA.bolsa=DATA.bolsa||[];
-        noRec.forEach(n=>{if(!allKnownNames().includes(n)){DATA.bolsa.push(n);}SEL.add(n);});
+      if(noRec.length&&confirm(`Reconocí ${ok} jugadores ✓\n\nNo reconocí: ${noRec.join(", ")}\n\n¿Los agrego como jugadores sorpresa? (te pregunto el copón de cada uno)`)){
+        DATA.bolsa=DATA.bolsa||[];DATA.bolsaCop=DATA.bolsaCop||{};
+        noRec.forEach(n=>{
+          if(!allKnownNames().includes(n)){DATA.bolsa.push(n);DATA.bolsaCop[n]=pedirCopon(n);}
+          SEL.add(n);
+        });
         save();
       }
       const dm=txt.match(/(\d{1,2})\/(\d{1,2})/);
@@ -1203,6 +1274,20 @@ function bind(){
     });
     document.querySelectorAll("[data-propno]").forEach(b=>b.onclick=()=>{
       deleteDoc(doc(db,"propuestas",b.dataset.propno)).then(()=>toast("Propuesta descartada")).catch(()=>{});
+    });
+    const aa=document.getElementById("addAdmin");
+    if(aa)aa.onclick=()=>{
+      const em=(document.getElementById("newAdmin").value||"").trim().toLowerCase();
+      if(!em||!em.includes("@")){toast("Escribí un mail válido de Google");return;}
+      if(ADMINS.includes(em)||COADMINS.some(a=>a.id===em)){toast("Ya es admin");return;}
+      if(!confirm(`👑 ¿Dar permisos de admin a ${em}?\nVa a poder cargar resultados, sortear y editar el plantel.`))return;
+      setDoc(doc(db,"admins",em),{email:em,por:USER.email,ts:Date.now()})
+        .then(()=>toast("👑 Co-admin agregado"))
+        .catch(()=>toast("⚠️ No se pudo (¿reglas actualizadas?)"));
+    };
+    document.querySelectorAll("[data-deladmin]").forEach(b=>b.onclick=()=>{
+      if(!confirm(`¿Quitar los permisos de admin a ${b.dataset.deladmin}?`))return;
+      deleteDoc(doc(db,"admins",b.dataset.deladmin)).then(()=>toast("Quitado")).catch(()=>toast("⚠️ No se pudo"));
     });
     const ct=document.getElementById("cerrarTemp");
     if(ct)ct.onclick=()=>{
@@ -1238,7 +1323,8 @@ function bind(){
       if(!c&&!confirm(`No elegiste copón para ${n}. ¿Darlo de alta igual como invitado sin copón?`))return;
       DATA.jugadores.push({n,c,real:"ex invitado sorpresa"});
       if(DATA.bolsa)DATA.bolsa=DATA.bolsa.filter(x=>x!==n);
-      save();toast(n+" dado de alta ✓");render();
+      if(DATA.bolsaCop)delete DATA.bolsaCop[n];
+      save();toast(n+" dado de alta como jugador estable ✓");render();
     });
     document.getElementById("addFecha").onclick=()=>{
       const f=document.getElementById("afecha").value;
