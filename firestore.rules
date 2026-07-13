@@ -53,6 +53,25 @@ service cloud.firestore {
       allow read, delete: if esAdmin();
     }
 
+    // 🎲 Prode: cada usuario escribe SOLO su pronóstico (el id lleva su uid),
+    // todos los logueados los leen (para el ranking de adivinos).
+    match /prode/{id} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null
+        && id == request.resource.data.f + '_' + request.auth.uid
+        && request.resource.data.uid == request.auth.uid;
+      allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
+    }
+
+    // 🙋 Asistencia al próximo domingo: misma lógica que el prode.
+    match /asistencia/{id} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null
+        && id == request.resource.data.f + '_' + request.auth.uid
+        && request.resource.data.uid == request.auth.uid;
+      allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
+    }
+
     // Todo lo que no está listado arriba: prohibido.
     match /{document=**} {
       allow read, write: if false;

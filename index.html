@@ -344,6 +344,7 @@ let AUTHREADY=false; // ya sabemos si hay sesión o no (evita el pestañeo del c
 let MYPLAYER=null; try{MYPLAYER=localStorage.getItem("cb_myplayer")||null;}catch(e){}
 let PROPUESTAS=[], propSub=false;
 let USUARIOS=[], COADMINS=[], SORTEO_FECHA=null;
+let PRODE=[], ASIS=[], socialSub=false; // 🎲 prode y 🙋 asistencia (colecciones nuevas)
 const CANCHAS_ABONO=2; // canchas fijas del abono de los domingos
 
 /* ================= DATOS =================
@@ -388,6 +389,7 @@ if(CLOUD){
         getDoc(doc(db,"admins",(u.email||"").toLowerCase())).then(s=>{ if(s.exists()){ISADMIN=true;subAdmin();renderAuth();render();} }).catch(()=>{});
       }
       if(ISADMIN)subAdmin();
+      subSocial(); // 🎲 prode + 🙋 asistencia en vivo (cualquier logueado)
     }
     renderAuth();render();
   });
@@ -401,6 +403,11 @@ if(CLOUD){
     }
     render();
   },err=>{ CLOUDSTATE="error"; toast("⚠️ Sin conexión a la nube"); });
+}
+function subSocial(){ // suscripciones para todos los logueados
+  if(socialSub||!db)return; socialSub=true;
+  onSnapshot(collection(db,"prode"),qs=>{PRODE=qs.docs.map(x=>({id:x.id,...x.data()}));if(VIEW==="inicio"||VIEW==="ranking")render();},()=>{});
+  onSnapshot(collection(db,"asistencia"),qs=>{ASIS=qs.docs.map(x=>({id:x.id,...x.data()}));if(VIEW==="inicio"||VIEW==="sorteo")render();},()=>{});
 }
 function subAdmin(){ // suscripciones en vivo que solo necesita el admin
   if(propSub)return; propSub=true;
@@ -678,6 +685,18 @@ function vInicio(){
       <div class="note" style="margin-bottom:10px">Alguien del grupo cargó datos de una fecha. Revisalos y confirmalos con un toque.</div>
       <button class="btn block" data-go2="admin" style="background:#7c3aed">👑 Revisar y confirmar</button>
     </div>`:""}
+    ${CLOUD?(()=>{ // ⏳ cuenta regresiva + 🙋 asistencia
+      const pj=proxJuego();
+      const anotados=ASIS.filter(a=>a.f===pj.f);
+      const yo=USER?anotados.find(a=>a.uid===USER.uid):null;
+      return `<div class="card pad" style="margin-bottom:12px">
+        <div class="tag" style="margin-bottom:4px">⏳ PRÓXIMO PÁDEL · ${fmtFecha(pj.f)} · 8:30</div>
+        <div id="cdown" class="anton" style="font-size:27px;color:var(--A)">…</div>
+        ${USER?`
+          <div class="note" style="margin:8px 0">🙋 Anotados: <b>${anotados.length}</b>${anotados.length?` — ${anotados.map(a=>esc(a.jugador||a.nombre||"?")).join(", ")}`:" — sé el primero"}</div>
+          <button class="btn ${yo?'ghost':''} block" id="asisBtn">${yo?"😴 Me bajo":"🙋 ¡Juego el domingo!"}</button>`
+        :`<div class="note" style="margin-top:8px">🔑 Ingresá con Google para anotarte y ver quiénes juegan.</div>`}
+      </div>`;})():""}
     ${pend?`<div class="card pad" style="margin-bottom:12px;border-color:var(--red);box-shadow:0 0 14px rgba(226,16,42,.25)">
       <div class="tag" style="margin-bottom:8px;color:var(--red2)">⚠️ FECHA INCOMPLETA · ${fmtFecha(pend.f)}</div>
       <div class="note" style="margin-bottom:10px">Ya se jugó y solo falta cargar: <b>${faltantesTxt(pend)}</b>.${pend.campeon?"":" ¿Quién se llevó el Kia? 🚗"} Se pregunta únicamente lo que falta.</div>
@@ -685,18 +704,63 @@ function vInicio(){
         ?`<button class="btn block" id="loadResBtn">👑 Cargar lo que falta</button>`
         :(CLOUD?`<button class="btn block" id="propBtn">📝 Cargar lo que falta (lo confirma el organizador)</button>`:"")}
     </div>`:""}
-    ${prox?`<div class="card pad" style="margin-bottom:12px">
+    ${prox?(()=>{const pr=probsKia(prox.parejas);return `<div class="card pad" style="margin-bottom:12px">
       <div class="tag" style="margin-bottom:8px;color:var(--A)">🎾 PRÓXIMA FECHA · ${fmtFecha(prox.f)}</div>
-      ${prox.parejas.map((p,i)=>`<div class="row" style="padding:7px 0"><span><b>${i+1})</b> ${esc(p.join(" & "))}</span></div>`).join("")}
+      ${prox.parejas.map((p,i)=>`<div class="row" style="padding:7px 0"><span><b>${i+1})</b> ${esc(p.join(" & "))}</span><span class="tag" title="Probabilidad de Kia según la historia">🎯 ${pr[i]}%</span></div>`).join("")}
       ${prox.parejas.length>=2?`<button class="btn block" id="fixtureBtn" style="margin-top:10px">🆚 Sortear cruces y canchas de esta fecha</button>`:""}
       ${CLOUD?`<button class="btn block" id="propBtn2" style="margin-top:10px;background:var(--card2);border:1px solid var(--line);color:var(--txt)">📝 Proponer resultado (lo aprueba el organizador)</button>`:""}
-    </div>`:""}
+    </div>`;})():""}
+    ${CLOUD&&USER&&prox&&!prox.campeon&&prox.parejas.length>=2?(()=>{ // 🎲 PRODE
+      const mio=miProdeDe(prox.f);
+      const cuantos=PRODE.filter(x=>x.f===prox.f).length;
+      return `<div class="card pad" style="margin-bottom:12px;border-color:#7c3aed">
+        <div class="tag" style="margin-bottom:6px;color:#c4b5fd">🎲 PRODE · ¿Quién se lleva el Kia?</div>
+        ${mio?`<div class="note" style="margin-bottom:8px">Tu pronóstico: <b style="color:#c4b5fd">🎯 ${esc(mio.pareja.join(" & "))}</b></div>`
+             :`<div class="note" style="margin-bottom:8px">Jugá tu pronóstico antes del domingo. No vale plata, vale honor.</div>`}
+        <button class="btn block" id="prodeBtn" style="background:#7c3aed">${mio?"🎲 Cambiar mi pronóstico":"🎲 Hacer mi pronóstico"}</button>
+        <div class="note" style="margin-top:6px;text-align:center">${cuantos} pronóstico${cuantos===1?"":"s"} del grupo · el ranking de adivinos está en 📊 Ranking</div>
+      </div>`;})():""}
     ${heroHTML}
+    ${ult&&ult.mvp?(()=>{ // 👑 Rey de la semana
+      const j=DATA.jugadores.find(x=>x.n===ult.mvp);
+      const dias=Math.max(0,Math.floor((Date.now()-new Date(ult.f+"T12:00:00").getTime())/86400000));
+      return `<div class="card pad" style="margin-top:12px;display:flex;align-items:center;gap:14px;border-color:var(--gold)">
+        ${j&&j.foto?`<img src="${esc(j.foto)}" alt="" style="width:66px;height:66px;border-radius:14px;object-fit:cover;border:2px solid var(--gold)">`:`<div style="font-size:42px">👑</div>`}
+        <div style="flex:1">
+          <div class="tag" style="color:var(--gold)">👑 Rey de la semana</div>
+          <div class="anton" style="font-size:25px"><span class="pname" data-perfil="${esc(ult.mvp)}">${esc(ult.mvp)}</span></div>
+          <div class="note">MVP del ${fmtFecha(ult.f)} · reinando hace ${dias} día${dias===1?"":"s"}</div>
+        </div>
+      </div>`;})():""}
     <div class="pills" style="margin-top:12px">
       <div class="pill"><div class="n">${totalFechas}</div><div class="k">Fechas</div></div>
       <div class="pill"><div class="n">${todosLosNombres().length}</div><div class="k">Jugadores</div></div>
       <div class="pill"><div class="n">${totalCamp}</div><div class="k">Campeones</div></div>
     </div>
+    ${(()=>{ // 🔥 rachas vivas y rotas
+      const tops=rachasTop(), rotas=rachasRotas();
+      return tops.length||rotas.length?`<div class="card pad" style="margin-top:12px">
+        <div class="tag" style="margin-bottom:6px">🔥 Rachas de asistencia</div>
+        ${tops.map(t=>`<div class="row" style="padding:6px 0"><span class="pname" data-perfil="${esc(t.n)}">${chip(t.n)} ${esc(t.n)}</span><b class="big" style="color:#fb923c">${t.r} seguidos 🔥</b></div>`).join("")}
+        ${rotas.map(t=>`<div class="row" style="padding:6px 0"><span class="muted">💔 Se cortó la racha de <b>${t.r}</b> de <span class="pname" data-perfil="${esc(t.n)}" style="color:var(--txt)">${esc(t.n)}</span></span></div>`).join("")}
+      </div>`:"";})()}
+    ${(()=>{ // 📊 el dato del lunes
+      const dato=datoSemanal();
+      return dato?`<div class="card pad" style="margin-top:12px">
+        <div class="tag" style="margin-bottom:6px">📊 El dato del lunes</div>
+        <div style="font-size:15px;font-weight:700;line-height:1.5">${dato}</div>
+        <button class="btn ghost sm block" id="datoShare" style="margin-top:10px">📲 Tirarlo al grupo</button>
+      </div>`:"";})()}
+    ${(()=>{ // 📸 un día como hoy
+      const r=recuerdoSemanal();
+      return r?`<div class="card pad" style="margin-top:12px;display:flex;gap:12px;align-items:center">
+        <a href="${esc(r.f.fotoKia)}" target="_blank" rel="noopener"><img src="${esc(r.f.fotoKia)}" alt="" loading="lazy" style="width:84px;height:104px;object-fit:cover;border-radius:10px;border:1px solid var(--line)"></a>
+        <div style="flex:1">
+          <div class="tag">📸 Un día como hoy…</div>
+          <div style="font-weight:800;margin-top:2px">${fmtFecha(r.f.f)} · hace ${r.meses} mes${r.meses===1?"":"es"}</div>
+          <div class="note">🏆 Campeones: <b style="color:var(--txt)">${esc(r.f.campeon.join(" & "))}</b></div>
+        </div>
+      </div>`:"";})()}
   </section>
 
   <section>
@@ -751,17 +815,32 @@ function vRanking(){
     <div class="seg" id="rkseg">
       <button data-t="jug" class="${RKTAB==='jug'?'on':''}">Jugadores</button>
       <button data-t="par" class="${RKTAB==='par'?'on':''}">Parejas</button>
+      <button data-t="prode" class="${RKTAB==='prode'?'on':''}">🎲 Adivinos</button>
     </div>
-    <div class="card" id="rktable">${RKTAB==='jug'?tablaJug():tablaPar()}</div>
+    <div class="card" id="rktable">${RKTAB==='jug'?tablaJug():RKTAB==='par'?tablaPar():tablaProde()}</div>
     <div class="note" style="margin-top:10px">PJ = fechas jugadas · 🚗 = Kias (campeonatos) · 🎖️ = MVP del día · 🥄 = cucharas de madera · ☕ = se quedó al café · 🏃 = se rajó sin café. Tocá un nombre para ver su perfil.</div>
   </section>`;
 }
 function tablaJug(){
-  const arr=Object.values(statsInd(seasonFechas())).sort((a,b)=>b.camp-a.camp||b.pj-a.pj);
+  const orden=(a,b)=>b.camp-a.camp||b.pj-a.pj;
+  const arr=Object.values(statsInd(seasonFechas())).sort(orden);
   if(!arr.length)return `<div class="empty">Sin datos</div>`;
+  // 📈 movimiento vs. la semana pasada (sin la última fecha)
+  const prevPos={};
+  if(RKSEASON==="actual"&&DATA.fechas.length>1){
+    Object.values(statsInd(DATA.fechas.slice(1))).sort(orden).forEach((p,i)=>prevPos[p.n]=i);
+  }
+  const mv=(n,i)=>{
+    if(RKSEASON!=="actual")return "";
+    if(prevPos[n]===undefined)return ' <small style="color:#4ade80;font-weight:800">🆕</small>';
+    const d=prevPos[n]-i;
+    if(d>0)return ` <small style="color:#4ade80;font-weight:800">▲${d}</small>`;
+    if(d<0)return ` <small style="color:var(--red2);font-weight:800">▼${-d}</small>`;
+    return ' <small style="color:var(--muted)">=</small>';
+  };
   return `<table class="stand"><thead><tr><th>Jugador</th><th>PJ</th><th>🚗</th><th>🎖️</th><th>🥄</th><th>☕</th><th>🏃</th></tr></thead><tbody>
     ${arr.map((p,i)=>`<tr>
-      <td><span class="rk ${i<3?'g'+(i+1):''}">${i+1}</span><span class="pname" data-perfil="${esc(p.n)}">${chip(p.n)} ${esc(p.n)}</span></td>
+      <td><span class="rk ${i<3?'g'+(i+1):''}">${i+1}</span><span class="pname" data-perfil="${esc(p.n)}">${chip(p.n)} ${esc(p.n)}</span>${mv(p.n,i)}</td>
       <td style="text-align:right"><span class="big">${p.pj}</span></td>
       <td style="text-align:right;color:var(--gold);font-weight:800">${p.camp||"·"}</td>
       <td style="text-align:right;color:var(--A);font-weight:800">${p.mvp||"·"}</td>
@@ -847,7 +926,14 @@ function vPerfil(name){
       ${ind.cafeReg?`<div class="row"><span class="muted">☕ Se quedó al café</span><b class="big" style="color:#4ade80">${ind.cafe}/${ind.cafeReg}</b></div>`:""}
       ${ind.nocafe?`<div class="row"><span class="muted">🏃 Se rajó sin café</span><b class="big" style="color:var(--red2)">${ind.nocafe}</b></div>`:""}
       <div class="row"><span class="muted">Efectividad (Kias / fechas)</span><b class="big">${winPct}%</b></div>
-      ${badgesHTML(ind)}
+      ${(()=>{ // ⚔️ duelos históricos (por títulos del día)
+        const d=duelosDe(name);
+        return d.victima||d.verdugo?`<div class="row" style="display:block">
+          <div class="tag" style="margin-bottom:8px">⚔️ Duelos (por títulos del día)</div>
+          ${d.victima?`<div class="row" style="padding:7px 0"><span class="muted">😎 Tu víctima favorita</span><span><span class="pname" data-perfil="${esc(d.victima.n)}"><b>${esc(d.victima.n)}</b></span> <b style="color:#4ade80">${d.victima.w}-${d.victima.l}</b></span></div>`:""}
+          ${d.verdugo?`<div class="row" style="padding:7px 0"><span class="muted">😈 Te tiene de hijo</span><span><span class="pname" data-perfil="${esc(d.verdugo.n)}"><b>${esc(d.verdugo.n)}</b></span> <b style="color:var(--red2)">${d.verdugo.w}-${d.verdugo.l}</b></span></div>`:""}
+        </div>`:"";})()}
+      ${badgesHTML(ind,name)}
       ${comps.length?`<div class="row" style="display:block;border-bottom:0">
         <div class="tag" style="margin-bottom:8px">Compañeros más frecuentes</div>
         ${comps.map(([n,v])=>`<div class="row"><span class="pname" data-perfil="${esc(n)}">${chip(n)} ${esc(n)}</span><span class="muted">${v} ${v===1?'vez':'veces'}</span></div>`).join("")}
@@ -1067,8 +1153,9 @@ function normalizeData(d){
 }
 
 /* ---------- LOGROS ---------- */
-function badgesHTML(ind){
+function badgesHTML(ind,name){
   const b=[];
+  const secretos=name?logrosSecretos(name,ind):[];
   if(ind.camp>=1)b.push(["🚗","Se llevó el Kia"]);
   if(ind.camp>=3)b.push(["🏎️","Concesionaria Kia (3+)"]);
   if(ind.mvp>=1)b.push(["🎖️","MVP del día"]);
@@ -1078,12 +1165,15 @@ function badgesHTML(ind){
   if(ind.nocafe>=3)b.push(["🏃","Rajador serial (3+ sin café)"]);
   if(ind.pala>=1)b.push(["🥄","Catador de Blindex"]);
   if(ind.camp===0&&ind.pj>=8)b.push(["🧊","Bola fría (8+ fechas sin Kia)"]);
-  if(!b.length)return "";
+  if(!b.length&&!secretos.length&&!name)return "";
+  const faltan=Math.max(0,SECRETOS_TOTAL-secretos.length);
   return `<div class="row" style="display:block;border-bottom:0">
     <div class="tag" style="margin-bottom:8px">Logros</div>
     <div style="display:flex;flex-wrap:wrap;gap:8px">
       ${b.map(([e,t])=>`<span style="background:var(--card2);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:700">${e} ${t}</span>`).join("")}
+      ${secretos.map(([e,t])=>`<span style="background:linear-gradient(135deg,#2a1f3d,#1d1428);border:1px solid #7c3aed;border-radius:999px;padding:6px 12px;font-size:13px;font-weight:700">✨ ${e} ${t}</span>`).join("")}
     </div>
+    ${name&&faltan>0?`<div class="note" style="margin-top:8px;font-size:12px">🔒 Quedan <b>${faltan}</b> logros secretos por descubrir. Nadie sabe cuáles son…</div>`:""}
   </div>`;
 }
 
@@ -1181,6 +1271,120 @@ async function compartirFlyer(f,st){
   }catch(e){ if(!e||e.name!=="AbortError")toast("⚠️ No se pudo generar el flyer"); }
 }
 
+/* ---------- MODO ADICTIVO: rachas, prode, probabilidades, duelos, datos ---------- */
+function proxJuego(){ // próximo domingo 8:30 (si el de hoy ya se jugó, el que viene)
+  const d=new Date(); d.setHours(8,30,0,0);
+  d.setDate(d.getDate()+((7-d.getDay())%7));
+  if(d.getTime()-Date.now()<-4.5*3600*1000)d.setDate(d.getDate()+7);
+  const f=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+  return {f,d};
+}
+function rachaActualDe(n){ let r=0; for(const f of DATA.fechas){ if(f.parejas.some(t=>t.includes(n)))r++; else break; } return r; }
+function rachasTop(){ // rachas vivas (jugó la última)
+  if(!DATA.fechas.length)return [];
+  return DATA.jugadores.map(j=>({n:j.n,r:rachaActualDe(j.n)})).filter(x=>x.r>=3).sort((a,b)=>b.r-a.r).slice(0,3);
+}
+function rachasRotas(){ // venía con racha de 3+ y faltó a la última fecha 💔
+  if(DATA.fechas.length<2)return [];
+  const ult=DATA.fechas[0], rotas=[];
+  DATA.jugadores.forEach(j=>{
+    if(ult.parejas.some(t=>t.includes(j.n)))return;
+    let r=0; for(const f of DATA.fechas.slice(1)){ if(f.parejas.some(t=>t.includes(j.n)))r++; else break; }
+    if(r>=3)rotas.push({n:j.n,r});
+  });
+  return rotas.sort((a,b)=>b.r-a.r).slice(0,2);
+}
+function ratingDe(n){ // rating simple: base por copón + historia (para el pronóstico)
+  const ind=statsInd(allFechas())[n]||{camp:0,pala:0,mvp:0};
+  const base={A:1200,B:1100,C:1000,D:900}[coponDe(n)]||1050;
+  return base+28*(ind.camp||0)-14*(ind.pala||0)+6*(ind.mvp||0);
+}
+function probsKia(parejas){ // probabilidad de Kia por pareja (softmax del rating promedio)
+  const rs=parejas.map(p=>p.reduce((a,n)=>a+ratingDe(n),0)/p.length);
+  const ex=rs.map(r=>Math.exp(r/120));
+  const s=ex.reduce((a,b)=>a+b,0);
+  return ex.map(e=>Math.max(1,Math.round(e/s*100)));
+}
+function miProdeDe(f){ return USER?PRODE.find(x=>x.f===f&&x.uid===USER.uid):null; }
+function tablaProde(){ // 🎯 ranking de adivinos
+  const cerradas={}; allFechas().forEach(f=>{if(f.campeon)cerradas[f.f]=f.campeon;});
+  const m={};
+  PRODE.forEach(p=>{
+    const win=cerradas[p.f]; if(!win)return;
+    const who=p.jugador||p.nombre||"?";
+    const o=m[who]||(m[who]={n:who,total:0,ok:0});
+    o.total++;
+    if(Array.isArray(p.pareja)&&p.pareja.length===win.length&&p.pareja.every(x=>win.includes(x)))o.ok++;
+  });
+  const arr=Object.values(m).sort((a,b)=>b.ok-a.ok||a.total-b.total);
+  if(!arr.length)return `<div class="empty">Todavía no se resolvió ningún pronóstico 🎲<br><small>Se hacen desde el Inicio cuando están las parejas del domingo</small></div>`;
+  return `<table class="stand"><thead><tr><th>Adivino</th><th>🎯 Aciertos</th><th>Intentos</th></tr></thead><tbody>
+    ${arr.map((p,i)=>`<tr><td><span class="rk ${i<3?'g'+(i+1):''}">${i+1}</span><b>${esc(p.n)}</b></td><td style="text-align:right;color:var(--gold);font-weight:800">${p.ok}</td><td style="text-align:right">${p.total}</td></tr>`).join("")}
+  </tbody></table>`;
+}
+function duelosDe(name){ // ⚔️ por títulos del día: gano si salí campeón y vos no (jugando ambos)
+  const m={};
+  allFechas().forEach(f=>{
+    if(!f.campeon)return;
+    const my=f.parejas.find(p=>p.includes(name)); if(!my)return;
+    const yoCamp=f.campeon.includes(name);
+    f.parejas.forEach(p=>{ if(p===my)return; p.forEach(riv=>{
+      const o=m[riv]||(m[riv]={w:0,l:0});
+      if(yoCamp)o.w++;
+      else if(f.campeon.some(x=>p.includes(x)))o.l++;
+    });});
+  });
+  const arr=Object.entries(m).map(([n,v])=>({n,...v}));
+  const victima=[...arr].filter(x=>x.w>=2).sort((a,b)=>b.w-a.w||a.l-b.l)[0];
+  const verdugo=[...arr].filter(x=>x.l>=2).sort((a,b)=>b.l-a.l||a.w-b.w)[0];
+  return {victima:victima||null,verdugo:verdugo||null};
+}
+const SECRETOS_TOTAL=10;
+function logrosSecretos(name,ind){ // 🏅 se revelan solo al desbloquearse
+  const b=[];
+  const fs=[...allFechas()].filter(f=>f.parejas.some(p=>p.includes(name)));
+  const asc=[...fs].sort((a,b)=>a.f.localeCompare(b.f));
+  if(Object.keys(ind.comp||{}).length>=10)b.push(["🤝","Hermano de todos (jugó con 10+ compañeros)"]);
+  const champComp=new Set();allFechas().forEach(f=>{if(f.campeon&&f.campeon.includes(name))f.campeon.forEach(x=>{if(x!==name)champComp.add(x);});});
+  if(champComp.size>=3)b.push(["🎰","Gana con cualquiera (Kia con 3+ compañeros distintos)"]);
+  let sp=0,spx=0;asc.forEach(f=>{if(f.pala&&f.pala.includes(name)){sp++;spx=Math.max(spx,sp);}else sp=0;});
+  if(spx>=2)b.push(["🥄🥄","Coleccionista serial (2 cucharas seguidas)"]);
+  if(allFechas().some(f=>f.campeon&&f.campeon.includes(name)&&f.mvp===name))b.push(["💎","La doble perfecta (Kia + MVP el mismo día)"]);
+  let cs=0,c2=0;asc.forEach(f=>{if(f.campeon&&f.campeon.includes(name)){cs++;c2=Math.max(c2,cs);}else cs=0;});
+  if(c2>=2)b.push(["🔁","Bicampeón (2 domingos seguidos)"]);
+  if(asc.length&&asc[0].campeon&&asc[0].campeon.includes(name))b.push(["🐣","Debut soñado (campeón en su primera fecha)"]);
+  if(rachaMaxDe(allFechas(),name)>=10)b.push(["⛓️","Inoxidable (10+ fechas seguidas)"]);
+  if((ind.pj||0)>=20)b.push(["🐔","Gallo del domingo (20+ fechas)"]);
+  if((ind.cafe||0)>=10)b.push(["🫖","Socio vitalicio del café (10+)"]);
+  if((ind.camp||0)>=1&&(ind.pala||0)>=1)b.push(["🎭","Del cielo al Blindex (tiene Kia y cuchara)"]);
+  return b;
+}
+function datoSemanal(){ // 📊 el dato del lunes (rota por semana)
+  const arr=Object.values(statsInd());
+  const datos=[];
+  const tops=rachasTop(); if(tops.length)datos.push(`🔥 ${tops[0].n} lleva ${tops[0].r} domingos seguidos sin faltar. ¿Quién lo baja?`);
+  DATA.jugadores.forEach(j=>{const u=DATA.fechas.slice(0,5).filter(f=>f.campeon);const w=u.filter(f=>f.campeon.includes(j.n)).length;if(w>=3)datos.push(`😱 ${j.n} ganó ${w} de los últimos ${u.length} Kias. Está para el dopaje.`);});
+  let nD=0;for(const f of DATA.fechas){if(!f.campeon)continue;if(f.campeon.some(x=>coponDe(x)==="D"))break;nD++;}
+  if(nD>=5)datos.push(`🧊 Hace ${nD} fechas con campeón que un copón D no toca el Kia.`);
+  const rj=[...arr].sort((a,b)=>(b.nocafe||0)-(a.nocafe||0))[0];
+  if(rj&&rj.nocafe>=2)datos.push(`🏃 ${rj.n} ya se rajó ${rj.nocafe} veces sin el café. Los sponsors están preocupados.`);
+  const cu=[...arr].sort((a,b)=>(b.pala||0)-(a.pala||0))[0];
+  if(cu&&cu.pala>=2)datos.push(`🥄 ${cu.n} lidera el ranking de cucharas con ${cu.pala}. Catador oficial de Blindex.`);
+  const ef=[...arr].filter(x=>x.pj>=8).sort((a,b)=>(b.camp/b.pj)-(a.camp/a.pj))[0];
+  if(ef&&ef.camp)datos.push(`📈 ${ef.n} tiene la mejor efectividad del grupo: ${Math.round(ef.camp/ef.pj*100)}% de Kias por fecha jugada.`);
+  if(!datos.length)return null;
+  const week=Math.floor(Date.now()/(7*86400000));
+  return datos[week%datos.length];
+}
+function recuerdoSemanal(){ // 📸 un día como hoy (rota por semana entre fechas con foto)
+  const mem=allFechas().filter(f=>f.campeon&&f.fotoKia);
+  if(!mem.length)return null;
+  const week=Math.floor(Date.now()/(7*86400000));
+  const f=mem[week%mem.length];
+  const meses=Math.max(1,Math.round((Date.now()-new Date(f.f+"T12:00:00"))/2629800000));
+  return {f,meses};
+}
+
 /* ---------- GALA DE TEMPORADA ---------- */
 function rachaMaxDe(fechas,n){
   let max=0,cur=0;
@@ -1268,7 +1472,7 @@ function vSorteo(){
     <div class="card pad" style="margin-top:12px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
         <div class="tag">Presentes hoy · <span id="selcount">${SEL.size}</span></div>
-        <div><button class="btn ghost sm" id="selAll">Todos</button> <button class="btn ghost sm" id="selNone">Limpiar</button></div>
+        <div>${(()=>{const an=ASIS.filter(a=>a.f===proxJuego().f);return an.length?`<button class="btn ghost sm" id="asisMark" style="color:#4ade80">🙋 ${an.length} anotados</button> `:"";})()}<button class="btn ghost sm" id="selAll">Todos</button> <button class="btn ghost sm" id="selNone">Limpiar</button></div>
       </div>
       <div class="sortcols">
         ${(()=>{const indS=statsInd(allFechas());return ["A","B","C","D"].map(c=>{
@@ -1636,6 +1840,39 @@ function bind(){
   document.querySelectorAll("[data-perfil]").forEach(b=>b.onclick=()=>go("perfil",b.dataset.perfil));
 
   if(VIEW==="inicio"){
+    // ⏳ cuenta regresiva en vivo
+    const tick=()=>{const el=document.getElementById("cdown");if(!el)return;
+      const d=proxJuego().d.getTime()-Date.now();
+      if(d<=0){el.textContent="🎾 ¡Se juega AHORA!";return;}
+      const dd=Math.floor(d/86400000),hh=Math.floor(d%86400000/3600000),mm=Math.floor(d%3600000/60000),ss=Math.floor(d%60000/1000);
+      el.textContent=`${dd>0?dd+"d ":""}${hh}h ${String(mm).padStart(2,"0")}m ${String(ss).padStart(2,"0")}s`;};
+    tick();
+    clearInterval(window.__cd);window.__cd=setInterval(tick,1000);
+    // 🙋 anotarse / bajarse
+    const ab=document.getElementById("asisBtn");
+    if(ab)ab.onclick=async()=>{
+      const pj=proxJuego();
+      const yo=ASIS.find(a=>a.f===pj.f&&a.uid===USER.uid);
+      try{
+        if(yo){await deleteDoc(doc(db,"asistencia",`${pj.f}_${USER.uid}`));toast("😴 Te bajaste del domingo");}
+        else{await setDoc(doc(db,"asistencia",`${pj.f}_${USER.uid}`),{f:pj.f,uid:USER.uid,nombre:(USER.displayName||USER.email||"?").split(" ")[0],jugador:MYPLAYER||null,ts:Date.now()});toast("🙋 ¡Anotado para el domingo!");}
+      }catch(e){toast("⚠️ No se pudo (¿reglas actualizadas?)");}
+    };
+    // 🎲 prode
+    const pr=document.getElementById("prodeBtn");
+    if(pr)pr.onclick=async()=>{
+      const f=DATA.fechas[0]; if(!f||f.campeon)return;
+      const v=await uiPick("🎲 ¿Quién se lleva el Kia?",`${fmtFecha(f.f)} · elegí tu pareja campeona (podés cambiarlo hasta el domingo)`,
+        f.parejas.map((p,i)=>({label:`${i+1}) ${esc(p.join(" & "))} <small>🎯 ${probsKia(f.parejas)[i]}% según la historia</small>`,value:p})));
+      if(v===undefined)return;
+      try{
+        await setDoc(doc(db,"prode",`${f.f}_${USER.uid}`),{f:f.f,uid:USER.uid,nombre:(USER.displayName||USER.email||"?").split(" ")[0],jugador:MYPLAYER||null,pareja:v,ts:Date.now()});
+        toast("🎲 ¡Pronóstico jugado! Se resuelve el domingo");
+      }catch(e){toast("⚠️ No se pudo guardar (¿reglas actualizadas?)");}
+    };
+    // 📊 compartir el dato del lunes
+    const ds=document.getElementById("datoShare");
+    if(ds)ds.onclick=()=>{const dato=datoSemanal();if(dato)shareWA(`📊 *EL DATO DEL LUNES* · Copones BV\n\n${dato.replace(/<[^>]+>/g,"")}\n\n👉 Toda la data: ${APP_URL}`);};
     const wa=document.getElementById("waShare");
     if(wa)wa.onclick=()=>{
       const f=DATA.fechas.find(x=>x.campeon)||DATA.fechas[0];
@@ -1699,7 +1936,7 @@ function bind(){
   }
 
   if(VIEW==="ranking"){
-    document.querySelectorAll("#rkseg button").forEach(b=>b.onclick=()=>{RKTAB=b.dataset.t;document.getElementById("rktable").innerHTML=RKTAB==='jug'?tablaJug():tablaPar();document.querySelectorAll("#rkseg button").forEach(x=>x.classList.toggle("on",x.dataset.t===RKTAB));bind();});
+    document.querySelectorAll("#rkseg button").forEach(b=>b.onclick=()=>{RKTAB=b.dataset.t;document.getElementById("rktable").innerHTML=RKTAB==='jug'?tablaJug():RKTAB==='par'?tablaPar():tablaProde();document.querySelectorAll("#rkseg button").forEach(x=>x.classList.toggle("on",x.dataset.t===RKTAB));bind();});
     const rs=document.getElementById("rkseason");
     if(rs)rs.onchange=()=>{RKSEASON=rs.value;render();};
   }
@@ -1740,6 +1977,12 @@ function bind(){
     };
     updCounts();
     document.querySelectorAll("[data-tog]").forEach(b=>b.onclick=()=>{const n=b.dataset.tog;if(navigator.vibrate)navigator.vibrate(8);if(SEL.has(n)){SEL.delete(n);b.classList.remove("on");}else{SEL.add(n);b.classList.add("on");}updCounts();resumenConvocados(false);});
+    const am=document.getElementById("asisMark");
+    if(am)am.onclick=()=>{ // 🙋 marca a los anotados de la app
+      let ok=0;
+      ASIS.filter(a=>a.f===proxJuego().f).forEach(a=>{const m=matchPlayer(a.jugador||a.nombre||"");if(m){SEL.add(m);ok++;}});
+      route("sorteo");toast(`🙋 ${ok} anotados marcados como presentes`);
+    };
     document.getElementById("selAll").onclick=()=>{DATA.jugadores.forEach(j=>{if(j.c)SEL.add(j.n);});route("sorteo");};
     document.getElementById("selNone").onclick=()=>{SEL.clear();route("sorteo");};
     const addSorp=async()=>{
