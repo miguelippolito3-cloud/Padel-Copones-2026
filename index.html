@@ -69,8 +69,8 @@
 
   /* hero result */
   .hero{background:linear-gradient(135deg,#241a2e,#151019 55%,#101622);border:1px solid var(--line);border-radius:16px;padding:16px;position:relative;overflow:hidden}
-  .hero:before{content:"";position:absolute;right:-40px;top:-40px;width:170px;height:170px;background:radial-gradient(circle,rgba(226,16,42,.28),transparent 70%)}
-  .hero:after{content:"";position:absolute;left:-30px;bottom:-45px;width:150px;height:150px;background:radial-gradient(circle,rgba(47,123,255,.2),transparent 70%)}
+  .hero:before{content:"";position:absolute;right:-40px;top:-40px;width:170px;height:170px;background:radial-gradient(circle,rgba(226,16,42,.28),transparent 70%);pointer-events:none}
+  .hero:after{content:"";position:absolute;left:-30px;bottom:-45px;width:150px;height:150px;background:radial-gradient(circle,rgba(47,123,255,.2),transparent 70%);pointer-events:none}
   .hero .lbl{font-family:"Barlow Condensed";font-weight:700;letter-spacing:.16em;font-size:12px;color:var(--red2);text-transform:uppercase}
   .hero .date{font-family:"Barlow Condensed";color:var(--muted);font-size:13px;font-weight:600}
   .champ{display:flex;align-items:center;gap:12px;margin-top:8px}
@@ -315,6 +315,22 @@ const FIREBASE_CONFIG = {
 const ADMINS = ["miguelippolito3@gmail.com","miguel.ippolito@grupomitre.com.ar"];
 const APP_URL="https://miguelippolito3-cloud.github.io/Padel-Copones-2026/";
 function shareWA(txt){ window.open("https://wa.me/?text="+encodeURIComponent(txt),"_blank"); }
+function textoResultados(f,st){ // el mensaje de resultados para WhatsApp (lo usan el botón de texto y el flyer)
+  let txt=`🎾🔥 *PÁDEL COPONES BV*\n📅 Resultados del ${fmtFecha(f.f)}\n\n`;
+  if(f.campeon){
+    txt+=`🚗🏆 *SE LLEVARON EL KIA:*\n${f.campeon.join(" & ")}\n`;
+    const kias=Math.max(...f.campeon.map(n=>(st[n]||{}).camp||0));
+    if(kias>1)txt+=`_(ya van ${kias} Kias en la temporada 😱)_\n`;
+    txt+=`\n`;
+  }
+  if(f.pala)txt+=`🥄 *Cuchara de madera:* ${f.pala.join(" & ")}\n`;
+  if(f.mvp)txt+=`🎖️ *MVP del día:* ${f.mvp}\n`;
+  if(Array.isArray(f.sinCafe))txt+=f.sinCafe.length
+    ?`🏃 *Se rajaron sin café:* ${f.sinCafe.join(", ")} 👀\n`
+    :`☕ *Café:* se quedaron todos 👏\n`;
+  txt+=`\n👉 *Mirá el ranking, tu perfil y tus logros en la app:*\n${APP_URL}\n\n_Copones Buena Vista · Domingos 8:30 🎾_`;
+  return txt;
+}
 const CLOUD = !JSON.stringify(FIREBASE_CONFIG).includes("PEGAR_ACA");
 let USER=null, ISADMIN=false, auth=null, db=null, dbRef=null, CLOUDSTATE="conectando";
 let MYPLAYER=null; try{MYPLAYER=localStorage.getItem("cb_myplayer")||null;}catch(e){}
@@ -580,7 +596,10 @@ function vInicio(){
           ${ult.sinCafe&&ult.sinCafe.length?`<div class="tag">🏃 Sin café: <b style="color:var(--red2)">${esc(ult.sinCafe.join(", "))}</b></div>`:""}
           <div class="tag">${ult.confirmada?'<span style="color:#4ade80">✅ Fecha confirmada por el organizador</span>':'<span style="color:#ffcf4d">⏳ A confirmar por el organizador</span>'}</div>
         </div>
-        <button class="btn block" id="waShare" style="margin-top:14px;background:#25D366;color:#0a0b0d">📲 Mandar resultados al grupo</button>
+        <div style="display:flex;gap:8px;margin-top:14px">
+          <button class="btn" id="flyerBtn" style="flex:1.2;background:#25D366;color:#0a0b0d">🖼️ Flyer + texto al grupo</button>
+          <button class="btn ghost" id="waShare" style="flex:1">📲 Solo texto</button>
+        </div>
       </div>`;
     }else{
       heroHTML=`<div class="hero">
@@ -982,6 +1001,100 @@ function badgesHTML(ind){
       ${b.map(([e,t])=>`<span style="background:var(--card2);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:700">${e} ${t}</span>`).join("")}
     </div>
   </div>`;
+}
+
+/* ---------- FLYER DE RESULTADOS (imagen para WhatsApp) ---------- */
+async function flyerResultado(f){
+  try{await Promise.all([document.fonts.load('400 120px Anton'),document.fonts.load('700 30px "Barlow Condensed"'),document.fonts.load('800 30px Inter'),document.fonts.ready]);}catch(e){}
+  const W=1080,H=1350;
+  const cv=document.createElement("canvas");cv.width=W;cv.height=H;
+  const x=cv.getContext("2d");
+  const rr=(px,py,w,h,r)=>{x.beginPath();x.moveTo(px+r,py);x.arcTo(px+w,py,px+w,py+h,r);x.arcTo(px+w,py+h,px,py+h,r);x.arcTo(px,py+h,px,py,r);x.arcTo(px,py,px+w,py,r);x.closePath();};
+  const sp=v=>{try{x.letterSpacing=v;}catch(e){}};
+  const fit=(t,base,tpl,maxW)=>{let s=base;x.font=tpl(s);while(s>20&&x.measureText(t).width>maxW){s-=2;x.font=tpl(s);}return s;};
+  const anton=s=>`${s}px Anton`;
+  // fondo
+  x.fillStyle="#0a0b0d";x.fillRect(0,0,W,H);
+  const rad=(cx,cy,r,c)=>{const g=x.createRadialGradient(cx,cy,0,cx,cy,r);g.addColorStop(0,c);g.addColorStop(1,"rgba(10,11,13,0)");x.fillStyle=g;x.fillRect(0,0,W,H);};
+  rad(W*.85,-60,700,"rgba(226,16,42,.35)");rad(0,H,600,"rgba(47,123,255,.22)");rad(W,H*.9,520,"rgba(245,197,24,.14)");
+  x.strokeStyle="rgba(255,255,255,.045)";x.lineWidth=1;
+  for(let i=0;i<=W;i+=60){x.beginPath();x.moveTo(i,0);x.lineTo(i,H);x.stroke();}
+  for(let i=0;i<=H;i+=60){x.beginPath();x.moveTo(0,i);x.lineTo(W,i);x.stroke();}
+  x.save();x.globalAlpha=.09;x.translate(W-110,470);x.rotate(-.31);x.font="340px serif";x.textAlign="center";x.fillText("🎾",0,0);x.restore();
+  let g=x.createLinearGradient(0,0,W,0);
+  [["#f5c518",0],["#fb923c",.25],["#e2102a",.5],["#a78bfa",.75],["#2f7bff",1]].forEach(([c,s])=>g.addColorStop(s,c));
+  x.fillStyle=g;x.fillRect(0,0,W,10);
+  // marca
+  g=x.createLinearGradient(64,56,182,126);g.addColorStop(0,"#e2102a");g.addColorStop(1,"#fb923c");
+  rr(64,56,118,72,12);x.fillStyle=g;x.fill();
+  x.fillStyle="#fff";x.font="44px Anton";x.textAlign="center";x.textBaseline="middle";x.fillText("CB",123,95);
+  x.textAlign="left";x.fillStyle="#f4f6fa";x.font="44px Anton";x.fillText("COPONES",208,88);
+  x.font='700 22px "Barlow Condensed"';x.fillStyle="#98a0ad";sp("7px");x.fillText("BUENA VISTA · PÁDEL",210,126);sp("0px");
+  // fecha (derecha)
+  x.textAlign="right";x.font='700 24px "Barlow Condensed"';x.fillStyle="#98a0ad";sp("4px");x.fillText("RESULTADOS",W-64,72);sp("0px");
+  x.font='700 34px "Barlow Condensed"';x.fillStyle="#f4f6fa";x.fillText(fmtFecha(f.f).toUpperCase(),W-64,112);
+  // etiqueta campeón
+  x.textAlign="left";
+  if(f.campeon){
+    x.font='700 32px "Barlow Condensed"';x.fillStyle="#ff3350";sp("9px");x.fillText("🚗 SE LLEVARON EL KIA",64,262);sp("0px");
+    const lw=x.measureText("🚗 SE LLEVARON EL KIA").width;
+    g=x.createLinearGradient(64,0,W-64,0);g.addColorStop(0,"#ff3350");g.addColorStop(1,"rgba(255,51,80,0)");
+    x.fillStyle=g;x.fillRect(64+lw+90,254,W-64-(64+lw+90),3);
+    // copa + nombres
+    x.font="150px serif";x.fillText("🏆",64,470);
+    const n1=String(f.campeon[0]||"").toUpperCase(), n2=("& "+String(f.campeon[1]||"")).toUpperCase();
+    const s1=fit(n1,115,anton,640), s2=fit(n2,115,anton,640);
+    x.fillStyle="#fff";x.font=`${s1}px Anton`;x.fillText(n1,290,392);
+    x.font=`${s2}px Anton`;x.fillText(n2,290,392+Math.max(s1,s2)+8);
+    x.font='700 29px "Barlow Condensed"';x.fillStyle="#f5c518";sp("6px");
+    x.fillText(`CAMPEONES DEL DOMINGO · ${f.parejas.length} PAREJAS`,292,586);sp("0px");
+  }
+  // filas de datos
+  const rows=[];
+  if(f.mvp)rows.push(["🎖️","MVP DEL DÍA",String(f.mvp).toUpperCase(),"#f5c518"]);
+  if(f.pala)rows.push(["🥄","CUCHARA",f.pala.join(" & ").toUpperCase(),"#8a8f99"]);
+  if(Array.isArray(f.sinCafe))rows.push(f.sinCafe.length
+    ?["🏃","SIN CAFÉ",f.sinCafe.join(", ").toUpperCase()+" 👀","#ff3350"]
+    :["☕","CAFÉ","SE QUEDARON TODOS 👏","#4ade80"]);
+  let y=660; const rh=132, gap=26;
+  rows.forEach(([ic,k,v,c])=>{
+    rr(66,y,W-130,rh,20);x.fillStyle="rgba(255,255,255,.05)";x.fill();
+    x.strokeStyle="rgba(255,255,255,.13)";x.lineWidth=2;x.stroke();
+    rr(66,y,12,rh,6);x.fillStyle=c;x.fill();
+    x.font="54px serif";x.fillText(ic,108,y+rh/2+4);
+    x.font='700 26px "Barlow Condensed"';sp("5px");
+    const kw=x.measureText(k).width;
+    x.fillStyle="#98a0ad";x.fillText(k,196,y+rh/2+2);sp("0px");
+    const vx=Math.max(480,196+kw+50);
+    const vs=fit(v,46,anton,W-94-vx);
+    x.fillStyle="#f4f6fa";x.font=anton(vs);x.fillText(v,vx,y+rh/2+4);
+    y+=rh+gap;
+  });
+  // pie (derecha primero, para que la URL no se le encime)
+  x.textAlign="right";x.font=anton(36);x.fillStyle="#f4f6fa";x.fillText("DOMINGOS 8:30",W-64,H-148);
+  x.font='700 22px "Barlow Condensed"';x.fillStyle="#98a0ad";sp("4px");x.fillText("NOS VEMOS EN LA CANCHA",W-64,H-108);sp("0px");
+  x.textAlign="left";
+  x.font='700 27px "Barlow Condensed"';x.fillStyle="#98a0ad";x.fillText("RANKING COMPLETO, PERFILES Y LOGROS 👇",64,H-148);
+  const url="miguelippolito3-cloud.github.io/Padel-Copones-2026";
+  const us=fit(url,28,s=>`800 ${s}px Inter`,W-128-340);
+  x.font=`800 ${us}px Inter`;x.fillStyle="#f5c518";x.fillText(url,64,H-106);
+  return cv;
+}
+async function compartirFlyer(f,st){
+  toast("🖼️ Generando el flyer…");
+  try{
+    const cv=await flyerResultado(f);
+    const blob=await new Promise(r=>cv.toBlob(r,"image/png"));
+    const file=new File([blob],`copones-${f.f}.png`,{type:"image/png"});
+    const txt=textoResultados(f,st);
+    if(navigator.canShare&&navigator.canShare({files:[file]})){
+      await navigator.share({files:[file],text:txt}); // en WhatsApp la imagen entra con el texto de epígrafe
+    }else{ // sin Web Share (ej: compu): baja la imagen y abre WhatsApp con el texto
+      const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`copones-${f.f}.png`;a.click();
+      shareWA(txt);
+      toast("🖼️ Flyer descargado — adjuntalo en el chat junto al texto");
+    }
+  }catch(e){ if(!e||e.name!=="AbortError")toast("⚠️ No se pudo generar el flyer"); }
 }
 
 /* ---------- GALA DE TEMPORADA ---------- */
@@ -1417,21 +1530,12 @@ function bind(){
     const wa=document.getElementById("waShare");
     if(wa)wa.onclick=()=>{
       const f=DATA.fechas.find(x=>x.campeon)||DATA.fechas[0];
-      const st=statsInd();
-      let txt=`🎾🔥 *PÁDEL COPONES BV*\n📅 Resultados del ${fmtFecha(f.f)}\n\n`;
-      if(f.campeon){
-        txt+=`🚗🏆 *SE LLEVARON EL KIA:*\n${f.campeon.join(" & ")}\n`;
-        const kias=Math.max(...f.campeon.map(n=>(st[n]||{}).camp||0));
-        if(kias>1)txt+=`_(ya van ${kias} Kias en la temporada 😱)_\n`;
-        txt+=`\n`;
-      }
-      if(f.pala)txt+=`🥄 *Cuchara de madera:* ${f.pala.join(" & ")}\n`;
-      if(f.mvp)txt+=`🎖️ *MVP del día:* ${f.mvp}\n`;
-      if(Array.isArray(f.sinCafe))txt+=f.sinCafe.length
-        ?`🏃 *Se rajaron sin café:* ${f.sinCafe.join(", ")} 👀\n`
-        :`☕ *Café:* se quedaron todos 👏\n`;
-      txt+=`\n👉 *Mirá el ranking, tu perfil y tus logros en la app:*\n${APP_URL}\n\n_Copones Buena Vista · Domingos 8:30 🎾_`;
-      shareWA(txt);
+      shareWA(textoResultados(f,statsInd()));
+    };
+    const fb=document.getElementById("flyerBtn");
+    if(fb)fb.onclick=()=>{
+      const f=DATA.fechas.find(x=>x.campeon)||DATA.fechas[0];
+      compartirFlyer(f,statsInd());
     };
     const pb=document.getElementById("propBtn");
     if(pb)pb.onclick=async()=>{
