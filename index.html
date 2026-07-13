@@ -766,7 +766,8 @@ function vJugadores(){
     <input id="psearch" placeholder="🔍 Buscar jugador o apodo…" value="${esc(PQ)}" style="width:100%;margin-bottom:12px">
     <div class="plcols">
       ${["A","B","C","D"].map(c=>{
-        const arr=DATA.jugadores.filter(j=>j.c===c&&match(j.n,j.real)).sort((a,b)=>a.n.localeCompare(b.n));
+        // los que más jugaron arriba
+        const arr=DATA.jugadores.filter(j=>j.c===c&&match(j.n,j.real)).sort((a,b)=>(((ind[b.n]||{}).pj||0)-((ind[a.n]||{}).pj||0))||a.n.localeCompare(b.n));
         return `<div class="plcol co-${c}">
           <div class="plhead"><span class="cchip ${COL[c]}">${c}</span> ${COPTIT[c]}</div>
           ${arr.length?arr.map(j=>plcardHTML(j.n,j.real,ind[j.n])).join(""):'<div class="note" style="font-size:12px;padding:4px 2px">—</div>'}
@@ -1229,13 +1230,14 @@ function vSorteo(){
         <div><button class="btn ghost sm" id="selAll">Todos</button> <button class="btn ghost sm" id="selNone">Limpiar</button></div>
       </div>
       <div class="sortcols">
-        ${["A","B","C","D"].map(c=>{
-          const arr=DATA.jugadores.filter(j=>j.c===c).map(j=>j.n).sort((a,b)=>a.localeCompare(b));
+        ${(()=>{const indS=statsInd(allFechas());return ["A","B","C","D"].map(c=>{
+          // los que más jugaron arriba: son los que casi siempre están
+          const arr=DATA.jugadores.filter(j=>j.c===c).map(j=>j.n).sort((a,b)=>(((indS[b]||{}).pj||0)-((indS[a]||{}).pj||0))||a.localeCompare(b));
           return `<div class="sortcol co-${c}">
             <div class="sh">${c} · ${COPTIT[c]}<small id="cnt-${c}">0/${arr.length}</small></div>
             ${arr.length?arr.map(n=>`<button class="ptoggle k-${c} ${SEL.has(n)?'on':''}" data-tog="${esc(n)}">${esc(n)}</button>`).join(""):'<div class="note" style="font-size:12px">—</div>'}
           </div>`;
-        }).join("")}
+        }).join("");})()}
         <div class="sortcol co-S">
           <div class="sh" style="color:#22c55e">🎁 Sorpresas<small id="cnt-S"></small></div>
           ${looseNames().map(n=>`<button class="ptoggle k-S ${SEL.has(n)?'on':''}" data-tog="${esc(n)}">${esc(n)}${coponDe(n)?` <small style="opacity:.75">(${coponDe(n)})</small>`:""}</button>`).join("")||'<div class="note" style="font-size:12px;margin-bottom:6px">—</div>'}
