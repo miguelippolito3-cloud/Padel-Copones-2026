@@ -780,6 +780,7 @@ function vPerfil(name){
       </div>
       <div class="row"><span class="muted">🎖️ MVP del día</span><b class="big" style="color:var(--gold)">${ind.mvp||0}</b></div>
       ${racha>=2?`<div class="row"><span class="muted">🔥 Racha de asistencia</span><b class="big" style="color:#fb923c">${racha} seguidas</b></div>`:""}
+      ${(()=>{const j=DATA.jugadores.find(x=>x.n===name);return j&&j.nac?`<div class="row"><span class="muted">🎂 Año de nacimiento</span><b class="big">${esc(String(j.nac))}</b></div>`:""})()}
       ${ind.cafeReg?`<div class="row"><span class="muted">☕ Se quedó al café</span><b class="big" style="color:#4ade80">${ind.cafe}/${ind.cafeReg}</b></div>`:""}
       ${ind.nocafe?`<div class="row"><span class="muted">🏃 Se rajó sin café</span><b class="big" style="color:var(--red2)">${ind.nocafe}</b></div>`:""}
       <div class="row"><span class="muted">Efectividad (Kias / fechas)</span><b class="big">${winPct}%</b></div>
