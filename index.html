@@ -201,6 +201,35 @@
   .toast{position:fixed;left:50%;bottom:86px;transform:translateX(-50%);background:#000;border:1px solid var(--line);color:#fff;padding:10px 16px;border-radius:10px;font-weight:700;font-size:14px;z-index:80;opacity:0;transition:.25s;pointer-events:none}
   .toast.show{opacity:1}
 
+  /* ===== MODALES PROPIOS (chau prompts del navegador) ===== */
+  @keyframes fadein{from{opacity:0}to{opacity:1}}
+  @keyframes slideup{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+  .modal-ov{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.68);backdrop-filter:blur(3px);display:flex;align-items:flex-end;justify-content:center;animation:fadein .15s}
+  .modal-card{background:var(--card);border:1px solid var(--line);border-radius:18px 18px 0 0;max-width:520px;width:100%;max-height:84vh;overflow-y:auto;padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom));animation:slideup .2s ease}
+  @media(min-width:560px){.modal-ov{align-items:center;padding:16px}.modal-card{border-radius:18px}}
+  .modal-t{font-family:"Anton",Impact,sans-serif;font-size:21px;margin-bottom:4px}
+  .modal-s{color:var(--muted);font-size:13px;line-height:1.5;margin-bottom:12px}
+  .mopt{display:block;width:100%;text-align:left;background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:12px;padding:14px;margin-bottom:8px;font-weight:800;font-size:15.5px;cursor:pointer;font-family:inherit;min-height:48px;transition:.1s}
+  .mopt:active{transform:scale(.98)}
+  .mopt small{display:block;color:var(--muted);font-weight:600;font-size:12px;margin-top:2px}
+  .mopt.on{background:var(--red);border-color:var(--red);color:#fff}
+  .mopt.on small{color:rgba(255,255,255,.75)}
+  .mgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:8px}
+  .mgrid .mopt{margin-bottom:0;text-align:center}
+  .mok{display:block;width:100%;background:var(--red);border:0;color:#fff;border-radius:12px;padding:14px;font-weight:800;font-size:15.5px;cursor:pointer;font-family:inherit;margin-top:4px;min-height:48px}
+  .mcancel{display:block;width:100%;background:transparent;border:0;color:var(--muted);padding:12px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit}
+
+  /* ===== MODO PANTALLA (bolillero gigante) ===== */
+  .bigshow{position:fixed;inset:0;z-index:120;background:radial-gradient(900px 600px at 50% -10%,#221016,#000 72%);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;cursor:pointer;animation:fadein .2s;color:#fff}
+  .bigshow .bs-brand{position:absolute;top:calc(14px + env(safe-area-inset-top));font-family:"Barlow Condensed";font-weight:700;letter-spacing:.3em;text-transform:uppercase;color:var(--muted);font-size:min(3.4vw,14px)}
+  .bigshow .bs-drum{font-size:min(20vw,120px);animation:bob 1s ease-in-out infinite}
+  .bigshow .bs-name{font-family:"Anton",Impact,sans-serif;font-size:min(12vw,76px);color:var(--A);min-height:1.2em;margin-top:10px}
+  .bigshow .bs-note{position:absolute;bottom:calc(18px + env(safe-area-inset-bottom));font-family:"Barlow Condensed";font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-size:min(3.4vw,14px)}
+  .bigshow .bs-list{display:flex;flex-direction:column;gap:min(2.4vh,16px);width:100%;max-height:78vh;overflow-y:auto;padding:10px 0}
+  .bigshow .bs-pair{font-family:"Anton",Impact,sans-serif;font-size:min(7.5vw,46px);line-height:1.12;animation:slideup .5s ease both}
+  .bigshow .bs-pair .bs-no{color:var(--red2);margin-right:12px}
+  .bigshow .bs-sup{color:var(--muted);font-size:min(5vw,28px);font-family:"Barlow Condensed";font-weight:700}
+
   /* ===== MOBILE / UX ===== */
   .btn{min-height:44px}
   .btn.sm{min-height:38px}
@@ -383,9 +412,14 @@ function realDe(n){const j=DATA.jugadores.find(x=>x.n===n);return j?(j.real||"")
 /* ================= HELPERS ================= */
 function key(a,b){return [a,b].sort().join(" ‑ ");}
 function coponDe(n){ const j=DATA.jugadores.find(x=>x.n===n); if(j)return j.c; return (DATA.bolsaCop&&DATA.bolsaCop[n])||""; }
-function pedirCopon(nombre){
-  const r=(prompt(`¿Qué copón es ${nombre}?\nA = Crack · B = Bueno · C = Promedio · D = Valiente\n(Enter = B)`,"B")||"B").trim().toUpperCase();
-  return "ABCD".includes(r)?r:"B";
+async function pedirCopon(nombre){
+  const v=await uiPick(`🎁 ¿Qué copón es ${esc(nombre)}?`,"Para que el sorteo lo empareje bien",[
+    {label:`<span class="cchip chA">A</span> Crack`,value:"A"},
+    {label:`<span class="cchip chB">B</span> Bueno`,value:"B"},
+    {label:`<span class="cchip chC">C</span> Promedio`,value:"C"},
+    {label:`<span class="cchip chD">D</span> Valiente`,value:"D"}
+  ]);
+  return v||"B";
 }
 function todosLosNombres(){
   const s=new Set(DATA.jugadores.map(j=>j.n));
@@ -434,6 +468,54 @@ function avatarColor(n){const cols=["#e2102a","#2f7bff","#fb923c","#22c55e","#a7
 function fmtFecha(s){const [y,m,d]=s.split("-");const ms=["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];return `${+d} ${ms[+m-1]} ${y}`;}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function toast(t){const el=document.getElementById("toast");el.textContent=t;el.classList.add("show");clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove("show"),1800);}
+
+/* ---------- MODALES PROPIOS (reemplazan a prompt/confirm) ---------- */
+function uiClose(){const m=document.getElementById("uimodal");if(m)m.remove();}
+function uiShow(title,sub,inner){
+  uiClose();
+  const d=document.createElement("div");
+  d.id="uimodal";d.className="modal-ov";
+  d.innerHTML=`<div class="modal-card"><div class="modal-t">${title}</div>${sub?`<div class="modal-s">${sub}</div>`:""}<div>${inner}</div></div>`;
+  document.body.appendChild(d);
+  return d;
+}
+function uiPick(title,sub,options){ // options: [{label,sub?,value}] → Promise<value|undefined si cancela>
+  return new Promise(res=>{
+    const d=uiShow(title,sub,
+      options.map((o,i)=>`<button class="mopt" data-i="${i}">${o.label}${o.sub?`<small>${o.sub}</small>`:""}</button>`).join("")+
+      `<button class="mcancel" data-x>Cancelar</button>`);
+    d.querySelectorAll(".mopt").forEach(b=>b.onclick=()=>{uiClose();res(options[+b.dataset.i].value);});
+    d.querySelector("[data-x]").onclick=()=>{uiClose();res(undefined);};
+    d.onclick=e=>{if(e.target===d){uiClose();res(undefined);}};
+  });
+}
+function uiMulti(title,sub,names,okEmpty){ // selección múltiple → Promise<array|undefined>
+  return new Promise(res=>{
+    const sel=new Set();
+    const d=uiShow(title,sub,
+      `<div class="mgrid">${names.map((n,i)=>`<button class="mopt" data-i="${i}">${esc(n)}</button>`).join("")}</div>
+      <button class="mok" data-ok>${okEmpty}</button>
+      <button class="mcancel" data-x>Cancelar</button>`);
+    const ok=d.querySelector("[data-ok]");
+    d.querySelectorAll(".mopt").forEach(b=>b.onclick=()=>{
+      const n=names[+b.dataset.i];
+      if(sel.has(n)){sel.delete(n);b.classList.remove("on");}else{sel.add(n);b.classList.add("on");}
+      ok.textContent=sel.size?`✓ Confirmar (${sel.size})`:okEmpty;
+    });
+    ok.onclick=()=>{uiClose();res([...sel]);};
+    d.querySelector("[data-x]").onclick=()=>{uiClose();res(undefined);};
+  });
+}
+function uiConfirm(title,msg,okLabel,cancelLabel){ // → Promise<bool>
+  return new Promise(res=>{
+    const d=uiShow(title,msg,
+      `<button class="mok" data-ok>${okLabel||"✓ Dale"}</button>
+      <button class="mcancel" data-x>${cancelLabel||"Mejor no"}</button>`);
+    d.querySelector("[data-ok]").onclick=()=>{uiClose();res(true);};
+    d.querySelector("[data-x]").onclick=()=>{uiClose();res(false);};
+    d.onclick=e=>{if(e.target===d){uiClose();res(false);}};
+  });
+}
 
 /* ================= ROUTER ================= */
 let VIEW="inicio", PARAM=null;
@@ -786,33 +868,37 @@ function faltantesTxt(f){
   const nom={campeon:"🚗 campeón",pala:"🥄 cuchara",mvp:"🎖️ MVP",cafe:"☕ café"};
   return faltantesDe(f).map(k=>nom[k]).join(" · ");
 }
-function cargarResultado(f){
-  const opciones=f.parejas.map((p,idx)=>`${idx+1}) ${p.join(" & ")}`).join("\n");
+async function cargarResultado(f){
   let faltan=faltantesDe(f);
   let corrigiendo=false;
   const antes={campeon:f.campeon||null,pala:(f.pala===undefined?null:f.pala),mvp:(f.mvp===undefined?null:f.mvp),sinCafe:Array.isArray(f.sinCafe)?f.sinCafe.slice():null};
   if(!faltan.length){ // ya está todo: corregir = reescribir la historia, con respaldo
-    if(!confirm(`🕰️ ¡Momento! La fecha del ${fmtFecha(f.f)} ya está completa y estás por REESCRIBIR LA HISTORIA.\n\nTranqui: la versión actual queda guardada en el historial de cambios, con fecha y autor. Acá nada se pierde… pero todo se sabe 😏\n\n¿Le entramos?`))return;
+    if(!await uiConfirm("🕰️ ¡Momento!",`La fecha del <b>${fmtFecha(f.f)}</b> ya está completa y estás por <b>reescribir la historia</b>.<br><br>Tranqui: la versión actual queda guardada en el historial de cambios, con fecha y autor. Acá nada se pierde… pero todo se sabe 😏`,"✍️ Le entramos"))return;
     corrigiendo=true;
     faltan=["campeon","pala","mvp","cafe"];
   }
+  const dia=fmtFecha(f.f);
+  const parejasOpt=f.parejas.map((p,i)=>({label:`${i+1}) ${esc(p.join(" & "))}`,value:p}));
+  const jugadores=[...new Set(f.parejas.flat())];
   let cambios=0;
-  if(faltan.includes("campeon")){
-    const r=prompt("🚗 ¿Qué pareja se llevó el Kia? Escribí el número:\n"+opciones+"\n(0 = sin campeón)");
-    if(r!==null){const idx=parseInt(r)-1;f.campeon=(idx>=0&&idx<f.parejas.length)?f.parejas[idx]:null;cambios++;}
-  }
-  if(faltan.includes("pala")){
-    const rp=prompt("🥄 ¿Y la cuchara de madera? Número de pareja:\n"+opciones+"\n(0 = nadie)");
-    if(rp!==null){const ip=parseInt(rp)-1;f.pala=(ip>=0&&ip<f.parejas.length)?f.parejas[ip]:false;cambios++;}
-  }
-  if(faltan.includes("mvp")){
-    const rm=prompt("🎖️ ¿MVP del día? (nombre exacto, vacío = nadie)",f.mvp||"");
-    if(rm!==null){f.mvp=rm.trim()||false;cambios++;}
-  }
-  if(faltan.includes("cafe")){
-    const rc=prompt("☕ ¿Alguien se rajó SIN quedarse al café? (nombres separados por coma · vacío = se quedaron todos)",(f.sinCafe||[]).join(", "));
-    if(rc!==null){f.sinCafe=parseCafe(rc);cambios++;}
-  }
+  const pasos=[];
+  if(faltan.includes("campeon"))pasos.push(async()=>{
+    const v=await uiPick("🚗 ¿Quién se llevó el Kia?",`Fecha del ${dia} · tocá la pareja campeona`,[...parejasOpt,{label:"🤷 Sin campeón todavía",value:null}]);
+    if(v===undefined)return false; f.campeon=v; return true;
+  });
+  if(faltan.includes("pala"))pasos.push(async()=>{
+    const v=await uiPick("🥄 ¿Y la cuchara de madera?",`Fecha del ${dia} · la pareja que la pasó peor`,[...parejasOpt,{label:"🤷 Nadie / no hubo",value:false}]);
+    if(v===undefined)return false; f.pala=v; return true;
+  });
+  if(faltan.includes("mvp"))pasos.push(async()=>{
+    const v=await uiPick("🎖️ ¿MVP del día?",`Fecha del ${dia} · el que la rompió`,[...jugadores.map(n=>({label:esc(n),value:n})),{label:"🤷 Nadie / no hubo",value:false}]);
+    if(v===undefined)return false; f.mvp=v; return true;
+  });
+  if(faltan.includes("cafe"))pasos.push(async()=>{
+    const v=await uiMulti("🏃 ¿Alguien se rajó sin el café?",`Fecha del ${dia} · marcá a los que se fueron sin quedarse`,jugadores,"☕ Se quedaron todos");
+    if(v===undefined)return false; f.sinCafe=v; return true;
+  });
+  for(const paso of pasos){ if(!await paso())break; cambios++; }
   if(!cambios)return;
   if(corrigiendo){ // respaldo: versión anterior + quién la cambió
     (f.versiones||(f.versiones=[])).push({ts:Date.now(),por:(USER&&USER.email)||"admin (este dispositivo)",antes});
@@ -898,11 +984,53 @@ function badgesHTML(ind){
   </div>`;
 }
 
+/* ---------- GALA DE TEMPORADA ---------- */
+function rachaMaxDe(fechas,n){
+  let max=0,cur=0;
+  [...fechas].sort((a,b)=>a.f.localeCompare(b.f)).forEach(f=>{
+    if(f.parejas.some(t=>t.includes(n))){cur++;if(cur>max)max=cur;}else cur=0;
+  });
+  return max;
+}
+function premiosDe(fechas){
+  const ind=Object.values(statsInd(fechas));
+  const pares=Object.values(statsPar(fechas));
+  const top=(arr,k)=>{const s=[...arr].sort((a,b)=>b[k]-a[k])[0];return s&&s[k]?s:null;};
+  const p=[];
+  const c=top(ind,"camp"); if(c)p.push(["🚗","Campeón del año",`${c.n} (${c.camp} Kia${c.camp===1?"":"s"})`]);
+  const quim=[...pares].filter(x=>x.camp).sort((a,b)=>b.camp-a.camp||a.veces-b.veces)[0];
+  if(quim)p.push(["💞","Pareja con más química",`${quim.a} & ${quim.b} (${quim.camp} título${quim.camp===1?"":"s"} en ${quim.veces} fecha${quim.veces===1?"":"s"} juntos)`]);
+  const m=top(ind,"mvp"); if(m)p.push(["🎖️","MVP del año",`${m.n} (${m.mvp})`]);
+  const pj=top(ind,"pj"); if(pj)p.push(["🔥","El más presente",`${pj.n} (${pj.pj} fechas)`]);
+  let rn=null,rv=0; ind.forEach(x=>{const r=rachaMaxDe(fechas,x.n);if(r>rv){rv=r;rn=x.n;}});
+  if(rn&&rv>=3)p.push(["⛓️","Racha de hierro",`${rn} (${rv} fechas seguidas sin faltar)`]);
+  const pa=top(ind,"pala"); if(pa)p.push(["🥄","Cuchara de oro",`${pa.n} (${pa.pala})`]);
+  const cf=top(ind,"cafe"); if(cf)p.push(["☕","Fana del cafecito",`${cf.n} (se quedó ${cf.cafe} ${cf.cafe===1?"vez":"veces"})`]);
+  const rj=top(ind,"nocafe"); if(rj)p.push(["🏃","Rajador del año",`${rj.n} (se fue ${rj.nocafe} ${rj.nocafe===1?"vez":"veces"} sin café)`]);
+  return p;
+}
+function mostrarGala(nombre,fechas){
+  const p=premiosDe(fechas);
+  if(!p.length){toast("Todavía no hay datos para la gala");return;}
+  const inner=p.map(([e,t,v])=>`<div class="mopt" style="cursor:default"><b>${e} ${t}</b><small>${esc(v)}</small></div>`).join("")+
+    `<button class="mok" data-wa>📲 Mandar la gala al grupo</button><button class="mcancel" data-x>Cerrar</button>`;
+  const d=uiShow(`🏆✨ Gala · ${esc(nombre)}`,`${fechas.length} fechas jugadas · los premios de la temporada`,inner);
+  d.querySelector("[data-wa]").onclick=()=>{
+    let txt=`🏆✨ *GALA COPONES BV* · ${nombre} ✨🏆\n_${fechas.length} fechas jugadas_\n\n`;
+    txt+=p.map(([e,t,v])=>`${e} *${t}:* ${v}`).join("\n");
+    txt+=`\n\n👉 Toda la data en la app:\n${APP_URL}`;
+    shareWA(txt);
+  };
+  d.querySelector("[data-x]").onclick=uiClose;
+  d.onclick=e=>{if(e.target===d)uiClose();};
+}
+
 /* ---------- SORTEO ---------- */
 function mulberry32(a){return function(){a|=0;a=(a+0x6D2B79F5)|0;let t=Math.imul(a^(a>>>15),1|a);t=(t+Math.imul(t^(t>>>7),61|t))^t;return((t^(t>>>14))>>>0)/4294967296;};}
 function shuffle(arr,rnd){const a=arr.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
 let SEL=new Set(); // el usuario marca quién vino hoy
 let LASTPAIRS=null;
+let BIGMODE=false; try{BIGMODE=localStorage.getItem("cb_big")==="1";}catch(e){}
 function vSorteo(){
   const js=DATA.jugadores.slice().sort((a,b)=>("ABCD".indexOf(a.c||"Z"))-("ABCD".indexOf(b.c||"Z"))||a.n.localeCompare(b.n));
   return `<section>
@@ -915,6 +1043,8 @@ function vSorteo(){
         <button class="btn" id="btnDraw">🎾 Sortear</button>
         <button class="btn ghost sm" id="btnSeed">Otro Nº</button>
       </div>
+      <button class="btn ghost sm block" id="bigBtn" style="margin-top:10px"></button>
+      <div class="note" style="margin-top:6px;font-size:12px">📺 El modo pantalla muestra el bolillero gigante a pantalla completa — ideal para proyectar o pasar el teléfono en ronda en el club.</div>
     </div>
 
     <div class="card pad" style="margin-top:12px">
@@ -1016,6 +1146,7 @@ function revelar(orden,{sup,problemas,seedRaw,manual}){
   msg.innerHTML="🥁 🥁 🥁";
   if(navigator.vibrate)navigator.vibrate([10,80,10,80,10,80,10]);
   const iv=setInterval(()=>{const el=document.getElementById("drumName");if(el)el.textContent=nombres[Math.floor(Math.random()*nombres.length)];},85);
+  if(BIGMODE)bigShow(orden,sup,manual); // 📺 bolillero gigante en paralelo
 
   setTimeout(()=>{
     clearInterval(iv);
@@ -1083,6 +1214,35 @@ function revelar(orden,{sup,problemas,seedRaw,manual}){
     paint(true);
     msg.innerHTML=baseMsg;
   },manual?1100:1900);
+}
+function bigShow(orden,sup,manual){ // 📺 sorteo a pantalla completa, para proyectar o pasar en ronda
+  const ov=document.createElement("div");ov.className="bigshow";document.body.appendChild(ov);
+  const nombres=orden.flat().map(x=>x.n).concat(sup?[sup.n]:[]);
+  ov.innerHTML=`<div class="bs-brand">🎾 Copones Buena Vista · Sorteo transparente</div>
+    <div class="bs-drum">🥁</div><div class="bs-name">…</div>
+    <div class="bs-note">Bolas a la misma temperatura…</div>`;
+  const iv=setInterval(()=>{const el=ov.querySelector(".bs-name");if(el)el.textContent=nombres[Math.floor(Math.random()*nombres.length)];},85);
+  const timers=[];
+  timers.push(setTimeout(()=>{
+    clearInterval(iv);
+    ov.innerHTML=`<div class="bs-brand">🎾 Copones Buena Vista · Parejas del domingo</div>
+      <div class="bs-list"></div><div class="bs-note">Tocá para cerrar</div>`;
+    const list=ov.querySelector(".bs-list");
+    orden.forEach((p,i)=>{
+      timers.push(setTimeout(()=>{
+        const row=document.createElement("div");row.className="bs-pair";
+        row.innerHTML=`<span class="bs-no">${i+1}</span>${esc(p.map(x=>x.n).join(" & "))}`;
+        list.appendChild(row);row.scrollIntoView({block:"nearest"});
+        if(navigator.vibrate)navigator.vibrate(25);
+      },600+i*1400));
+    });
+    if(sup)timers.push(setTimeout(()=>{
+      const row=document.createElement("div");row.className="bs-pair bs-sup";
+      row.textContent=`⏳ ${sup.n} — suplente rotativo`;
+      list.appendChild(row);row.scrollIntoView({block:"nearest"});
+    },600+orden.length*1400));
+  },manual?1100:1900));
+  ov.onclick=()=>{clearInterval(iv);timers.forEach(clearTimeout);ov.remove();};
 }
 
 /* ---------- ADMIN ---------- */
@@ -1193,7 +1353,8 @@ function vAdmin(){
     <div class="card pad" style="margin-top:12px">
       <div class="tag" style="margin-bottom:8px">🏁 Temporadas</div>
       <div class="note" style="margin-bottom:10px">Temporada en curso: <b>${DATA.fechas.length} fechas</b>. Al cerrarla, el ranking arranca de cero y la temporada queda guardada — se consulta desde el selector de Ranking. Los perfiles siguen mostrando la carrera completa.</div>
-      ${(DATA.historial||[]).map(t=>{const st=Object.values(statsPar(t.fechas)).sort((a,b)=>b.camp-a.camp)[0];return `<div class="adline"><span class="an">🏁 ${esc(t.nombre)} · ${t.fechas.length} fechas${st&&st.camp?` · 👑 ${esc(st.a)} & ${esc(st.b)}`:""}</span></div>`;}).join("")}
+      ${(DATA.historial||[]).map((t,i)=>{const st=Object.values(statsPar(t.fechas)).sort((a,b)=>b.camp-a.camp)[0];return `<div class="adline"><span class="an">🏁 ${esc(t.nombre)} · ${t.fechas.length} fechas${st&&st.camp?` · 👑 ${esc(st.a)} & ${esc(st.b)}`:""}</span><button data-gala="${i}" title="Ver gala">🏆</button></div>`;}).join("")}
+      ${DATA.fechas.length?`<button class="btn ghost sm block" id="galaNow" style="margin-top:6px">🏆 Ver la gala de la temporada en curso</button>`:""}
       <button class="btn ghost sm block" id="cerrarTemp" style="margin-top:6px">🏁 Cerrar temporada y empezar de cero</button>
     </div>
 
@@ -1273,33 +1434,35 @@ function bind(){
       shareWA(txt);
     };
     const pb=document.getElementById("propBtn");
-    if(pb)pb.onclick=()=>{
+    if(pb)pb.onclick=async()=>{
       const f=DATA.fechas[0];
       if(!f||!faltantesDe(f).length){toast("No hay nada pendiente de cargar");return;}
       if(!USER){toast("Primero ingresá con Google (🔑 arriba)");window.fbLogin();return;}
       const faltan=faltantesDe(f); // solo se pregunta lo que falta
-      const ops=f.parejas.map((p,i)=>`${i+1}) ${p.join(" & ")}`).join("\n");
+      const dia=fmtFecha(f.f);
+      const parejasOpt=f.parejas.map((p,i)=>({label:`${i+1}) ${esc(p.join(" & "))}`,value:p}));
+      const jugadores=[...new Set(f.parejas.flat())];
       const prop={f:f.f,por:USER.email,ts:Date.now()};
       let cambios=0;
       if(faltan.includes("campeon")){
-        const rc=prompt("🚗 ¿Quién se llevó el Kia? Escribí el número:\n"+ops+"\n(0 = no sé)");
-        if(rc===null)return; const ic=parseInt(rc)-1;
-        if(ic>=0&&ic<f.parejas.length){prop.campeon=f.parejas[ic];cambios++;}
+        const v=await uiPick("🚗 ¿Quién se llevó el Kia?",`${dia} · tocá la pareja campeona`,[...parejasOpt,{label:"🤷 No sé / no me acuerdo",value:null}]);
+        if(v===undefined)return;
+        if(v){prop.campeon=v;cambios++;}
       }
       if(faltan.includes("pala")){
-        const rp2=prompt("🥄 ¿Cuchara de madera? Número:\n"+ops+"\n(0 = no sé)");
-        if(rp2===null)return; const ip=parseInt(rp2)-1;
-        if(ip>=0&&ip<f.parejas.length){prop.pala=f.parejas[ip];cambios++;}
+        const v=await uiPick("🥄 ¿Cuchara de madera?",`${dia} · la pareja que la pasó peor`,[...parejasOpt,{label:"🤷 No sé",value:null}]);
+        if(v===undefined)return;
+        if(v){prop.pala=v;cambios++;}
       }
       if(faltan.includes("mvp")){
-        const rm=prompt("🎖️ ¿MVP del día? (nombre, vacío = no sé)","");
-        if(rm===null)return;
-        if(rm.trim()){prop.mvp=rm.trim();cambios++;}
+        const v=await uiPick("🎖️ ¿MVP del día?",`${dia} · el que la rompió`,[...jugadores.map(n=>({label:esc(n),value:n})),{label:"🤷 No sé",value:null}]);
+        if(v===undefined)return;
+        if(v){prop.mvp=v;cambios++;}
       }
       if(faltan.includes("cafe")){
-        const rcafe=prompt("☕ ¿Alguien se rajó SIN quedarse al café? (nombres con coma · vacío = se quedaron todos)","");
-        if(rcafe===null)return;
-        prop.sinCafe=parseCafe(rcafe);cambios++;
+        const v=await uiMulti("🏃 ¿Alguien se rajó sin el café?",`${dia} · marcá a los que se fueron sin quedarse`,jugadores,"☕ Se quedaron todos");
+        if(v===undefined)return;
+        prop.sinCafe=v;cambios++;
       }
       if(!cambios){toast("No cargaste ningún dato");return;}
       addDoc(collection(db,"propuestas"),prop)
@@ -1344,6 +1507,10 @@ function bind(){
     document.getElementById("btnDraw").onclick=draw;
     document.getElementById("seed").addEventListener("keydown",e=>{if(e.key==="Enter")draw();});
     document.getElementById("btnManual").onclick=drawManual;
+    const bb=document.getElementById("bigBtn");
+    const bigTxt=()=>{bb.textContent=BIGMODE?"📺 Modo pantalla: ON — el sorteo sale gigante":"📺 Modo pantalla: OFF";bb.style.borderColor=BIGMODE?"var(--A)":"";bb.style.color=BIGMODE?"var(--A)":"";};
+    bigTxt();
+    bb.onclick=()=>{BIGMODE=!BIGMODE;try{localStorage.setItem("cb_big",BIGMODE?"1":"0");}catch(e){}bigTxt();toast(BIGMODE?"📺 El próximo sorteo sale a pantalla completa":"Modo pantalla apagado");};
     const updCounts=()=>{
       document.getElementById("selcount").textContent=SEL.size;
       ["A","B","C","D"].forEach(c=>{const js=DATA.jugadores.filter(j=>j.c===c);const sel=js.filter(j=>SEL.has(j.n)).length;const el=document.getElementById("cnt-"+c);if(el)el.textContent=sel+"/"+js.length;});
@@ -1353,10 +1520,10 @@ function bind(){
     document.querySelectorAll("[data-tog]").forEach(b=>b.onclick=()=>{const n=b.dataset.tog;if(navigator.vibrate)navigator.vibrate(8);if(SEL.has(n)){SEL.delete(n);b.classList.remove("on");}else{SEL.add(n);b.classList.add("on");}updCounts();resumenConvocados(false);});
     document.getElementById("selAll").onclick=()=>{DATA.jugadores.forEach(j=>{if(j.c)SEL.add(j.n);});route("sorteo");};
     document.getElementById("selNone").onclick=()=>{SEL.clear();route("sorteo");};
-    const addSorp=()=>{
+    const addSorp=async()=>{
       const inp=document.getElementById("newsorp");const v=inp.value.trim();if(!v)return;
       if(allKnownNames().includes(v)){toast("Ese nombre ya existe");return;}
-      const c=pedirCopon(v);
+      const c=await pedirCopon(v);
       (DATA.bolsa||(DATA.bolsa=[])).push(v);
       (DATA.bolsaCop||(DATA.bolsaCop={}))[v]=c;
       SEL.add(v);save();route("sorteo");
@@ -1364,7 +1531,7 @@ function bind(){
     };
     document.getElementById("addsorp").onclick=addSorp;
     document.getElementById("newsorp").addEventListener("keydown",e=>{if(e.key==="Enter")addSorp();});
-    document.getElementById("parseList").onclick=()=>{
+    document.getElementById("parseList").onclick=async()=>{
       const txt=document.getElementById("pasteList").value;
       if(!txt.trim()){toast("Pegá la lista primero");return;}
       const noRec=[]; let ok=0;
@@ -1374,12 +1541,12 @@ function bind(){
         if(m){SEL.add(m);ok++;}
         else noRec.push(l);
       });
-      if(noRec.length&&confirm(`Reconocí ${ok} jugadores ✓\n\nNo reconocí: ${noRec.join(", ")}\n\n¿Los agrego como jugadores sorpresa? (te pregunto el copón de cada uno)`)){
+      if(noRec.length&&await uiConfirm(`✨ Reconocí ${ok} jugador${ok===1?"":"es"}`,`No reconocí a: <b>${esc(noRec.join(", "))}</b>.<br><br>¿Los agrego como jugadores sorpresa? Te pregunto el copón de cada uno.`,"🎁 Sí, agregalos","No, dejalos afuera")){
         DATA.bolsa=DATA.bolsa||[];DATA.bolsaCop=DATA.bolsaCop||{};
-        noRec.forEach(n=>{
-          if(!allKnownNames().includes(n)){DATA.bolsa.push(n);DATA.bolsaCop[n]=pedirCopon(n);}
+        for(const n of noRec){
+          if(!allKnownNames().includes(n)){DATA.bolsa.push(n);DATA.bolsaCop[n]=await pedirCopon(n);}
           SEL.add(n);
-        });
+        }
         save();
       }
       const dm=txt.match(/(\d{1,2})\/(\d{1,2})/);
@@ -1435,10 +1602,17 @@ function bind(){
       if(!nombre)return;
       if(!confirm(`🏁 ¿Cerrar "${nombre.trim()}" con ${DATA.fechas.length} fechas?\n\nEl ranking actual arranca de cero y la temporada queda guardada en el historial.`))return;
       DATA.historial=DATA.historial||[];
-      DATA.historial.push({nombre:nombre.trim(),fechas:DATA.fechas});
+      const cerrada={nombre:nombre.trim(),fechas:DATA.fechas};
+      DATA.historial.push(cerrada);
       DATA.fechas=[];
       save();toast("🏁 Temporada cerrada");render();
+      mostrarGala(cerrada.nombre,cerrada.fechas); // 🎉 la gala de despedida
     };
+    document.querySelectorAll("[data-gala]").forEach(b=>b.onclick=()=>{
+      const t=(DATA.historial||[])[+b.dataset.gala]; if(t)mostrarGala(t.nombre,t.fechas);
+    });
+    const gn=document.getElementById("galaNow");
+    if(gn)gn.onclick=()=>mostrarGala("Temporada en curso",DATA.fechas);
     const br=document.getElementById("btnRen");
     if(br)br.onclick=()=>{
       const old=document.getElementById("renSel").value, neu=document.getElementById("renNew").value.trim();
@@ -1479,9 +1653,9 @@ function bind(){
       DATA.fechas.sort((a,b)=>b.f.localeCompare(a.f));
       save();toast("Fecha agregada");render();
     };
-    document.querySelectorAll("[data-delf]").forEach(b=>b.onclick=()=>{
+    document.querySelectorAll("[data-delf]").forEach(b=>b.onclick=async()=>{
       const f=DATA.fechas[+b.dataset.delf]; if(!f)return;
-      if(!confirm(`🗑️ ¿Borrar la fecha del ${fmtFecha(f.f)} (${f.parejas.length} parejas)?\n\nEsto no se puede deshacer.`))return;
+      if(!await uiConfirm("🗑️ ¿Borrar esta fecha?",`La del <b>${fmtFecha(f.f)}</b> (${f.parejas.length} parejas). Esto no se puede deshacer.`,"🗑️ Sí, borrala"))return;
       DATA.fechas.splice(+b.dataset.delf,1);save();render();
     });
     document.querySelectorAll("[data-editcamp]").forEach(b=>b.onclick=()=>cargarResultado(DATA.fechas[+b.dataset.editcamp]));
@@ -1490,14 +1664,16 @@ function bind(){
       const lineas=[...f.versiones].reverse().map(v=>{
         const d=new Date(v.ts), t=`${d.getDate()}/${d.getMonth()+1} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
         const a=v.antes||{};
-        return `• ${t} · lo cambió ${v.por}\n  Decía: 🚗 ${a.campeon?a.campeon.join(" & "):"—"} · 🥄 ${a.pala?a.pala.join(" & "):"—"} · 🎖️ ${a.mvp||"—"} · ☕ ${Array.isArray(a.sinCafe)?(a.sinCafe.length?"se rajaron "+a.sinCafe.join(", "):"se quedaron todos"):"—"}`;
+        return `<div class="mopt" style="cursor:default"><b>${t}</b> · lo cambió ${esc(v.por)}<small>Decía: 🚗 ${a.campeon?esc(a.campeon.join(" & ")):"—"} · 🥄 ${a.pala?esc(a.pala.join(" & ")):"—"} · 🎖️ ${a.mvp?esc(a.mvp):"—"} · ☕ ${Array.isArray(a.sinCafe)?(a.sinCafe.length?"se rajaron "+esc(a.sinCafe.join(", ")):"se quedaron todos"):"—"}</small></div>`;
       });
-      alert(`🕰️ Historial de cambios · ${fmtFecha(f.f)}\n(la versión vigente es la que se ve en la app)\n\n${lineas.join("\n\n")}`);
+      const d=uiShow(`🕰️ Historial de cambios`,`Fecha del ${fmtFecha(f.f)} · la versión vigente es la que se ve en la app`,lineas.join("")+`<button class="mcancel" data-x>Cerrar</button>`);
+      d.querySelector("[data-x]").onclick=uiClose;
+      d.onclick=e=>{if(e.target===d)uiClose();};
     });
     document.querySelectorAll("[data-cop]").forEach(s=>s.onchange=()=>{DATA.jugadores[+s.dataset.cop].c=s.value;save();});
-    document.querySelectorAll("[data-delj]").forEach(b=>b.onclick=()=>{
+    document.querySelectorAll("[data-delj]").forEach(b=>b.onclick=async()=>{
       const j=DATA.jugadores[+b.dataset.delj]; if(!j)return;
-      if(!confirm(`🗑️ ¿Sacar a ${j.n} del plantel?\n\nSu historial de fechas no se borra: va a aparecer como jugador sorpresa.`))return;
+      if(!await uiConfirm(`🗑️ ¿Sacar a ${esc(j.n)} del plantel?`,"Su historial de fechas no se borra: va a aparecer como jugador sorpresa.","🗑️ Sí, sacalo"))return;
       DATA.jugadores.splice(+b.dataset.delj,1);save();render();
     });
     document.getElementById("addj").onclick=()=>{const v=document.getElementById("newj").value.trim();if(!v)return;DATA.jugadores.push({n:v,c:""});save();render();};
