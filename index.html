@@ -218,6 +218,8 @@
   .mgrid .mopt{margin-bottom:0;text-align:center}
   .mok{display:block;width:100%;background:var(--red);border:0;color:#fff;border-radius:12px;padding:14px;font-weight:800;font-size:15.5px;cursor:pointer;font-family:inherit;margin-top:4px;min-height:48px}
   .mcancel{display:block;width:100%;background:transparent;border:0;color:var(--muted);padding:12px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit}
+  .mx{flex:none;width:36px;height:36px;border-radius:999px;background:var(--card2);border:1px solid var(--line);color:var(--muted);font-size:15px;font-weight:800;cursor:pointer;line-height:1}
+  .mx:active{transform:scale(.94)}
 
   /* ===== MODO PANTALLA (bolillero gigante) ===== */
   .bigshow{position:fixed;inset:0;z-index:120;background:radial-gradient(900px 600px at 50% -10%,#221016,#000 72%);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;cursor:pointer;animation:fadein .2s;color:#fff}
@@ -491,8 +493,15 @@ function uiShow(title,sub,inner){
   uiClose();
   const d=document.createElement("div");
   d.id="uimodal";d.className="modal-ov";
-  d.innerHTML=`<div class="modal-card"><div class="modal-t">${title}</div>${sub?`<div class="modal-s">${sub}</div>`:""}<div>${inner}</div></div>`;
+  d.innerHTML=`<div class="modal-card">
+    <div style="display:flex;align-items:flex-start;gap:10px">
+      <div class="modal-t" style="flex:1">${title}</div>
+      <button class="mx" data-mx title="Cerrar">✕</button>
+    </div>
+    ${sub?`<div class="modal-s">${sub}</div>`:""}<div>${inner}</div></div>`;
   document.body.appendChild(d);
+  // la ✕ equivale al botón de cancelar del modal (así cada flujo resuelve bien su promesa)
+  d.querySelector("[data-mx]").onclick=()=>{const c=d.querySelector("[data-x]");if(c)c.click();else uiClose();};
   return d;
 }
 function uiPick(title,sub,options){ // options: [{label,sub?,value}] → Promise<value|undefined si cancela>
@@ -932,36 +941,39 @@ async function cargarResultado(f){
   const parejasOpt=f.parejas.map((p,i)=>({label:`${i+1}) ${esc(p.join(" & "))}`,value:p}));
   const jugadores=[...new Set(f.parejas.flat())];
   const keepOpt=txt=>({label:`↩️ Dejar como está <small style="opacity:.8">(${txt})</small>`,value:KEEP});
-  let cambios=0;
+  let cambios=0, salir=false; // ✕ / Cancelar / tocar afuera = salir del flujo (lo ya respondido se guarda)
 
   // 🚗 Campeón
-  {
+  if(!salir){
     const actual=f.campeon?esc(f.campeon.join(" & ")):"sin cargar";
     const v=await uiPick("🚗 ¿Quién se llevó el Kia?",`Fecha del ${dia} · tocá la pareja campeona`,
       [keepOpt(actual),...parejasOpt,{label:"🤷 Sin campeón todavía",value:null}]);
-    if(v!==undefined&&v!==KEEP){f.campeon=v;cambios++;}
+    if(v===undefined)salir=true;
+    else if(v!==KEEP){f.campeon=v;cambios++;}
   }
   // 🥄 Cuchara
-  {
+  if(!salir){
     const actual=f.pala?esc(f.pala.join(" & ")):(f.pala===false?"nadie / no hubo":"sin cargar");
     const v=await uiPick("🥄 ¿Y la cuchara de madera?",`Fecha del ${dia} · la pareja que la pasó peor`,
       [keepOpt(actual),...parejasOpt,{label:"🤷 Nadie / no hubo",value:false}]);
-    if(v!==undefined&&v!==KEEP){f.pala=v;cambios++;}
+    if(v===undefined)salir=true;
+    else if(v!==KEEP){f.pala=v;cambios++;}
   }
   // 🎖️ MVP
-  {
+  if(!salir){
     const actual=f.mvp?esc(f.mvp):(f.mvp===false?"nadie / no hubo":"sin cargar");
     const v=await uiPick("🎖️ ¿MVP del día?",`Fecha del ${dia} · el que la rompió`,
       [keepOpt(actual),...jugadores.map(n=>({label:esc(n),value:n})),{label:"🤷 Nadie / no hubo",value:false}]);
-    if(v!==undefined&&v!==KEEP){f.mvp=v;cambios++;}
+    if(v===undefined)salir=true;
+    else if(v!==KEEP){f.mvp=v;cambios++;}
   }
   // ☕ Café (fichas ☕/🏃 por jugador, arranca con lo ya cargado)
-  {
+  if(!salir){
     const v=await uiCafe("☕ ¿Quiénes se quedaron al café?",`Fecha del ${dia}`,jugadores,Array.isArray(f.sinCafe)?f.sinCafe:[]);
     if(v!==undefined&&JSON.stringify([...v].sort())!==JSON.stringify(Array.isArray(f.sinCafe)?[...f.sinCafe].sort():null)){f.sinCafe=v;cambios++;}
   }
 
-  if(!cambios){toast("No cambiaste nada — quedó todo como estaba");return;}
+  if(!cambios){toast(salir?"Saliste sin cambios":"No cambiaste nada — quedó todo como estaba");return;}
   if(completa){ // respaldo: versión anterior + quién la cambió
     (f.versiones||(f.versiones=[])).push({ts:Date.now(),por:(USER&&USER.email)||"admin (este dispositivo)",antes});
   }
