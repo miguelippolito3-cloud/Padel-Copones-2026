@@ -340,6 +340,7 @@ function textoResultados(f,st){ // el mensaje de resultados para WhatsApp (lo us
 }
 const CLOUD = !JSON.stringify(FIREBASE_CONFIG).includes("PEGAR_ACA");
 let USER=null, ISADMIN=false, auth=null, db=null, dbRef=null, CLOUDSTATE="conectando";
+let AUTHREADY=false; // ya sabemos si hay sesión o no (evita el pestañeo del candado al abrir)
 let MYPLAYER=null; try{MYPLAYER=localStorage.getItem("cb_myplayer")||null;}catch(e){}
 let PROPUESTAS=[], propSub=false;
 let USUARIOS=[], COADMINS=[], SORTEO_FECHA=null;
@@ -375,6 +376,7 @@ if(CLOUD){
   db=getFirestore(fbApp);
   dbRef=doc(db,"app","data");
   onAuthStateChanged(auth,u=>{
+    AUTHREADY=true;
     USER=u;ISADMIN=!!(u&&ADMINS.includes(u.email));
     if(u){
       // registra el ingreso (para el panel de usuarios del admin)
@@ -583,8 +585,22 @@ document.getElementById("nav").addEventListener("click",e=>{const a=e.target.clo
 window.addEventListener("hashchange",()=>{ const h=location.hash.slice(1); const [v,p]=h.split("="); route(v||"inicio", p?decodeURIComponent(p):null); });
 
 /* ================= RENDER ================= */
+function vBloqueo(){ // 🔒 sin sesión, solo se ve el Inicio (modo invitado)
+  return `<section>
+    <div class="card pad" style="text-align:center;margin-top:24px">
+      <div style="font-size:46px;margin-bottom:8px">🔒</div>
+      <div class="big" style="margin-bottom:6px">Solo para los del grupo</div>
+      ${AUTHREADY
+        ?`<div class="note" style="margin-bottom:14px">Registrate una sola vez ingresando con tu cuenta de Google y desbloqueás el <b>ranking completo</b>, los <b>perfiles con fotos</b> y el <b>sorteo</b>.<br><br>En modo invitado solo se puede ver el <b>Inicio</b>.</div>
+      <button class="btn block" onclick="fbLogin()">🔑 Ingresar / Registrarme con Google</button>
+      <button class="btn ghost block" data-go2="inicio" style="margin-top:8px">← Volver al inicio</button>`
+        :`<div class="note">Verificando tu sesión…</div>`}
+    </div>
+  </section>`;
+}
 function render(){
   const app=document.getElementById("app");
+  if(CLOUD&&!USER&&VIEW!=="inicio"){app.innerHTML=vBloqueo();bind();renderTicker();return;}
   if(VIEW==="inicio")app.innerHTML=vInicio();
   else if(VIEW==="ranking")app.innerHTML=vRanking();
   else if(VIEW==="sorteo")app.innerHTML=vSorteo();
