@@ -506,6 +506,34 @@ function uiMulti(title,sub,names,okEmpty){ // selección múltiple → Promise<a
     d.querySelector("[data-x]").onclick=()=>{uiClose();res(undefined);};
   });
 }
+function uiCafe(title,sub,names,iniSel){ // ☕/🏃 por jugador → Promise<array de rajados|undefined si "dejar como está">
+  return new Promise(res=>{
+    const sel=new Set(iniSel||[]);
+    const d=uiShow(title,sub,
+      `<div class="modal-s" style="margin-top:-4px">Todos arrancan en ☕ <b>se quedó</b>. Tocá a los que se fueron para pasarlos a 🏃.</div>
+       <div class="mgrid">${names.map((n,i)=>`<button class="mopt cafeopt" data-i="${i}"></button>`).join("")}</div>
+       <button class="mok" data-ok></button>
+       <button class="mcancel" data-x>↩️ Dejar como está</button>`);
+    const paint=()=>{
+      d.querySelectorAll(".cafeopt").forEach(b=>{
+        const n=names[+b.dataset.i];
+        b.classList.toggle("on",sel.has(n));
+        b.innerHTML=`${sel.has(n)?"🏃":"☕"} ${esc(n)}`;
+        b.style.opacity=sel.has(n)?"1":".8";
+      });
+      d.querySelector("[data-ok]").textContent=sel.size?`✓ Guardar · 🏃 ${sel.size} sin café`:"✓ Guardar · ☕ se quedaron todos";
+    };
+    d.querySelectorAll(".cafeopt").forEach(b=>b.onclick=()=>{
+      const n=names[+b.dataset.i];
+      if(sel.has(n))sel.delete(n);else sel.add(n);
+      if(navigator.vibrate)navigator.vibrate(8);
+      paint();
+    });
+    paint();
+    d.querySelector("[data-ok]").onclick=()=>{uiClose();res([...sel]);};
+    d.querySelector("[data-x]").onclick=()=>{uiClose();res(undefined);};
+  });
+}
 function uiConfirm(title,msg,okLabel,cancelLabel){ // → Promise<bool>
   return new Promise(res=>{
     const d=uiShow(title,msg,
@@ -562,7 +590,8 @@ function vInicio(){
   const ind=statsInd(), arr=Object.values(ind);
   const h=new Date(), hoyS=h.getFullYear()+"-"+String(h.getMonth()+1).padStart(2,"0")+"-"+String(h.getDate()).padStart(2,"0");
   const f0=DATA.fechas[0];
-  const pend=(f0&&f0.f<hoyS&&faltantesDe(f0).length)?f0:null; // ya se jugó y falta algún dato
+  // la última fecha YA JUGADA con datos pendientes (aunque haya una futura cargada encima)
+  const pend=DATA.fechas.find(x=>x.f<hoyS&&faltantesDe(x).length)||null;
   const prox=(f0&&!f0.campeon&&f0.f>=hoyS)?f0:null;           // todavía no se jugó
   const ult=DATA.fechas.find(f=>f.campeon)||DATA.fechas[0];
   const topJ=[...arr].sort((a,b)=>b.pj-a.pj).slice(0,5);
@@ -610,7 +639,8 @@ function vInicio(){
     ${prox?`<div class="card pad" style="margin-bottom:12px">
       <div class="tag" style="margin-bottom:8px;color:var(--A)">🎾 PRÓXIMA FECHA · ${fmtFecha(prox.f)}</div>
       ${prox.parejas.map((p,i)=>`<div class="row" style="padding:7px 0"><span><b>${i+1})</b> ${esc(p.join(" & "))}</span></div>`).join("")}
-      ${CLOUD?`<button class="btn block" id="propBtn" style="margin-top:10px;background:var(--card2);border:1px solid var(--line);color:var(--txt)">📝 Proponer resultado (lo aprueba el organizador)</button>`:""}
+      ${prox.parejas.length>=2?`<button class="btn block" id="fixtureBtn" style="margin-top:10px">🆚 Sortear cruces y canchas de esta fecha</button>`:""}
+      ${CLOUD?`<button class="btn block" id="propBtn2" style="margin-top:10px;background:var(--card2);border:1px solid var(--line);color:var(--txt)">📝 Proponer resultado (lo aprueba el organizador)</button>`:""}
     </div>`:""}
     ${heroHTML}
     <div class="pills" style="margin-top:12px">
@@ -869,42 +899,53 @@ function faltantesTxt(f){
   return faltantesDe(f).map(k=>nom[k]).join(" · ");
 }
 async function cargarResultado(f){
-  let faltan=faltantesDe(f);
-  let corrigiendo=false;
+  // Se puede cargar Y corregir CUALQUIER dato de CUALQUIER fecha (también para atrás).
+  // Cada pregunta trae "↩️ Dejar como está": cancelar o dejar no aborta el resto.
+  const completa=!faltantesDe(f).length;
   const antes={campeon:f.campeon||null,pala:(f.pala===undefined?null:f.pala),mvp:(f.mvp===undefined?null:f.mvp),sinCafe:Array.isArray(f.sinCafe)?f.sinCafe.slice():null};
-  if(!faltan.length){ // ya está todo: corregir = reescribir la historia, con respaldo
+  if(completa){ // ya está todo: corregir = reescribir la historia, con respaldo
     if(!await uiConfirm("🕰️ ¡Momento!",`La fecha del <b>${fmtFecha(f.f)}</b> ya está completa y estás por <b>reescribir la historia</b>.<br><br>Tranqui: la versión actual queda guardada en el historial de cambios, con fecha y autor. Acá nada se pierde… pero todo se sabe 😏`,"✍️ Le entramos"))return;
-    corrigiendo=true;
-    faltan=["campeon","pala","mvp","cafe"];
   }
   const dia=fmtFecha(f.f);
+  const KEEP={dejar:true}; // valor especial: "dejar como está"
   const parejasOpt=f.parejas.map((p,i)=>({label:`${i+1}) ${esc(p.join(" & "))}`,value:p}));
   const jugadores=[...new Set(f.parejas.flat())];
+  const keepOpt=txt=>({label:`↩️ Dejar como está <small style="opacity:.8">(${txt})</small>`,value:KEEP});
   let cambios=0;
-  const pasos=[];
-  if(faltan.includes("campeon"))pasos.push(async()=>{
-    const v=await uiPick("🚗 ¿Quién se llevó el Kia?",`Fecha del ${dia} · tocá la pareja campeona`,[...parejasOpt,{label:"🤷 Sin campeón todavía",value:null}]);
-    if(v===undefined)return false; f.campeon=v; return true;
-  });
-  if(faltan.includes("pala"))pasos.push(async()=>{
-    const v=await uiPick("🥄 ¿Y la cuchara de madera?",`Fecha del ${dia} · la pareja que la pasó peor`,[...parejasOpt,{label:"🤷 Nadie / no hubo",value:false}]);
-    if(v===undefined)return false; f.pala=v; return true;
-  });
-  if(faltan.includes("mvp"))pasos.push(async()=>{
-    const v=await uiPick("🎖️ ¿MVP del día?",`Fecha del ${dia} · el que la rompió`,[...jugadores.map(n=>({label:esc(n),value:n})),{label:"🤷 Nadie / no hubo",value:false}]);
-    if(v===undefined)return false; f.mvp=v; return true;
-  });
-  if(faltan.includes("cafe"))pasos.push(async()=>{
-    const v=await uiMulti("🏃 ¿Alguien se rajó sin el café?",`Fecha del ${dia} · marcá a los que se fueron sin quedarse`,jugadores,"☕ Se quedaron todos");
-    if(v===undefined)return false; f.sinCafe=v; return true;
-  });
-  for(const paso of pasos){ if(!await paso())break; cambios++; }
-  if(!cambios)return;
-  if(corrigiendo){ // respaldo: versión anterior + quién la cambió
+
+  // 🚗 Campeón
+  {
+    const actual=f.campeon?esc(f.campeon.join(" & ")):"sin cargar";
+    const v=await uiPick("🚗 ¿Quién se llevó el Kia?",`Fecha del ${dia} · tocá la pareja campeona`,
+      [keepOpt(actual),...parejasOpt,{label:"🤷 Sin campeón todavía",value:null}]);
+    if(v!==undefined&&v!==KEEP){f.campeon=v;cambios++;}
+  }
+  // 🥄 Cuchara
+  {
+    const actual=f.pala?esc(f.pala.join(" & ")):(f.pala===false?"nadie / no hubo":"sin cargar");
+    const v=await uiPick("🥄 ¿Y la cuchara de madera?",`Fecha del ${dia} · la pareja que la pasó peor`,
+      [keepOpt(actual),...parejasOpt,{label:"🤷 Nadie / no hubo",value:false}]);
+    if(v!==undefined&&v!==KEEP){f.pala=v;cambios++;}
+  }
+  // 🎖️ MVP
+  {
+    const actual=f.mvp?esc(f.mvp):(f.mvp===false?"nadie / no hubo":"sin cargar");
+    const v=await uiPick("🎖️ ¿MVP del día?",`Fecha del ${dia} · el que la rompió`,
+      [keepOpt(actual),...jugadores.map(n=>({label:esc(n),value:n})),{label:"🤷 Nadie / no hubo",value:false}]);
+    if(v!==undefined&&v!==KEEP){f.mvp=v;cambios++;}
+  }
+  // ☕ Café (fichas ☕/🏃 por jugador, arranca con lo ya cargado)
+  {
+    const v=await uiCafe("☕ ¿Quiénes se quedaron al café?",`Fecha del ${dia}`,jugadores,Array.isArray(f.sinCafe)?f.sinCafe:[]);
+    if(v!==undefined&&JSON.stringify([...v].sort())!==JSON.stringify(Array.isArray(f.sinCafe)?[...f.sinCafe].sort():null)){f.sinCafe=v;cambios++;}
+  }
+
+  if(!cambios){toast("No cambiaste nada — quedó todo como estaba");return;}
+  if(completa){ // respaldo: versión anterior + quién la cambió
     (f.versiones||(f.versiones=[])).push({ts:Date.now(),por:(USER&&USER.email)||"admin (este dispositivo)",antes});
   }
   f.confirmada=true; // la carga directa siempre la hace un admin
-  save();toast(corrigiendo?"🕰️ Corregido — la versión anterior quedó en el historial":"Resultado cargado ✓");render();
+  save();toast(completa?"🕰️ Corregido — la versión anterior quedó en el historial":"Resultado cargado ✓");render();
 }
 
 /* ---------- CONVOCATORIA: parejas, canchas y fecha ---------- */
@@ -1047,6 +1088,13 @@ function vSorteo(){
       <div class="note" style="margin-top:6px;font-size:12px">📺 El modo pantalla muestra el bolillero gigante a pantalla completa — ideal para proyectar o pasar el teléfono en ronda en el club.</div>
     </div>
 
+    ${(()=>{const fp=fechaConParejas();return fp?`<div class="card pad" style="margin-top:12px;border-color:var(--A)">
+      <div class="tag" style="margin-bottom:8px;color:var(--A)">📅 Fecha del ${fmtFecha(fp.f)} ya cargada · ${fp.parejas.length} parejas</div>
+      <div class="note" style="margin-bottom:8px">Las parejas ya están definidas en la fecha cargada. Con un toque sorteo <b>los cruces y las canchas</b> (usa el Nº de la suerte de arriba, así es repetible).</div>
+      ${fp.parejas.map((p,i)=>`<div class="row" style="padding:5px 0"><span><b>${i+1})</b> ${esc(p.join(" & "))}</span></div>`).join("")}
+      <button class="btn block" id="btnFixFecha" style="margin-top:10px">🆚 Sortear fixture del ${fmtFecha(fp.f)}</button>
+    </div>`:"";})()}
+
     <div class="card pad" style="margin-top:12px">
       <div class="tag" style="margin-bottom:8px">📋 Pegar lista de WhatsApp</div>
       <div class="note" style="margin-bottom:8px">Pegá el mensaje con la lista numerada de convocados y se marcan solos (reconoce apodos: Mike, Track, Pachu…).</div>
@@ -1120,6 +1168,23 @@ function draw(){
   const problemas=pairs.filter(([a,b])=>(a.c==="A"||b.c==="A")&&rk(a)<=1&&rk(b)<=1);
   const orden=shuffle(pairs,rnd); // orden de anuncio
   revelar(orden,{sup,problemas,seedRaw,manual:false});
+}
+function fechaConParejas(){ // la próxima fecha ya cargada (hoy o futura) con parejas definidas
+  const h=new Date(), hoyS=h.getFullYear()+"-"+String(h.getMonth()+1).padStart(2,"0")+"-"+String(h.getDate()).padStart(2,"0");
+  const cand=DATA.fechas.filter(f=>f.f>=hoyS&&f.parejas&&f.parejas.length>=2);
+  return cand.length?cand[cand.length-1]:null; // la más cercana a hoy
+}
+function drawFixtureFecha(f){ // fixture de cruces y canchas con las parejas YA cargadas en la fecha
+  if(!f)return;
+  const seedEl=document.getElementById("seed"), msg=document.getElementById("drawMsg");
+  if(!seedEl||!msg)return; // solo funciona parado en la vista Sorteo
+  let seedRaw=(seedEl.value||"").trim();
+  if(!seedRaw){seedRaw=String(1000+Math.floor(Math.random()*8999));seedEl.value=seedRaw;}
+  const ci=document.getElementById("courts");
+  if(ci)ci.value=Math.min(12,Math.max(1,Math.ceil(f.parejas.length/2)));
+  const rnd=mulberry32(seedHash(seedRaw));
+  const orden=shuffle(f.parejas.map(p=>p.map(n=>({n,c:coponDe(n)}))),rnd);
+  revelar(orden,{sup:null,problemas:[],seedRaw,manual:true});
 }
 function drawManual(){ // parejas ya armadas a mano → solo se sortea el fixture
   const msg=document.getElementById("drawMsg");
@@ -1433,9 +1498,10 @@ function bind(){
       txt+=`\n👉 *Mirá el ranking, tu perfil y tus logros en la app:*\n${APP_URL}\n\n_Copones Buena Vista · Domingos 8:30 🎾_`;
       shareWA(txt);
     };
-    const pb=document.getElementById("propBtn");
-    if(pb)pb.onclick=async()=>{
-      const f=DATA.fechas[0];
+    const h2=new Date(), hoy2=h2.getFullYear()+"-"+String(h2.getMonth()+1).padStart(2,"0")+"-"+String(h2.getDate()).padStart(2,"0");
+    const fPend=DATA.fechas.find(x=>x.f<hoy2&&faltantesDe(x).length)||null;   // la última jugada con datos pendientes
+    const fProx=(DATA.fechas[0]&&!DATA.fechas[0].campeon&&DATA.fechas[0].f>=hoy2)?DATA.fechas[0]:null;
+    const proponer=async f=>{
       if(!f||!faltantesDe(f).length){toast("No hay nada pendiente de cargar");return;}
       if(!USER){toast("Primero ingresá con Google (🔑 arriba)");window.fbLogin();return;}
       const faltan=faltantesDe(f); // solo se pregunta lo que falta
@@ -1460,7 +1526,7 @@ function bind(){
         if(v){prop.mvp=v;cambios++;}
       }
       if(faltan.includes("cafe")){
-        const v=await uiMulti("🏃 ¿Alguien se rajó sin el café?",`${dia} · marcá a los que se fueron sin quedarse`,jugadores,"☕ Se quedaron todos");
+        const v=await uiCafe("☕ ¿Quiénes se quedaron al café?",`${dia}`,jugadores,[]);
         if(v===undefined)return;
         prop.sinCafe=v;cambios++;
       }
@@ -1469,8 +1535,14 @@ function bind(){
         .then(()=>toast("📝 ¡Enviado! Le aparece al organizador en su Inicio para confirmarlo"))
         .catch(()=>toast("⚠️ No se pudo enviar (faltan las reglas nuevas)"));
     };
+    const pb=document.getElementById("propBtn");
+    if(pb)pb.onclick=()=>proponer(fPend);
+    const pb2=document.getElementById("propBtn2");
+    if(pb2)pb2.onclick=()=>proponer(fProx);
     const lr=document.getElementById("loadResBtn");
-    if(lr)lr.onclick=()=>cargarResultado(DATA.fechas[0]);
+    if(lr)lr.onclick=()=>cargarResultado(fPend||DATA.fechas[0]);
+    const fx=document.getElementById("fixtureBtn");
+    if(fx)fx.onclick=()=>{go("sorteo");requestAnimationFrame(()=>drawFixtureFecha(fProx));};
   }
 
   if(VIEW==="jugadores"){
@@ -1507,6 +1579,8 @@ function bind(){
     document.getElementById("btnDraw").onclick=draw;
     document.getElementById("seed").addEventListener("keydown",e=>{if(e.key==="Enter")draw();});
     document.getElementById("btnManual").onclick=drawManual;
+    const bf=document.getElementById("btnFixFecha");
+    if(bf)bf.onclick=()=>drawFixtureFecha(fechaConParejas());
     const bb=document.getElementById("bigBtn");
     const bigTxt=()=>{bb.textContent=BIGMODE?"📺 Modo pantalla: ON — el sorteo sale gigante":"📺 Modo pantalla: OFF";bb.style.borderColor=BIGMODE?"var(--A)":"";bb.style.color=BIGMODE?"var(--A)":"";};
     bigTxt();
