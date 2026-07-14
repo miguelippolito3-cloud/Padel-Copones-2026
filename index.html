@@ -503,6 +503,17 @@ function toast(t){const el=document.getElementById("toast");el.textContent=t;el.
 
 /* ---------- MODALES PROPIOS (reemplazan a prompt/confirm) ---------- */
 function uiClose(){const m=document.getElementById("uimodal");if(m)m.remove();}
+function verFoto(url,titulo){ // 📸 visor interno: la foto se abre EN la app (nada de pestañas nuevas)
+  const prev=document.getElementById("fotoview"); if(prev)prev.remove();
+  const d=document.createElement("div");
+  d.id="fotoview"; d.className="modal-ov"; d.style.zIndex="95";
+  d.innerHTML=`<div style="max-width:94vw;max-height:88vh;text-align:center">
+    <img src="${esc(url)}" alt="" style="max-width:94vw;max-height:78vh;border-radius:14px;border:1px solid var(--line);box-shadow:0 10px 40px rgba(0,0,0,.55)">
+    ${titulo?`<div class="tag" style="margin-top:10px;justify-content:center;display:flex">${titulo}</div>`:""}
+    <div class="note" style="margin-top:6px;text-align:center">Tocá en cualquier lado para volver</div></div>`;
+  d.onclick=()=>d.remove();
+  document.body.appendChild(d);
+}
 function uiShow(title,sub,inner){
   uiClose();
   const d=document.createElement("div");
@@ -586,7 +597,15 @@ function uiConfirm(title,msg,okLabel,cancelLabel){ // → Promise<bool>
 
 /* ================= ROUTER ================= */
 let VIEW="inicio", PARAM=null;
-function route(v,p){ VIEW=v||"inicio";PARAM=p||null; document.querySelectorAll("#nav a").forEach(a=>a.classList.toggle("on",a.dataset.go===VIEW)); render(); window.scrollTo(0,0); }
+function route(v,p){
+  // Botón "atrás" del celu (o navegación) con algo abierto encima: se cierra
+  // en vez de quedar pegado sobre la pantalla nueva.
+  const fv=document.getElementById("fotoview"); if(fv)fv.remove();
+  const m=document.getElementById("uimodal");
+  if(m){ const mx=m.querySelector("[data-mx]"); if(mx)mx.click(); else m.remove(); }
+  const bs=document.querySelector(".bigshow"); if(bs)bs.click();
+  VIEW=v||"inicio";PARAM=p||null; document.querySelectorAll("#nav a").forEach(a=>a.classList.toggle("on",a.dataset.go===VIEW)); render(); window.scrollTo(0,0);
+}
 function go(v,p){ const nh="#"+v+(p?("="+encodeURIComponent(p)):""); if(location.hash===nh){route(v,p);} else {location.hash=nh;} }
 document.getElementById("nav").addEventListener("click",e=>{const a=e.target.closest("a");if(a)go(a.dataset.go);});
 window.addEventListener("hashchange",()=>{ const h=location.hash.slice(1); const [v,p]=h.split("="); route(v||"inicio", p?decodeURIComponent(p):null); });
@@ -725,7 +744,7 @@ function vInicio(){
       const j=DATA.jugadores.find(x=>x.n===ult.mvp);
       const dias=Math.max(0,Math.floor((Date.now()-new Date(ult.f+"T12:00:00").getTime())/86400000));
       return `<div class="card pad" style="margin-top:12px;display:flex;align-items:center;gap:14px;border-color:var(--gold)">
-        ${j&&j.foto?`<img src="${esc(j.foto)}" alt="" style="width:66px;height:66px;border-radius:14px;object-fit:cover;border:2px solid var(--gold)">`:`<div style="font-size:42px">👑</div>`}
+        ${j&&j.foto?`<img src="${esc(j.foto)}" alt="" data-foto="${esc(j.foto)}" data-fototit="${esc(j.n)}" style="width:66px;height:66px;border-radius:14px;object-fit:cover;border:2px solid var(--gold);cursor:pointer">`:`<div style="font-size:42px">👑</div>`}
         <div style="flex:1">
           <div class="tag" style="color:var(--gold)">👑 Rey de la semana</div>
           <div class="anton" style="font-size:25px"><span class="pname" data-perfil="${esc(ult.mvp)}">${esc(ult.mvp)}</span></div>
@@ -754,7 +773,7 @@ function vInicio(){
     ${(()=>{ // 📸 un día como hoy
       const r=recuerdoSemanal();
       return r?`<div class="card pad" style="margin-top:12px;display:flex;gap:12px;align-items:center">
-        <a href="${esc(r.f.fotoKia)}" target="_blank" rel="noopener"><img src="${esc(r.f.fotoKia)}" alt="" loading="lazy" style="width:84px;height:104px;object-fit:cover;border-radius:10px;border:1px solid var(--line)"></a>
+        <img src="${esc(r.f.fotoKia)}" alt="" loading="lazy" data-foto="${esc(r.f.fotoKia)}" data-fototit="🏆 ${esc(r.f.campeon.join(' & '))} · ${fmtFecha(r.f.f)}" style="width:84px;height:104px;object-fit:cover;border-radius:10px;border:1px solid var(--line);cursor:pointer">
         <div style="flex:1">
           <div class="tag">📸 Un día como hoy…</div>
           <div style="font-weight:800;margin-top:2px">${fmtFecha(r.f.f)} · hace ${r.meses} mes${r.meses===1?"":"es"}</div>
@@ -911,7 +930,7 @@ function vPerfil(name){
     <div class="card pad">
       <div class="phead">
         ${(()=>{const j=DATA.jugadores.find(x=>x.n===name);return j&&j.foto
-          ?`<img class="pav" src="${esc(j.foto)}" alt="${esc(name)}" loading="lazy">`
+          ?`<img class="pav" src="${esc(j.foto)}" alt="${esc(name)}" loading="lazy" data-foto="${esc(j.foto)}" data-fototit="${esc(name)}" style="cursor:pointer">`
           :`<div class="pav" style="background:${col}">${initials(name)}</div>`;})()}
         <div><div class="pn">${esc(name)}</div><div class="pm">${chip(name)} ${copName(c)}${realDe(name)?" · "+esc(realDe(name)):""}</div></div>
       </div>
@@ -942,7 +961,7 @@ function vPerfil(name){
         const kias=allFechas().filter(f=>f.campeon&&f.campeon.includes(name)&&f.fotoKia);
         return kias.length?`<div class="row" style="display:block;border-bottom:0">
           <div class="tag" style="margin-bottom:4px">🚗 Sus fotos con el Kia</div>
-          <div class="kiagrid">${kias.map(f=>`<figure><a href="${esc(f.fotoKia)}" target="_blank" rel="noopener"><img src="${esc(f.fotoKia)}" alt="Campeones ${fmtFecha(f.f)}" loading="lazy"></a><figcaption>${fmtFecha(f.f)} · con ${esc((f.campeon.find(x=>x!==name))||"")}</figcaption></figure>`).join("")}</div>
+          <div class="kiagrid">${kias.map(f=>`<figure><img src="${esc(f.fotoKia)}" alt="Campeones ${fmtFecha(f.f)}" loading="lazy" data-foto="${esc(f.fotoKia)}" data-fototit="🏆 ${esc(f.campeon.join(' & '))} · ${fmtFecha(f.f)}" style="cursor:pointer"><figcaption>${fmtFecha(f.f)} · con ${esc((f.campeon.find(x=>x!==name))||"")}</figcaption></figure>`).join("")}</div>
         </div>`:"";})()}
       <button class="btn block" id="share" style="margin-top:14px">📲 Compartir mis estadísticas</button>
       ${CLOUD?(MYPLAYER===name
@@ -1836,6 +1855,7 @@ function parseDuo(s){const p=(s||"").split(",").map(x=>x.trim()).filter(Boolean)
 
 /* ================= BIND ================= */
 function bind(){
+  document.querySelectorAll("[data-foto]").forEach(el=>el.onclick=e=>{e.stopPropagation();verFoto(el.dataset.foto,el.dataset.fototit||"");});
   document.querySelectorAll("[data-go2]").forEach(b=>b.onclick=()=>go(b.dataset.go2));
   document.querySelectorAll("[data-perfil]").forEach(b=>b.onclick=()=>go("perfil",b.dataset.perfil));
 
