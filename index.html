@@ -939,10 +939,11 @@ function vPerfil(name){
         ${comps.map(([n,v])=>`<div class="row"><span class="pname" data-perfil="${esc(n)}">${chip(n)} ${esc(n)}</span><span class="muted">${v} ${v===1?'vez':'veces'}</span></div>`).join("")}
       </div>`:""}
       ${(()=>{ // 🏆 galería: fotos del Kia de las fechas donde salió campeón
-        const kias=allFechas().filter(f=>f.campeon&&f.campeon.includes(name)&&f.fotoKia);
+        // si no hay fotoKia cargada, prueba con fotos/kia/FECHA.jpg (se sube el archivo y aparece sola)
+        const kias=allFechas().filter(f=>f.campeon&&f.campeon.includes(name)).map(f=>({f,src:f.fotoKia||`fotos/kia/${f.f}.jpg`}));
         return kias.length?`<div class="row" style="display:block;border-bottom:0">
           <div class="tag" style="margin-bottom:4px">🚗 Sus fotos con el Kia</div>
-          <div class="kiagrid">${kias.map(f=>`<figure><a href="${esc(f.fotoKia)}" target="_blank" rel="noopener"><img src="${esc(f.fotoKia)}" alt="Campeones ${fmtFecha(f.f)}" loading="lazy"></a><figcaption>${fmtFecha(f.f)} · con ${esc((f.campeon.find(x=>x!==name))||"")}</figcaption></figure>`).join("")}</div>
+          <div class="kiagrid">${kias.map(k=>`<figure><a href="${esc(k.src)}" target="_blank" rel="noopener"><img src="${esc(k.src)}" alt="Campeones ${fmtFecha(k.f.f)}" loading="lazy" onerror="this.closest('figure').style.display='none'"></a><figcaption>${fmtFecha(k.f.f)} · con ${esc((k.f.campeon.find(x=>x!==name))||"")}</figcaption></figure>`).join("")}</div>
         </div>`:"";})()}
       <button class="btn block" id="share" style="margin-top:14px">📲 Compartir mis estadísticas</button>
       ${CLOUD?(MYPLAYER===name
