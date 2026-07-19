@@ -1761,6 +1761,27 @@ function vAdmin(){
     </div>
 
     <div class="card pad" style="margin-top:12px">
+      <div class="tag" style="margin-bottom:8px">📸 Subir foto del Kia</div>
+      <div class="note" style="margin-bottom:8px">Elegí la fecha, cargá la foto (aunque sea gigante), <b>encuadrala arrastrando y con el zoom</b>, descargala ya lista y subila a GitHub con el botón. La app la muestra sola en la galería de los campeones.</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end">
+        <div class="field" style="flex:1;min-width:140px"><label>Fecha</label><select id="fkFecha">${DATA.fechas.map(f=>`<option value="${f.f}">${fmtFecha(f.f)}${f.campeon?" 🏆":""}</option>`).join("")}</select></div>
+        <button class="btn sm" id="fkPick">📷 Elegir foto</button>
+      </div>
+      <input id="fkFile" type="file" accept="image/*" class="hidden">
+      <div id="fkCrop" class="hidden" style="margin-top:10px">
+        <div id="fkFrame" style="position:relative;width:100%;max-width:330px;aspect-ratio:3/4;overflow:hidden;border-radius:12px;border:2px dashed var(--A);margin:0 auto;touch-action:none;cursor:grab;background:#000">
+          <img id="fkImg" alt="" style="position:absolute;left:0;top:0;transform-origin:0 0;user-select:none;-webkit-user-drag:none;max-width:none" draggable="false">
+        </div>
+        <div class="field" style="margin-top:8px"><label>Zoom</label><input id="fkZoom" type="range" min="100" max="300" value="100" style="width:100%"></div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn" id="fkSave" style="flex:1">⬇️ Descargar recortada</button>
+          <button class="btn ghost" id="fkGH" style="flex:1">🐙 Subirla a GitHub</button>
+        </div>
+        <div class="note" style="margin-top:6px;font-size:12px">1) "Descargar recortada" te baja el archivo ya con el nombre correcto (<b>fecha.jpg</b>). 2) "Subirla a GitHub" te abre la carpeta justa: Add file → Upload files → elegí el archivo → Commit. En 1-2 minutos aparece en la app.</div>
+      </div>
+    </div>
+
+    <div class="card pad" style="margin-top:12px">
       <div class="tag" style="margin-bottom:8px">👥 Plantel y copones</div>
       <div class="note" style="margin-bottom:8px">A=más fuerte → D=más flojo. Sin copón = invitado/otro.</div>
       ${DATA.jugadores.map((j,i)=>`<div class="adline">
@@ -2139,6 +2160,48 @@ function bind(){
       DATA.fechas.sort((a,b)=>b.f.localeCompare(a.f));
       save();toast("Fecha agregada");render();
     };
+    // 📸 cargador de foto del Kia con recorte
+    const fkPick=document.getElementById("fkPick");
+    if(fkPick){
+      const file=document.getElementById("fkFile"), img=document.getElementById("fkImg"),
+            frame=document.getElementById("fkFrame"), zoom=document.getElementById("fkZoom");
+      const st={x:0,y:0,scale:1,base:1,iw:0,ih:0};
+      const apply=()=>{img.style.transform=`translate(${st.x}px,${st.y}px) scale(${st.scale})`;};
+      const clamp=()=>{const fw=frame.clientWidth,fh=frame.clientHeight;
+        st.x=Math.min(0,Math.max(fw-st.iw*st.scale,st.x));
+        st.y=Math.min(0,Math.max(fh-st.ih*st.scale,st.y));};
+      fkPick.onclick=()=>file.click();
+      file.onchange=()=>{const f=file.files[0];if(!f)return;
+        img.onload=()=>{
+          st.iw=img.naturalWidth;st.ih=img.naturalHeight;
+          document.getElementById("fkCrop").classList.remove("hidden");
+          const fw=frame.clientWidth,fh=frame.clientHeight;
+          st.base=Math.max(fw/st.iw,fh/st.ih); // cubre el marco
+          st.scale=st.base;st.x=(fw-st.iw*st.base)/2;st.y=(fh-st.ih*st.base)/2;
+          zoom.value=100;apply();
+        };
+        img.src=URL.createObjectURL(f);
+      };
+      zoom.oninput=()=>{const fw=frame.clientWidth,fh=frame.clientHeight;
+        const ns=st.base*zoom.value/100, cx=fw/2, cy=fh/2;
+        st.x=cx-(cx-st.x)*(ns/st.scale);st.y=cy-(cy-st.y)*(ns/st.scale);
+        st.scale=ns;clamp();apply();};
+      let drag=null;
+      frame.addEventListener("pointerdown",e=>{drag={x:e.clientX-st.x,y:e.clientY-st.y};try{frame.setPointerCapture(e.pointerId);}catch(err){}});
+      frame.addEventListener("pointermove",e=>{if(!drag)return;st.x=e.clientX-drag.x;st.y=e.clientY-drag.y;clamp();apply();});
+      frame.addEventListener("pointerup",()=>drag=null);
+      document.getElementById("fkSave").onclick=()=>{
+        if(!st.iw){toast("Primero elegí una foto");return;}
+        const f=document.getElementById("fkFecha").value;
+        const fw=frame.clientWidth,fh=frame.clientHeight;
+        const outW=1100,outH=Math.round(outW*fh/fw),k=outW/fw;
+        const cv=document.createElement("canvas");cv.width=outW;cv.height=outH;
+        cv.getContext("2d").drawImage(img,st.x*k,st.y*k,st.iw*st.scale*k,st.ih*st.scale*k);
+        cv.toBlob(b=>{const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=`${f}.jpg`;a.click();
+          toast(`⬇️ ${f}.jpg descargada — ahora subila a GitHub`);},"image/jpeg",.85);
+      };
+      document.getElementById("fkGH").onclick=()=>window.open("https://github.com/miguelippolito3-cloud/Padel-Copones-2026/upload/main/fotos/kia","_blank");
+    }
     document.querySelectorAll("[data-delf]").forEach(b=>b.onclick=async()=>{
       const f=DATA.fechas[+b.dataset.delf]; if(!f)return;
       if(!await uiConfirm("🗑️ ¿Borrar esta fecha?",`La del <b>${fmtFecha(f.f)}</b> (${f.parejas.length} parejas). Esto no se puede deshacer.`,"🗑️ Sí, borrala"))return;
