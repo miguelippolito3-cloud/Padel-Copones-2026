@@ -611,22 +611,22 @@ document.getElementById("nav").addEventListener("click",e=>{const a=e.target.clo
 window.addEventListener("hashchange",()=>{ const h=location.hash.slice(1); const [v,p]=h.split("="); route(v||"inicio", p?decodeURIComponent(p):null); });
 
 /* ================= RENDER ================= */
-function vBloqueo(){ // 🔒 sin sesión, solo se ve el Inicio (modo invitado)
+function vBloqueo(){ // 🔒 sin sesión no se ve NADA: bienvenida + login obligatorio
   return `<section>
     <div class="card pad" style="text-align:center;margin-top:24px">
-      <div style="font-size:46px;margin-bottom:8px">🔒</div>
-      <div class="big" style="margin-bottom:6px">Solo para los del grupo</div>
+      <div style="font-size:46px;margin-bottom:8px">🎾</div>
+      <div class="big" style="margin-bottom:6px">Copones Buena Vista</div>
       ${AUTHREADY
-        ?`<div class="note" style="margin-bottom:14px">Registrate una sola vez ingresando con tu cuenta de Google y desbloqueás el <b>ranking completo</b>, los <b>perfiles con fotos</b> y el <b>sorteo</b>.<br><br>En modo invitado solo se puede ver el <b>Inicio</b>.</div>
+        ?`<div class="note" style="margin-bottom:14px">La app del grupo: <b>ranking histórico</b>, <b>perfiles con fotos</b>, el <b>prode del Kia</b> 🎲, el sorteo transparente 🥁 y la lista de anotados del domingo 🙋.<br><br><b>Es solo para los del grupo:</b> registrate una única vez con tu cuenta de Google y entrás directo para siempre.</div>
       <button class="btn block" onclick="fbLogin()">🔑 Ingresar / Registrarme con Google</button>
-      <button class="btn ghost block" data-go2="inicio" style="margin-top:8px">← Volver al inicio</button>`
+      <div class="note" style="margin-top:10px;font-size:12px">Domingos 8:30 · Gracias Kia 🚗</div>`
         :`<div class="note">Verificando tu sesión…</div>`}
     </div>
   </section>`;
 }
 function render(){
   const app=document.getElementById("app");
-  if(CLOUD&&!USER&&VIEW!=="inicio"){app.innerHTML=vBloqueo();bind();renderTicker();return;}
+  if(CLOUD&&!USER){app.innerHTML=vBloqueo();bind();renderTicker();return;}
   if(VIEW==="inicio")app.innerHTML=vInicio();
   else if(VIEW==="ranking")app.innerHTML=vRanking();
   else if(VIEW==="sorteo")app.innerHTML=vSorteo();
@@ -638,6 +638,11 @@ function render(){
 }
 
 function renderTicker(){
+  if(CLOUD&&!USER){ // sin sesión, el ticker tampoco muestra data
+    const line="🔒 App exclusiva del grupo · Registrate con Google para ver el ranking &nbsp;•&nbsp; 🎾 <b>Copones Buena Vista</b> &nbsp;•&nbsp; Domingos 8:30 &nbsp;•&nbsp; Gracias Kia 🚗";
+    document.getElementById("ticker").innerHTML=line+" &nbsp;•&nbsp; "+line;
+    return;
+  }
   const ind=statsInd();
   const arr=Object.values(ind);
   const topJ=[...arr].sort((a,b)=>b.pj-a.pj)[0];
