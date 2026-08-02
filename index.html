@@ -497,6 +497,8 @@ function statsPar(list){
 }
 function initials(n){return n.replace(/[^A-Za-zÀ-ÿ ]/g,"").trim().split(/\s+/).map(w=>w[0]).slice(0,2).join("").toUpperCase()||"?";}
 function avatarColor(n){const cols=["#e2102a","#2f7bff","#fb923c","#22c55e","#a78bfa","#f5c518","#ff5da2","#14b8a6"];let h=0;for(const ch of n)h=(h*31+ch.charCodeAt(0))>>>0;return cols[h%cols.length];}
+// Foto de perfil: la guardada en los datos, o la del repo (fotos/perfil/<apodo>.jpg) si existe
+function fotoPerfil(n){const j=DATA.jugadores.find(x=>x.n===n);if(j&&j.foto)return j.foto;const slug=n.replace(/\(.*?\)/g,"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^A-Za-z0-9]/g,"").toLowerCase();return slug?`fotos/perfil/${slug}.jpg`:null;}
 function fmtFecha(s){const [y,m,d]=s.split("-");const ms=["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];return `${+d} ${ms[+m-1]} ${y}`;}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function toast(t){const el=document.getElementById("toast");el.textContent=t;el.classList.add("show");clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove("show"),1800);}
@@ -748,10 +750,9 @@ function vInicio(){
       </div>`;})():""}
     ${heroHTML}
     ${ult&&ult.mvp?(()=>{ // 👑 Rey de la semana
-      const j=DATA.jugadores.find(x=>x.n===ult.mvp);
       const dias=Math.max(0,Math.floor((Date.now()-new Date(ult.f+"T12:00:00").getTime())/86400000));
       return `<div class="card pad" style="margin-top:12px;display:flex;align-items:center;gap:14px;border-color:var(--gold)">
-        ${j&&j.foto?`<img src="${esc(j.foto)}" alt="" data-foto="${esc(j.foto)}" data-fototit="${esc(j.n)}" style="width:66px;height:66px;border-radius:14px;object-fit:cover;border:2px solid var(--gold);cursor:pointer">`:`<div style="font-size:42px">👑</div>`}
+        ${(()=>{const src=fotoPerfil(ult.mvp);return src?`<img src="${esc(src)}" alt="" data-foto="${esc(src)}" data-fototit="${esc(ult.mvp)}" style="width:66px;height:66px;border-radius:14px;object-fit:cover;border:2px solid var(--gold);cursor:pointer" onerror="this.style.display='none';this.nextElementSibling.style.display='block'"><div style="font-size:42px;display:none">👑</div>`:`<div style="font-size:42px">👑</div>`;})()}
         <div style="flex:1">
           <div class="tag" style="color:var(--gold)">👑 Rey de la semana</div>
           <div class="anton" style="font-size:25px"><span class="pname" data-perfil="${esc(ult.mvp)}">${esc(ult.mvp)}</span></div>
@@ -936,8 +937,8 @@ function vPerfil(name){
     <button class="btn ghost sm" data-go2="jugadores" style="margin-bottom:14px">← Perfiles</button>
     <div class="card pad">
       <div class="phead">
-        ${(()=>{const j=DATA.jugadores.find(x=>x.n===name);return j&&j.foto
-          ?`<img class="pav" src="${esc(j.foto)}" alt="${esc(name)}" loading="lazy" data-foto="${esc(j.foto)}" data-fototit="${esc(name)}" style="cursor:pointer">`
+        ${(()=>{const src=fotoPerfil(name);return src
+          ?`<img class="pav" src="${esc(src)}" alt="${esc(name)}" loading="lazy" data-foto="${esc(src)}" data-fototit="${esc(name)}" style="cursor:pointer" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="pav" style="background:${col};display:none">${initials(name)}</div>`
           :`<div class="pav" style="background:${col}">${initials(name)}</div>`;})()}
         <div><div class="pn">${esc(name)}</div><div class="pm">${chip(name)} ${copName(c)}${realDe(name)?" · "+esc(realDe(name)):""}</div></div>
       </div>
