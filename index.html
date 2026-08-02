@@ -686,7 +686,9 @@ function vInicio(){
           ${ult.sinCafe&&ult.sinCafe.length?`<div class="tag">🏃 Sin café: <b style="color:var(--red2)">${esc(ult.sinCafe.join(", "))}</b></div>`:""}
           <div class="tag">${ult.confirmada?'<span style="color:#4ade80">✅ Fecha confirmada por el organizador</span>':'<span style="color:#ffcf4d">⏳ A confirmar por el organizador</span>'}</div>
         </div>
-        <div style="display:flex;gap:8px;margin-top:14px">
+        <div class="kiagrid fotoblock" style="grid-template-columns:repeat(4,1fr);margin-top:12px">
+          ${[["kia","🚗 Campeones"],["pala","🥄 Cuchara"],["mvp","🎖️ MVP"],["cafe","☕ Café"]].map(([t,lbl])=>`<figure><img src="fotos/${t}/${ult.f}.jpg" alt="" loading="lazy" data-foto="fotos/${t}/${ult.f}.jpg" data-fototit="${lbl} · ${fmtFecha(ult.f)}" style="cursor:pointer" onerror="this.closest('figure').style.display='none'"><figcaption>${lbl}</figcaption></figure>`).join("")}
+        </div>
           <button class="btn" id="flyerBtn" style="flex:1.2;background:#25D366;color:#0a0b0d">🖼️ Flyer + texto al grupo</button>
           <button class="btn ghost" id="waShare" style="flex:1">📲 Solo texto</button>
         </div>
@@ -965,9 +967,15 @@ function vPerfil(name){
       ${(()=>{ // 🏆 galería: fotos del Kia de las fechas donde salió campeón
         // si no hay fotoKia cargada, prueba con fotos/kia/FECHA.jpg (se sube el archivo y aparece sola)
         const kias=allFechas().filter(f=>f.campeon&&f.campeon.includes(name)).map(f=>({f,src:f.fotoKia||`fotos/kia/${f.f}.jpg`}));
-        return kias.length?`<div class="row" style="display:block;border-bottom:0">
+        return kias.length?`<div class="row fotoblock" style="display:block;border-bottom:0">
           <div class="tag" style="margin-bottom:4px">🚗 Sus fotos con el Kia</div>
           <div class="kiagrid">${kias.map(k=>`<figure><img src="${esc(k.src)}" alt="Campeones ${fmtFecha(k.f.f)}" loading="lazy" data-foto="${esc(k.src)}" data-fototit="🏆 ${esc(k.f.campeon.join(' & '))} · ${fmtFecha(k.f.f)}" style="cursor:pointer" onerror="this.closest('figure').style.display='none'"><figcaption>${fmtFecha(k.f.f)} · con ${esc((k.f.campeon.find(x=>x!==name))||"")}</figcaption></figure>`).join("")}</div>
+        </div>`:"";})()}
+      ${(()=>{ // 🥄 galería de cucharas retratadas (solo si existe la foto del día)
+        const palas=allFechas().filter(f=>Array.isArray(f.pala)&&f.pala.includes(name));
+        return palas.length?`<div class="row fotoblock" style="display:block;border-bottom:0">
+          <div class="tag" style="margin-bottom:4px">🥄 Sus cucharas retratadas</div>
+          <div class="kiagrid">${palas.map(f=>`<figure><img src="fotos/pala/${f.f}.jpg" alt="" loading="lazy" data-foto="fotos/pala/${f.f}.jpg" data-fototit="🥄 ${esc(f.pala.join(' & '))} · ${fmtFecha(f.f)}" style="cursor:pointer" onerror="this.closest('figure').style.display='none'"><figcaption>${fmtFecha(f.f)}</figcaption></figure>`).join("")}</div>
         </div>`:"";})()}
       <button class="btn block" id="share" style="margin-top:14px">📲 Compartir mis estadísticas</button>
       ${CLOUD?(MYPLAYER===name
@@ -1766,10 +1774,16 @@ function vAdmin(){
     </div>
 
     <div class="card pad" style="margin-top:12px">
-      <div class="tag" style="margin-bottom:8px">📸 Subir foto del Kia</div>
-      <div class="note" style="margin-bottom:8px">Elegí la fecha, cargá la foto (aunque sea gigante), <b>encuadrala arrastrando y con el zoom</b>, descargala ya lista y subila a GitHub con el botón. La app la muestra sola en la galería de los campeones.</div>
+      <div class="tag" style="margin-bottom:8px">📸 Subir fotos de la fecha</div>
+      <div class="note" style="margin-bottom:8px">Elegí la fecha y de qué es la foto (Kia, cuchara, MVP o café), cargala aunque sea gigante, <b>encuadrala arrastrando y con el zoom</b>, descargala ya lista y subila a GitHub con el botón. La app la muestra sola.</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end">
-        <div class="field" style="flex:1;min-width:140px"><label>Fecha</label><select id="fkFecha">${DATA.fechas.map(f=>`<option value="${f.f}">${fmtFecha(f.f)}${f.campeon?" 🏆":""}</option>`).join("")}</select></div>
+        <div class="field" style="flex:1;min-width:130px"><label>Fecha</label><select id="fkFecha">${DATA.fechas.map(f=>`<option value="${f.f}">${fmtFecha(f.f)}${f.campeon?" 🏆":""}</option>`).join("")}</select></div>
+        <div class="field" style="flex:1;min-width:130px"><label>¿Foto de qué?</label><select id="fkTipo">
+          <option value="kia">🚗 Kia / campeones</option>
+          <option value="pala">🥄 Cuchara de madera</option>
+          <option value="mvp">🎖️ MVP</option>
+          <option value="cafe">☕ Café</option>
+        </select></div>
         <button class="btn sm" id="fkPick">📷 Elegir foto</button>
       </div>
       <input id="fkFile" type="file" accept="image/*" class="hidden">
@@ -1883,6 +1897,8 @@ function parseDuo(s){const p=(s||"").split(",").map(x=>x.trim()).filter(Boolean)
 /* ================= BIND ================= */
 function bind(){
   document.querySelectorAll("[data-foto]").forEach(el=>el.onclick=e=>{e.stopPropagation();verFoto(el.dataset.foto,el.dataset.fototit||"");});
+  // si ninguna foto del bloque existe, se oculta el bloque entero (título incluido)
+  setTimeout(()=>{document.querySelectorAll(".fotoblock").forEach(bl=>{const figs=[...bl.querySelectorAll("figure")];if(figs.length&&figs.every(f=>f.style.display==="none"))bl.style.display="none";});},1500);
   document.querySelectorAll("[data-go2]").forEach(b=>b.onclick=()=>go(b.dataset.go2));
   document.querySelectorAll("[data-perfil]").forEach(b=>b.onclick=()=>go("perfil",b.dataset.perfil));
 
@@ -2202,10 +2218,11 @@ function bind(){
         const outW=1100,outH=Math.round(outW*fh/fw),k=outW/fw;
         const cv=document.createElement("canvas");cv.width=outW;cv.height=outH;
         cv.getContext("2d").drawImage(img,st.x*k,st.y*k,st.iw*st.scale*k,st.ih*st.scale*k);
+        const tipo=document.getElementById("fkTipo").value;
         cv.toBlob(b=>{const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=`${f}.jpg`;a.click();
-          toast(`⬇️ ${f}.jpg descargada — ahora subila a GitHub`);},"image/jpeg",.85);
+          toast(`⬇️ ${f}.jpg descargada — subila a la carpeta fotos/${tipo} (el botón te lleva)`);},"image/jpeg",.85);
       };
-      document.getElementById("fkGH").onclick=()=>window.open("https://github.com/miguelippolito3-cloud/Padel-Copones-2026/upload/main/fotos/kia","_blank");
+      document.getElementById("fkGH").onclick=()=>window.open(`https://github.com/miguelippolito3-cloud/Padel-Copones-2026/upload/main/fotos/${document.getElementById("fkTipo").value}`,"_blank");
     }
     document.querySelectorAll("[data-delf]").forEach(b=>b.onclick=async()=>{
       const f=DATA.fechas[+b.dataset.delf]; if(!f)return;
