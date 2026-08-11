@@ -8,7 +8,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Copones BV" />
-<link rel="manifest" href='data:application/manifest+json,{"name":"Copones Buena Vista","short_name":"Copones BV","start_url":".","display":"standalone","background_color":"%230a0a0a","theme_color":"%230a0a0a","icons":[{"src":"data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 192 192%22%3E%3Crect width=%22192%22 height=%22192%22 fill=%22%23d50a0a%22/%3E%3Ctext x=%2296%22 y=%22130%22 font-size=%22110%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22bold%22%3ECB%3C/text%3E%3C/svg%3E","sizes":"192x192","type":"image/svg+xml"}]}' />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🎾%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -201,6 +202,7 @@
   .nav a.on .ic{filter:drop-shadow(0 0 8px rgba(226,16,42,.8))}
   .nav a.on:after{content:"";position:absolute;top:0;width:26px;height:3px;background:var(--red);border-radius:0 0 3px 3px}
   .nav a{position:relative}
+  .navdot{position:absolute;top:3px;left:calc(50% + 8px);background:var(--red2);color:#fff;font-size:10px;font-weight:800;min-width:16px;height:16px;border-radius:999px;display:flex;align-items:center;justify-content:center;padding:0 4px;box-shadow:0 0 8px rgba(255,51,80,.6);font-family:"Inter",sans-serif}
 
   .hidden{display:none}
   .toast{position:fixed;left:50%;bottom:86px;transform:translateX(-50%);background:#000;border:1px solid var(--line);color:#fff;padding:10px 16px;border-radius:10px;font-weight:700;font-size:14px;z-index:80;opacity:0;transition:.25s;pointer-events:none}
@@ -338,6 +340,28 @@ function textoResultados(f,st){ // el mensaje de resultados para WhatsApp (lo us
   txt+=`\n👉 *Mirá el ranking, tu perfil y tus logros en la app:*\n${APP_URL}\n\n_Copones Buena Vista · Domingos 8:30 🎾_`;
   return txt;
 }
+/* 📲 App instalable (PWA): service worker + botón de instalar */
+let PWAPROMPT=null;
+if("serviceWorker" in navigator){ window.addEventListener("load",()=>{ navigator.serviceWorker.register("./sw.js").catch(()=>{}); }); }
+window.addEventListener("beforeinstallprompt",e=>{ e.preventDefault(); PWAPROMPT=e; if(VIEW==="inicio")render(); });
+function esApp(){ return window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone===true; }
+function instalarCardHTML(){
+  if(esApp())return "";
+  try{if(localStorage.getItem("cb_pwahide"))return "";}catch(e){}
+  const ios=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  if(PWAPROMPT)return `<div class="card pad" style="margin-top:12px">
+    <div class="tag" style="margin-bottom:6px">📲 Llevala como app</div>
+    <div class="note" style="margin-bottom:8px">Instalala en el teléfono: ícono propio, pantalla completa y abre al toque.</div>
+    <button class="btn block" id="pwaBtn">📲 Instalar la app</button>
+    <button class="mcancel" id="pwaNo" style="padding:8px">Ahora no</button>
+  </div>`;
+  if(ios)return `<div class="card pad" style="margin-top:12px">
+    <div class="tag" style="margin-bottom:6px">📲 Llevala como app</div>
+    <div class="note">En iPhone: tocá <b>Compartir</b> (el cuadradito con la flecha) → <b>"Agregar a inicio"</b> y te queda con ícono propio, como una app más.</div>
+    <button class="mcancel" id="pwaNo" style="padding:8px">Listo, no lo muestres más</button>
+  </div>`;
+  return "";
+}
 const CLOUD = !JSON.stringify(FIREBASE_CONFIG).includes("PEGAR_ACA");
 let USER=null, ISADMIN=false, auth=null, db=null, dbRef=null, CLOUDSTATE="conectando";
 let AUTHREADY=false; // ya sabemos si hay sesión o no (evita el pestañeo del candado al abrir)
@@ -345,6 +369,7 @@ let MYPLAYER=null; try{MYPLAYER=localStorage.getItem("cb_myplayer")||null;}catch
 let PROPUESTAS=[], propSub=false;
 let USUARIOS=[], COADMINS=[], SORTEO_FECHA=null;
 let PRODE=[], ASIS=[], socialSub=false; // 🎲 prode y 🙋 asistencia (colecciones nuevas)
+let FOTOS={}; // 📸 fotos publicadas desde la app (viven en la nube, se ven al instante)
 const CANCHAS_ABONO=2; // canchas fijas del abono de los domingos
 
 /* ================= DATOS =================
@@ -383,7 +408,7 @@ if(CLOUD){
       // registra el ingreso (para el panel de usuarios del admin)
       setDoc(doc(db,"usuarios",u.uid),{email:u.email,nombre:u.displayName||"",ultimoIngreso:Date.now()},{merge:true}).catch(()=>{});
       // ⭐ Este soy yo: recupera el jugador vinculado a esta cuenta
-      getDoc(doc(db,"usuarios",u.uid)).then(s=>{ if(s.exists()&&s.data().jugador){MYPLAYER=s.data().jugador;try{localStorage.setItem("cb_myplayer",MYPLAYER);}catch(e){}render();} }).catch(()=>{});
+      getDoc(doc(db,"usuarios",u.uid)).then(s=>{ if(s.exists()&&s.data().jugador){MYPLAYER=s.data().jugador;try{localStorage.setItem("cb_myplayer",MYPLAYER);}catch(e){}render();} else maybeQuienSoy(); }).catch(()=>{});
       // 👑 co-admins: si no es dueño, chequea la lista dinámica
       if(!ISADMIN){
         getDoc(doc(db,"admins",(u.email||"").toLowerCase())).then(s=>{ if(s.exists()){ISADMIN=true;subAdmin();renderAuth();render();} }).catch(()=>{});
@@ -402,12 +427,30 @@ if(CLOUD){
       CLOUDSTATE="vacia";
     }
     render();
+    setTimeout(maybeQuienSoy,800); // primer ingreso: recién acá hay plantel para elegir
   },err=>{ CLOUDSTATE="error"; toast("⚠️ Sin conexión a la nube"); });
+}
+/* 👋 Primer ingreso: "¿vos quién sos?" — vincula la cuenta con su jugador de una */
+let ASKEDWHO=false;
+async function maybeQuienSoy(){
+  if(ASKEDWHO||!USER||MYPLAYER||!DATA.jugadores.length||document.getElementById("uimodal"))return;
+  try{if(localStorage.getItem("cb_askwho"))return;}catch(e){}
+  ASKEDWHO=true;
+  const ind=statsInd(allFechas());
+  const js=DATA.jugadores.slice().sort((a,b)=>(((ind[b.n]||{}).pj||0)-((ind[a.n]||{}).pj||0)));
+  const v=await uiPick("👋 ¡Bienvenido! ¿Vos quién sos?","Elegí tu jugador y la app te muestra tu perfil, tus rachas y tu prode directo en el Inicio. Si venís de visita, tocá abajo de todo.",
+    [...js.map(j=>({label:`${chip(j.n)} ${esc(j.n)}`,value:j.n})),{label:"👀 Solo miro / soy visita",value:"__no__"}]);
+  try{localStorage.setItem("cb_askwho","1");}catch(e){}
+  if(!v||v==="__no__")return;
+  setDoc(doc(db,"usuarios",USER.uid),{email:USER.email,jugador:v,vinculadoEl:Date.now()},{merge:true})
+    .then(()=>{MYPLAYER=v;try{localStorage.setItem("cb_myplayer",v);}catch(e){}toast("⭐ ¡Listo! Tu perfil quedó vinculado");render();})
+    .catch(()=>{});
 }
 function subSocial(){ // suscripciones para todos los logueados
   if(socialSub||!db)return; socialSub=true;
   onSnapshot(collection(db,"prode"),qs=>{PRODE=qs.docs.map(x=>({id:x.id,...x.data()}));if(VIEW==="inicio"||VIEW==="ranking")render();},()=>{});
   onSnapshot(collection(db,"asistencia"),qs=>{ASIS=qs.docs.map(x=>({id:x.id,...x.data()}));if(VIEW==="inicio"||VIEW==="sorteo")render();},()=>{});
+  onSnapshot(collection(db,"fotos"),qs=>{FOTOS={};qs.docs.forEach(x=>FOTOS[x.id]=x.data());render();},()=>{});
 }
 function subAdmin(){ // suscripciones en vivo que solo necesita el admin
   if(propSub)return; propSub=true;
@@ -497,8 +540,27 @@ function statsPar(list){
 }
 function initials(n){return n.replace(/[^A-Za-zÀ-ÿ ]/g,"").trim().split(/\s+/).map(w=>w[0]).slice(0,2).join("").toUpperCase()||"?";}
 function avatarColor(n){const cols=["#e2102a","#2f7bff","#fb923c","#22c55e","#a78bfa","#f5c518","#ff5da2","#14b8a6"];let h=0;for(const ch of n)h=(h*31+ch.charCodeAt(0))>>>0;return cols[h%cols.length];}
-// Foto de perfil: la guardada en los datos, o la del repo (fotos/perfil/<apodo>.jpg) si existe
-function fotoPerfil(n){const j=DATA.jugadores.find(x=>x.n===n);if(j&&j.foto)return j.foto;const slug=n.replace(/\(.*?\)/g,"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^A-Za-z0-9]/g,"").toLowerCase();return slug?`fotos/perfil/${slug}.jpg`:null;}
+/* ---- \ud83d\udcf8 Fotos en la nube: se publican desde la app y las ven todos al instante ---- */
+function fotoKey(tipo,k){return tipo+"_"+String(k).replace(/[^A-Za-z0-9_-]/g,"_");}
+function fotoNube(tipo,k){const c=FOTOS[fotoKey(tipo,k)];return (c&&c.data)?c.data:null;}
+function fotoSrc(tipo,k){return fotoNube(tipo,k)||`fotos/${tipo}/${k}.jpg`;} // nube primero, repo como respaldo
+async function publicarFoto(tipo,k,dataURL){
+  await setDoc(doc(db,"fotos",fotoKey(tipo,k)),{tipo,k:String(k),data:dataURL,por:(USER&&USER.email)||"admin",ts:Date.now()});
+}
+function comprimirCanvas(cv){ // que entre en un documento de la nube (l\u00edmite ~1MB)
+  let q=.82, url=cv.toDataURL("image/jpeg",q);
+  while(url.length>880000&&q>.4){q-=.08;url=cv.toDataURL("image/jpeg",q);}
+  if(url.length>880000){
+    const k=Math.sqrt(880000/url.length)*.95, c2=document.createElement("canvas");
+    c2.width=Math.max(300,Math.round(cv.width*k));c2.height=Math.max(300,Math.round(cv.height*k));
+    c2.getContext("2d").drawImage(cv,0,0,c2.width,c2.height);
+    url=c2.toDataURL("image/jpeg",.68);
+  }
+  return url;
+}
+// Foto de perfil: publicada desde la app > guardada en los datos > la del repo (fotos/perfil/<apodo>.jpg)
+function fotoPerfil(n){const nube=fotoNube("perfil",slugName(n));if(nube)return nube;const j=DATA.jugadores.find(x=>x.n===n);if(j&&j.foto)return j.foto;const slug=slugName(n);return slug?`fotos/perfil/${slug}.jpg`:null;}
+function slugName(n){return String(n).replace(/\(.*?\)/g,"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^A-Za-z0-9]/g,"").toLowerCase();}
 function fmtFecha(s){const [y,m,d]=s.split("-");const ms=["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];return `${+d} ${ms[+m-1]} ${y}`;}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function toast(t){const el=document.getElementById("toast");el.textContent=t;el.classList.add("show");clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove("show"),1800);}
@@ -586,6 +648,57 @@ function uiCafe(title,sub,names,iniSel){ // ☕/🏃 por jugador → Promise<arr
     d.querySelector("[data-x]").onclick=()=>{uiClose();res(undefined);};
   });
 }
+function cropFlow(aspect,titulo){ // 📸 elegir foto → recortar en un modal → Promise<dataURL|null>
+  return new Promise(res=>{
+    const inp=document.createElement("input");inp.type="file";inp.accept="image/*";
+    let eligio=false;
+    inp.onchange=()=>{
+      eligio=true;
+      const file=inp.files[0]; if(!file){res(null);return;}
+      const d=uiShow(titulo||"📸 Encuadrá la foto","Arrastrala para acomodarla y ajustá el zoom",`
+        <div id="cfFrame" style="position:relative;width:100%;max-width:330px;aspect-ratio:${aspect};overflow:hidden;border-radius:12px;border:2px dashed var(--A);margin:0 auto;touch-action:none;cursor:grab;background:#000">
+          <img id="cfImg" alt="" style="position:absolute;left:0;top:0;transform-origin:0 0;user-select:none;-webkit-user-drag:none;max-width:none" draggable="false">
+        </div>
+        <div class="field" style="margin-top:8px"><label>Zoom</label><input id="cfZoom" type="range" min="100" max="300" value="100" style="width:100%"></div>
+        <button class="mok" data-ok>✓ Usar esta foto</button>
+        <button class="mcancel" data-x>Cancelar</button>`);
+      const img=d.querySelector("#cfImg"),frame=d.querySelector("#cfFrame"),zoom=d.querySelector("#cfZoom");
+      const st={x:0,y:0,scale:1,base:1,iw:0,ih:0};
+      const apply=()=>{img.style.transform=`translate(${st.x}px,${st.y}px) scale(${st.scale})`;};
+      const clamp=()=>{const fw=frame.clientWidth,fh=frame.clientHeight;
+        st.x=Math.min(0,Math.max(fw-st.iw*st.scale,st.x));
+        st.y=Math.min(0,Math.max(fh-st.ih*st.scale,st.y));};
+      img.onload=()=>{
+        st.iw=img.naturalWidth;st.ih=img.naturalHeight;
+        const fw=frame.clientWidth,fh=frame.clientHeight;
+        st.base=Math.max(fw/st.iw,fh/st.ih);
+        st.scale=st.base;st.x=(fw-st.iw*st.base)/2;st.y=(fh-st.ih*st.base)/2;
+        apply();
+      };
+      img.src=URL.createObjectURL(file);
+      zoom.oninput=()=>{const fw=frame.clientWidth,fh=frame.clientHeight;
+        const ns=st.base*zoom.value/100,cx=fw/2,cy=fh/2;
+        st.x=cx-(cx-st.x)*(ns/st.scale);st.y=cy-(cy-st.y)*(ns/st.scale);
+        st.scale=ns;clamp();apply();};
+      let drag=null;
+      frame.addEventListener("pointerdown",e=>{drag={x:e.clientX-st.x,y:e.clientY-st.y};try{frame.setPointerCapture(e.pointerId);}catch(err){}});
+      frame.addEventListener("pointermove",e=>{if(!drag)return;st.x=e.clientX-drag.x;st.y=e.clientY-drag.y;clamp();apply();});
+      frame.addEventListener("pointerup",()=>drag=null);
+      d.querySelector("[data-ok]").onclick=()=>{
+        if(!st.iw){toast("Esperá que cargue la foto…");return;}
+        const fw=frame.clientWidth,fh=frame.clientHeight;
+        const outW=900,outH=Math.round(outW*fh/fw),k=outW/fw;
+        const cv=document.createElement("canvas");cv.width=outW;cv.height=outH;
+        cv.getContext("2d").drawImage(img,st.x*k,st.y*k,st.iw*st.scale*k,st.ih*st.scale*k);
+        uiClose();res(comprimirCanvas(cv));
+      };
+      d.querySelector("[data-x]").onclick=()=>{uiClose();res(null);};
+    };
+    // si cierra el selector de archivos sin elegir nada, no queda colgada la promesa
+    window.addEventListener("focus",()=>setTimeout(()=>{if(!eligio)res(null);},900),{once:true});
+    inp.click();
+  });
+}
 function uiConfirm(title,msg,okLabel,cancelLabel){ // → Promise<bool>
   return new Promise(res=>{
     const d=uiShow(title,msg,
@@ -637,6 +750,28 @@ function render(){
   else if(VIEW==="admin")app.innerHTML=vAdmin();
   bind();
   renderTicker();
+  updateNavDot();
+}
+/* 🔴 avisos: puntito en la barra con lo pendiente (propuestas, fecha incompleta, prode sin jugar) */
+function pendCount(){
+  if(CLOUD&&!USER)return 0;
+  let n=0;
+  if(ISADMIN){n+=PROPUESTAS.length;if(fechaPendiente())n++;}
+  const f0=DATA.fechas[0];
+  if(CLOUD&&USER&&f0&&!f0.campeon&&f0.parejas.length>=2&&f0!==fechaPendiente()){
+    const h=new Date(),hoyS=h.getFullYear()+"-"+String(h.getMonth()+1).padStart(2,"0")+"-"+String(h.getDate()).padStart(2,"0");
+    if(f0.f>=hoyS&&!miProdeDe(f0.f))n++; // 🎲 te falta jugar el prode
+  }
+  return n;
+}
+function updateNavDot(){
+  const a=document.querySelector('#nav a[data-go="inicio"]');
+  if(!a)return;
+  let b=a.querySelector(".navdot");
+  const n=pendCount();
+  if(!n){if(b)b.remove();return;}
+  if(!b){b=document.createElement("span");b.className="navdot";a.appendChild(b);}
+  b.textContent=n>9?"9+":n;
 }
 
 function renderTicker(){
@@ -670,8 +805,8 @@ function vInicio(){
   const h=new Date(), hoyS=h.getFullYear()+"-"+String(h.getMonth()+1).padStart(2,"0")+"-"+String(h.getDate()).padStart(2,"0");
   const f0=DATA.fechas[0];
   // la última fecha YA JUGADA con datos pendientes (aunque haya una futura cargada encima)
-  const pend=DATA.fechas.find(x=>x.f<hoyS&&faltantesDe(x).length)||null;
-  const prox=(f0&&!f0.campeon&&f0.f>=hoyS)?f0:null;           // todavía no se jugó
+  const pend=fechaPendiente();
+  const prox=(f0&&!f0.campeon&&f0.f>=hoyS&&f0!==pend)?f0:null;           // todavía no se jugó
   const ult=DATA.fechas.find(f=>f.campeon)||DATA.fechas[0];
   const topJ=[...arr].sort((a,b)=>b.pj-a.pj).slice(0,5);
   const topC=[...arr].sort((a,b)=>b.camp-a.camp||b.pj-a.pj).slice(0,5);
@@ -689,7 +824,7 @@ function vInicio(){
           <div class="tag">${ult.confirmada?'<span style="color:#4ade80">✅ Fecha confirmada por el organizador</span>':'<span style="color:#ffcf4d">⏳ A confirmar por el organizador</span>'}</div>
         </div>
         <div class="kiagrid fotoblock" style="grid-template-columns:repeat(4,1fr);margin-top:12px">
-          ${[["kia","🚗 Campeones"],["pala","🥄 Cuchara"],["mvp","🎖️ MVP"],["cafe","☕ Café"]].map(([t,lbl])=>`<figure><img src="fotos/${t}/${ult.f}.jpg" alt="" loading="lazy" data-foto="fotos/${t}/${ult.f}.jpg" data-fototit="${lbl} · ${fmtFecha(ult.f)}" style="cursor:pointer" onerror="this.closest('figure').style.display='none'"><figcaption>${lbl}</figcaption></figure>`).join("")}
+          ${[["kia","🚗 Campeones"],["pala","🥄 Cuchara"],["mvp","🎖️ MVP"],["cafe","☕ Café"]].map(([t,lbl])=>{const s=fotoSrc(t,ult.f);return `<figure><img src="${esc(s)}" alt="" loading="lazy" data-foto="${esc(s)}" data-fototit="${lbl} · ${fmtFecha(ult.f)}" style="cursor:pointer" onerror="this.closest('figure').style.display='none'"><figcaption>${lbl}</figcaption></figure>`;}).join("")}
         </div>
           <button class="btn" id="flyerBtn" style="flex:1.2;background:#25D366;color:#0a0b0d">🖼️ Flyer + texto al grupo</button>
           <button class="btn ghost" id="waShare" style="flex:1">📲 Solo texto</button>
@@ -764,6 +899,7 @@ function vInicio(){
       <div class="pill"><div class="n">${todosLosNombres().length}</div><div class="k">Jugadores</div></div>
       <div class="pill"><div class="n">${totalCamp}</div><div class="k">Campeones</div></div>
     </div>
+    ${instalarCardHTML()}
     ${(()=>{ // 🔥 rachas vivas y rotas
       const tops=rachasTop(), rotas=rachasRotas();
       return tops.length||rotas.length?`<div class="card pad" style="margin-top:12px">
@@ -967,7 +1103,7 @@ function vPerfil(name){
       </div>`:""}
       ${(()=>{ // 🏆 galería: fotos del Kia de las fechas donde salió campeón
         // si no hay fotoKia cargada, prueba con fotos/kia/FECHA.jpg (se sube el archivo y aparece sola)
-        const kias=allFechas().filter(f=>f.campeon&&f.campeon.includes(name)).map(f=>({f,src:f.fotoKia||`fotos/kia/${f.f}.jpg`}));
+        const kias=allFechas().filter(f=>f.campeon&&f.campeon.includes(name)).map(f=>({f,src:fotoNube("kia",f.f)||f.fotoKia||`fotos/kia/${f.f}.jpg`}));
         return kias.length?`<div class="row fotoblock" style="display:block;border-bottom:0">
           <div class="tag" style="margin-bottom:4px">🚗 Sus fotos con el Kia</div>
           <div class="kiagrid">${kias.map(k=>`<figure><img src="${esc(k.src)}" alt="Campeones ${fmtFecha(k.f.f)}" loading="lazy" data-foto="${esc(k.src)}" data-fototit="🏆 ${esc(k.f.campeon.join(' & '))} · ${fmtFecha(k.f.f)}" style="cursor:pointer" onerror="this.closest('figure').style.display='none'"><figcaption>${fmtFecha(k.f.f)} · con ${esc((k.f.campeon.find(x=>x!==name))||"")}</figcaption></figure>`).join("")}</div>
@@ -976,12 +1112,13 @@ function vPerfil(name){
         const palas=allFechas().filter(f=>Array.isArray(f.pala)&&f.pala.includes(name));
         return palas.length?`<div class="row fotoblock" style="display:block;border-bottom:0">
           <div class="tag" style="margin-bottom:4px">🥄 Sus cucharas retratadas</div>
-          <div class="kiagrid">${palas.map(f=>`<figure><img src="fotos/pala/${f.f}.jpg" alt="" loading="lazy" data-foto="fotos/pala/${f.f}.jpg" data-fototit="🥄 ${esc(f.pala.join(' & '))} · ${fmtFecha(f.f)}" style="cursor:pointer" onerror="this.closest('figure').style.display='none'"><figcaption>${fmtFecha(f.f)}</figcaption></figure>`).join("")}</div>
+          <div class="kiagrid">${palas.map(f=>{const s=fotoSrc("pala",f.f);return `<figure><img src="${esc(s)}" alt="" loading="lazy" data-foto="${esc(s)}" data-fototit="🥄 ${esc(f.pala.join(' & '))} · ${fmtFecha(f.f)}" style="cursor:pointer" onerror="this.closest('figure').style.display='none'"><figcaption>${fmtFecha(f.f)}</figcaption></figure>`;}).join("")}</div>
         </div>`:"";})()}
       <button class="btn block" id="share" style="margin-top:14px">📲 Compartir mis estadísticas</button>
       ${CLOUD?(MYPLAYER===name
         ?`<div class="note" style="text-align:center;margin-top:10px;color:var(--gold)">⭐ Este sos vos</div>`
         :`<button class="btn ghost block" id="meBtn" style="margin-top:8px">⭐ Este soy yo</button>`):""}
+      ${CLOUD&&ISADMIN?`<button class="btn ghost sm block" id="fotoBtn" style="margin-top:8px">📸 ${fotoNube("perfil",slugName(name))?"Cambiar":"Ponerle"} foto de perfil</button>`:""}
     </div>
 
     <section>
@@ -1077,57 +1214,84 @@ function faltantesTxt(f){
   const nom={campeon:"🚗 campeón",pala:"🥄 cuchara",mvp:"🎖️ MVP",cafe:"☕ café"};
   return faltantesDe(f).map(k=>nom[k]).join(" · ");
 }
+function fechaPendiente(){ // última fecha jugada con datos sin cargar — la de HOY cuenta desde las 11 (ya terminaron de jugar)
+  const h=new Date(), hoyS=h.getFullYear()+"-"+String(h.getMonth()+1).padStart(2,"0")+"-"+String(h.getDate()).padStart(2,"0");
+  return DATA.fechas.find(x=>(x.f<hoyS||(x.f===hoyS&&h.getHours()>=11))&&faltantesDe(x).length)||null;
+}
 async function cargarResultado(f){
-  // Se puede cargar Y corregir CUALQUIER dato de CUALQUIER fecha (también para atrás).
-  // Cada pregunta trae "↩️ Dejar como está": cancelar o dejar no aborta el resto.
+  // 📝 TODO EN UNA SOLA PANTALLA: campeón, cuchara, MVP y café juntos.
+  // Se ve lo ya cargado, se toca solo lo que cambia y se guarda una única vez.
   const completa=!faltantesDe(f).length;
   const antes={campeon:f.campeon||null,pala:(f.pala===undefined?null:f.pala),mvp:(f.mvp===undefined?null:f.mvp),sinCafe:Array.isArray(f.sinCafe)?f.sinCafe.slice():null};
   if(completa){ // ya está todo: corregir = reescribir la historia, con respaldo
     if(!await uiConfirm("🕰️ ¡Momento!",`La fecha del <b>${fmtFecha(f.f)}</b> ya está completa y estás por <b>reescribir la historia</b>.<br><br>Tranqui: la versión actual queda guardada en el historial de cambios, con fecha y autor. Acá nada se pierde… pero todo se sabe 😏`,"✍️ Le entramos"))return;
   }
-  const dia=fmtFecha(f.f);
-  const KEEP={dejar:true}; // valor especial: "dejar como está"
-  const parejasOpt=f.parejas.map((p,i)=>({label:`${i+1}) ${esc(p.join(" & "))}`,value:p}));
   const jugadores=[...new Set(f.parejas.flat())];
-  const keepOpt=txt=>({label:`↩️ Dejar como está <small style="opacity:.8">(${txt})</small>`,value:KEEP});
-  let cambios=0, salir=false; // ✕ / Cancelar / tocar afuera = salir del flujo (lo ya respondido se guarda)
-
-  // 🚗 Campeón
-  if(!salir){
-    const actual=f.campeon?esc(f.campeon.join(" & ")):"sin cargar";
-    const v=await uiPick("🚗 ¿Quién se llevó el Kia?",`Fecha del ${dia} · tocá la pareja campeona`,
-      [keepOpt(actual),...parejasOpt,{label:"🤷 Sin campeón todavía",value:null}]);
-    if(v===undefined)salir=true;
-    else if(v!==KEEP){f.campeon=v;cambios++;}
-  }
-  // 🥄 Cuchara
-  if(!salir){
-    const actual=f.pala?esc(f.pala.join(" & ")):(f.pala===false?"nadie / no hubo":"sin cargar");
-    const v=await uiPick("🥄 ¿Y la cuchara de madera?",`Fecha del ${dia} · la pareja que la pasó peor`,
-      [keepOpt(actual),...parejasOpt,{label:"🤷 Nadie / no hubo",value:false}]);
-    if(v===undefined)salir=true;
-    else if(v!==KEEP){f.pala=v;cambios++;}
-  }
-  // 🎖️ MVP
-  if(!salir){
-    const actual=f.mvp?esc(f.mvp):(f.mvp===false?"nadie / no hubo":"sin cargar");
-    const v=await uiPick("🎖️ ¿MVP del día?",`Fecha del ${dia} · el que la rompió`,
-      [keepOpt(actual),...jugadores.map(n=>({label:esc(n),value:n})),{label:"🤷 Nadie / no hubo",value:false}]);
-    if(v===undefined)salir=true;
-    else if(v!==KEEP){f.mvp=v;cambios++;}
-  }
-  // ☕ Café (fichas ☕/🏃 por jugador, arranca con lo ya cargado)
-  if(!salir){
-    const v=await uiCafe("☕ ¿Quiénes se quedaron al café?",`Fecha del ${dia}`,jugadores,Array.isArray(f.sinCafe)?f.sinCafe:[]);
-    if(v!==undefined&&JSON.stringify([...v].sort())!==JSON.stringify(Array.isArray(f.sinCafe)?[...f.sinCafe].sort():null)){f.sinCafe=v;cambios++;}
-  }
-
-  if(!cambios){toast(salir?"Saliste sin cambios":"No cambiaste nada — quedó todo como estaba");return;}
-  if(completa){ // respaldo: versión anterior + quién la cambió
-    (f.versiones||(f.versiones=[])).push({ts:Date.now(),por:(USER&&USER.email)||"admin (este dispositivo)",antes});
-  }
-  f.confirmada=true; // la carga directa siempre la hace un admin
-  save();toast(completa?"🕰️ Corregido — la versión anterior quedó en el historial":"Resultado cargado ✓");render();
+  const est={ // estado editable (arranca con lo que ya hay; null = sin cargar, false = nadie)
+    campeon:f.campeon||null,
+    pala:(f.pala===undefined?null:f.pala),
+    mvp:(f.mvp===undefined?null:f.mvp),
+    cafeReg:Array.isArray(f.sinCafe),
+    sinCafe:new Set(Array.isArray(f.sinCafe)?f.sinCafe:[])
+  };
+  const parejasBtns=g=>f.parejas.map((p,i)=>`<button class="mopt" data-g="${g}" data-v="${i}">${i+1}) ${esc(p.join(" & "))}</button>`).join("");
+  const d=uiShow(`📝 Resultado del ${fmtFecha(f.f)}`,`Está todo junto: tocá lo que quieras cargar o corregir y guardá una sola vez. Lo que dejes sin marcar queda como "sin cargar".`,`
+    <div class="tag" style="margin:6px 0 6px">🚗 ¿Quién se llevó el Kia?</div>
+    <div class="mgrid">${parejasBtns("campeon")}</div>
+    <div class="tag" style="margin:14px 0 6px">🥄 Cuchara de madera</div>
+    <div class="mgrid">${parejasBtns("pala")}<button class="mopt" data-g="pala" data-v="nadie">🤷 Nadie / no hubo</button></div>
+    <div class="tag" style="margin:14px 0 6px">🎖️ MVP del día</div>
+    <div class="mgrid">${jugadores.map(n=>`<button class="mopt" data-g="mvp" data-v="j:${esc(n)}">${esc(n)}</button>`).join("")}<button class="mopt" data-g="mvp" data-v="nadie">🤷 Nadie / no hubo</button></div>
+    <div class="tag" style="margin:14px 0 6px">☕ Café</div>
+    <div id="cafeZona"></div>
+    <button class="mok" data-ok style="margin-top:14px">💾 Guardar todo</button>
+    <button class="mcancel" data-x>Cancelar (no guarda nada)</button>`);
+  const igual=(a,b)=>JSON.stringify(a===undefined?null:a)===JSON.stringify(b===undefined?null:b);
+  const paint=()=>{
+    d.querySelectorAll('[data-g="campeon"]').forEach(b=>b.classList.toggle("on",!!est.campeon&&igual(f.parejas[+b.dataset.v],est.campeon)));
+    d.querySelectorAll('[data-g="pala"]').forEach(b=>b.classList.toggle("on",b.dataset.v==="nadie"?est.pala===false:(Array.isArray(est.pala)&&igual(f.parejas[+b.dataset.v],est.pala))));
+    d.querySelectorAll('[data-g="mvp"]').forEach(b=>b.classList.toggle("on",b.dataset.v==="nadie"?est.mvp===false:(typeof est.mvp==="string"&&("j:"+est.mvp)===b.dataset.v)));
+    const cz=d.querySelector("#cafeZona");
+    cz.innerHTML=est.cafeReg
+      ?`<div class="note" style="margin-bottom:8px">Todos arrancan en ☕ <b>se quedó</b>. Tocá a los que se rajaron para pasarlos a 🏃.</div>
+        <div class="mgrid">${jugadores.map(n=>`<button class="mopt ${est.sinCafe.has(n)?"on":""}" data-cafe="${esc(n)}">${est.sinCafe.has(n)?"🏃":"☕"} ${esc(n)}</button>`).join("")}</div>
+        <button class="mcancel" data-cafeoff style="padding:6px">↩️ No registrar el café de esta fecha</button>`
+      :`<button class="mopt" data-cafeon>➕ Registrar quién se quedó al café</button>`;
+    const on=cz.querySelector("[data-cafeon]"); if(on)on.onclick=()=>{est.cafeReg=true;paint();};
+    const off=cz.querySelector("[data-cafeoff]"); if(off)off.onclick=()=>{est.cafeReg=false;est.sinCafe.clear();paint();};
+    cz.querySelectorAll("[data-cafe]").forEach(b=>b.onclick=()=>{const n=b.dataset.cafe;if(est.sinCafe.has(n))est.sinCafe.delete(n);else est.sinCafe.add(n);if(navigator.vibrate)navigator.vibrate(8);paint();});
+  };
+  d.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{
+    const g=b.dataset.g,v=b.dataset.v;
+    if(g==="campeon"){const p=f.parejas[+v];est.campeon=(est.campeon&&igual(p,est.campeon))?null:p;}
+    if(g==="pala"){ if(v==="nadie")est.pala=(est.pala===false)?null:false; else {const p=f.parejas[+v];est.pala=(Array.isArray(est.pala)&&igual(p,est.pala))?null:p;} }
+    if(g==="mvp"){ if(v==="nadie")est.mvp=(est.mvp===false)?null:false; else {const n=v.slice(2);est.mvp=(est.mvp===n)?null:n;} }
+    if(navigator.vibrate)navigator.vibrate(8);
+    paint();
+  });
+  paint();
+  await new Promise(res=>{
+    d.querySelector("[data-ok]").onclick=()=>{
+      const cafeNew=est.cafeReg?[...est.sinCafe].sort():null;
+      const cafeOld=antes.sinCafe?[...antes.sinCafe].sort():null;
+      let cambios=0;
+      if(!igual(est.campeon,antes.campeon))cambios++;
+      if(!igual(est.pala,antes.pala))cambios++;
+      if(!igual(est.mvp,antes.mvp))cambios++;
+      if(JSON.stringify(cafeNew)!==JSON.stringify(cafeOld))cambios++;
+      uiClose();
+      if(!cambios){toast("No cambiaste nada — quedó todo como estaba");res();return;}
+      f.campeon=est.campeon;
+      f.pala=est.pala;
+      f.mvp=est.mvp;
+      if(est.cafeReg)f.sinCafe=[...est.sinCafe]; else delete f.sinCafe;
+      if(completa)(f.versiones||(f.versiones=[])).push({ts:Date.now(),por:(USER&&USER.email)||"admin (este dispositivo)",antes});
+      f.confirmada=true; // la carga directa siempre la hace un admin
+      save();toast(completa?"🕰️ Corregido — la versión anterior quedó en el historial":"Resultado cargado ✓");render();
+      res();
+    };
+    d.querySelector("[data-x]").onclick=()=>{uiClose();res();};
+  });
 }
 
 /* ---------- CONVOCATORIA: parejas, canchas y fecha ---------- */
@@ -1775,30 +1939,21 @@ function vAdmin(){
     </div>
 
     <div class="card pad" style="margin-top:12px">
-      <div class="tag" style="margin-bottom:8px">📸 Subir fotos de la fecha</div>
-      <div class="note" style="margin-bottom:8px">Elegí la fecha y de qué es la foto (Kia, cuchara, MVP o café), cargala aunque sea gigante, <b>encuadrala arrastrando y con el zoom</b>, descargala ya lista y subila a GitHub con el botón. La app la muestra sola.</div>
+      <div class="tag" style="margin-bottom:8px">📸 Fotos de la fecha y de perfiles</div>
+      <div class="note" style="margin-bottom:8px">Elegí de qué es la foto, recortala y tocá <b>Publicar</b>: aparece <b>al instante</b> en la app para todos. Sin GitHub, sin renombrar, sin esperas.</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end">
-        <div class="field" style="flex:1;min-width:130px"><label>Fecha</label><select id="fkFecha">${DATA.fechas.map(f=>`<option value="${f.f}">${fmtFecha(f.f)}${f.campeon?" 🏆":""}</option>`).join("")}</select></div>
         <div class="field" style="flex:1;min-width:130px"><label>¿Foto de qué?</label><select id="fkTipo">
           <option value="kia">🚗 Kia / campeones</option>
           <option value="pala">🥄 Cuchara de madera</option>
           <option value="mvp">🎖️ MVP</option>
           <option value="cafe">☕ Café</option>
+          <option value="perfil">👤 Foto de perfil</option>
         </select></div>
-        <button class="btn sm" id="fkPick">📷 Elegir foto</button>
+        <div class="field" style="flex:1;min-width:130px" id="fkFechaWrap"><label>Fecha</label><select id="fkFecha">${DATA.fechas.map(f=>`<option value="${f.f}">${fmtFecha(f.f)}${f.campeon?" 🏆":""}</option>`).join("")}</select></div>
+        <div class="field hidden" style="flex:1;min-width:130px" id="fkJugWrap"><label>Jugador</label><select id="fkJug">${DATA.jugadores.map(j=>`<option value="${esc(j.n)}">${esc(j.n)}</option>`).join("")}</select></div>
       </div>
-      <input id="fkFile" type="file" accept="image/*" class="hidden">
-      <div id="fkCrop" class="hidden" style="margin-top:10px">
-        <div id="fkFrame" style="position:relative;width:100%;max-width:330px;aspect-ratio:3/4;overflow:hidden;border-radius:12px;border:2px dashed var(--A);margin:0 auto;touch-action:none;cursor:grab;background:#000">
-          <img id="fkImg" alt="" style="position:absolute;left:0;top:0;transform-origin:0 0;user-select:none;-webkit-user-drag:none;max-width:none" draggable="false">
-        </div>
-        <div class="field" style="margin-top:8px"><label>Zoom</label><input id="fkZoom" type="range" min="100" max="300" value="100" style="width:100%"></div>
-        <div style="display:flex;gap:8px;margin-top:8px">
-          <button class="btn" id="fkSave" style="flex:1">⬇️ Descargar recortada</button>
-          <button class="btn ghost" id="fkGH" style="flex:1">🐙 Subirla a GitHub</button>
-        </div>
-        <div class="note" style="margin-top:6px;font-size:12px">1) "Descargar recortada" te baja el archivo ya con el nombre correcto (<b>fecha.jpg</b>). 2) "Subirla a GitHub" te abre la carpeta justa: Add file → Upload files → elegí el archivo → Commit. En 1-2 minutos aparece en la app.</div>
-      </div>
+      <button class="btn block" id="fkPub" style="margin-top:10px">📷 Elegir foto, recortar y publicar</button>
+      <button class="btn ghost sm block hidden" id="fkDel" style="margin-top:8px">🗑️ Sacar la foto publicada de esta selección</button>
     </div>
 
     <div class="card pad" style="margin-top:12px">
@@ -1948,8 +2103,8 @@ function bind(){
       compartirFlyer(f,statsInd());
     };
     const h2=new Date(), hoy2=h2.getFullYear()+"-"+String(h2.getMonth()+1).padStart(2,"0")+"-"+String(h2.getDate()).padStart(2,"0");
-    const fPend=DATA.fechas.find(x=>x.f<hoy2&&faltantesDe(x).length)||null;   // la última jugada con datos pendientes
-    const fProx=(DATA.fechas[0]&&!DATA.fechas[0].campeon&&DATA.fechas[0].f>=hoy2)?DATA.fechas[0]:null;
+    const fPend=fechaPendiente();   // la última jugada con datos pendientes (la de hoy cuenta desde las 11)
+    const fProx=(DATA.fechas[0]&&!DATA.fechas[0].campeon&&DATA.fechas[0].f>=hoy2&&DATA.fechas[0]!==fPend)?DATA.fechas[0]:null;
     const proponer=async f=>{
       if(!f||!faltantesDe(f).length){toast("No hay nada pendiente de cargar");return;}
       if(!USER){toast("Primero ingresá con Google (🔑 arriba)");window.fbLogin();return;}
@@ -1992,6 +2147,11 @@ function bind(){
     if(lr)lr.onclick=()=>cargarResultado(fPend||DATA.fechas[0]);
     const fx=document.getElementById("fixtureBtn");
     if(fx)fx.onclick=()=>{go("sorteo");requestAnimationFrame(()=>drawFixtureFecha(fProx));};
+    // 📲 instalar como app
+    const pw=document.getElementById("pwaBtn");
+    if(pw)pw.onclick=async()=>{ if(!PWAPROMPT)return; PWAPROMPT.prompt(); try{await PWAPROMPT.userChoice;}catch(e){} PWAPROMPT=null; render(); };
+    const pn=document.getElementById("pwaNo");
+    if(pn)pn.onclick=()=>{ try{localStorage.setItem("cb_pwahide","1");}catch(e){} render(); };
   }
 
   if(VIEW==="jugadores"){
@@ -2019,6 +2179,14 @@ function bind(){
       setDoc(doc(db,"usuarios",USER.uid),{email:USER.email,jugador:PARAM,vinculadoEl:Date.now()},{merge:true})
         .then(()=>{MYPLAYER=PARAM;try{localStorage.setItem("cb_myplayer",PARAM);}catch(e){}toast("⭐ ¡Perfil vinculado!");render();})
         .catch(()=>toast("⚠️ No se pudo vincular (faltan las reglas nuevas)"));
+    };
+    const fo=document.getElementById("fotoBtn"); // 📸 foto de perfil directa (admin)
+    if(fo)fo.onclick=async()=>{
+      const data=await cropFlow("1/1",`📸 Foto de perfil de ${PARAM}`);
+      if(!data)return;
+      toast("☁️ Publicando…");
+      try{await publicarFoto("perfil",slugName(PARAM),data);toast("📸 ¡Foto de perfil publicada!");}
+      catch(e){toast("⚠️ No se pudo publicar (¿faltan las reglas nuevas?)");}
     };
   }
 
@@ -2182,48 +2350,34 @@ function bind(){
       DATA.fechas.sort((a,b)=>b.f.localeCompare(a.f));
       save();toast("Fecha agregada");render();
     };
-    // 📸 cargador de foto del Kia con recorte
-    const fkPick=document.getElementById("fkPick");
-    if(fkPick){
-      const file=document.getElementById("fkFile"), img=document.getElementById("fkImg"),
-            frame=document.getElementById("fkFrame"), zoom=document.getElementById("fkZoom");
-      const st={x:0,y:0,scale:1,base:1,iw:0,ih:0};
-      const apply=()=>{img.style.transform=`translate(${st.x}px,${st.y}px) scale(${st.scale})`;};
-      const clamp=()=>{const fw=frame.clientWidth,fh=frame.clientHeight;
-        st.x=Math.min(0,Math.max(fw-st.iw*st.scale,st.x));
-        st.y=Math.min(0,Math.max(fh-st.ih*st.scale,st.y));};
-      fkPick.onclick=()=>file.click();
-      file.onchange=()=>{const f=file.files[0];if(!f)return;
-        img.onload=()=>{
-          st.iw=img.naturalWidth;st.ih=img.naturalHeight;
-          document.getElementById("fkCrop").classList.remove("hidden");
-          const fw=frame.clientWidth,fh=frame.clientHeight;
-          st.base=Math.max(fw/st.iw,fh/st.ih); // cubre el marco
-          st.scale=st.base;st.x=(fw-st.iw*st.base)/2;st.y=(fh-st.ih*st.base)/2;
-          zoom.value=100;apply();
-        };
-        img.src=URL.createObjectURL(f);
+    // 📸 fotos: elegir → recortar (modal) → publicar en la nube (aparece al instante)
+    const fkTipo=document.getElementById("fkTipo");
+    if(fkTipo){
+      const fkFecha=document.getElementById("fkFecha"), fkJug=document.getElementById("fkJug"),
+            fkDel=document.getElementById("fkDel"), wrapF=document.getElementById("fkFechaWrap"), wrapJ=document.getElementById("fkJugWrap");
+      const keyAct=()=>fkTipo.value==="perfil"?slugName(fkJug.value):fkFecha.value;
+      const upd=()=>{
+        wrapF.classList.toggle("hidden",fkTipo.value==="perfil");
+        wrapJ.classList.toggle("hidden",fkTipo.value!=="perfil");
+        fkDel.classList.toggle("hidden",!FOTOS[fotoKey(fkTipo.value,keyAct())]);
       };
-      zoom.oninput=()=>{const fw=frame.clientWidth,fh=frame.clientHeight;
-        const ns=st.base*zoom.value/100, cx=fw/2, cy=fh/2;
-        st.x=cx-(cx-st.x)*(ns/st.scale);st.y=cy-(cy-st.y)*(ns/st.scale);
-        st.scale=ns;clamp();apply();};
-      let drag=null;
-      frame.addEventListener("pointerdown",e=>{drag={x:e.clientX-st.x,y:e.clientY-st.y};try{frame.setPointerCapture(e.pointerId);}catch(err){}});
-      frame.addEventListener("pointermove",e=>{if(!drag)return;st.x=e.clientX-drag.x;st.y=e.clientY-drag.y;clamp();apply();});
-      frame.addEventListener("pointerup",()=>drag=null);
-      document.getElementById("fkSave").onclick=()=>{
-        if(!st.iw){toast("Primero elegí una foto");return;}
-        const f=document.getElementById("fkFecha").value;
-        const fw=frame.clientWidth,fh=frame.clientHeight;
-        const outW=1100,outH=Math.round(outW*fh/fw),k=outW/fw;
-        const cv=document.createElement("canvas");cv.width=outW;cv.height=outH;
-        cv.getContext("2d").drawImage(img,st.x*k,st.y*k,st.iw*st.scale*k,st.ih*st.scale*k);
-        const tipo=document.getElementById("fkTipo").value;
-        cv.toBlob(b=>{const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=`${f}.jpg`;a.click();
-          toast(`⬇️ ${f}.jpg descargada — subila a la carpeta fotos/${tipo} (el botón te lleva)`);},"image/jpeg",.85);
+      fkTipo.onchange=upd;fkFecha.onchange=upd;fkJug.onchange=upd;upd();
+      document.getElementById("fkPub").onclick=async()=>{
+        const t=fkTipo.value,k=keyAct();
+        const titulo=t==="perfil"?`📸 Foto de perfil de ${fkJug.value}`:`📸 Foto del ${fmtFecha(fkFecha.value)}`;
+        const data=await cropFlow(t==="perfil"?"1/1":"3/4",titulo);
+        if(!data)return;
+        toast("☁️ Publicando…");
+        try{await publicarFoto(t,k,data);toast("📸 ¡Publicada! Ya la ven todos en la app");upd();}
+        catch(e){
+          const a=document.createElement("a");a.href=data;a.download=`${k}.jpg`;a.click();
+          toast("⚠️ No se pudo publicar (¿faltan las reglas nuevas?) — te descargué el recorte para no perderlo");
+        }
       };
-      document.getElementById("fkGH").onclick=()=>window.open(`https://github.com/miguelippolito3-cloud/Padel-Copones-2026/upload/main/fotos/${document.getElementById("fkTipo").value}`,"_blank");
+      fkDel.onclick=async()=>{
+        if(!await uiConfirm("🗑️ ¿Sacar esta foto?","Se borra la foto publicada desde la app (si hay una subida al repo, vuelve a verse esa).","🗑️ Sí, sacala"))return;
+        try{await deleteDoc(doc(db,"fotos",fotoKey(fkTipo.value,keyAct())));toast("Foto borrada");}catch(e){toast("⚠️ No se pudo borrar");}
+      };
     }
     document.querySelectorAll("[data-delf]").forEach(b=>b.onclick=async()=>{
       const f=DATA.fechas[+b.dataset.delf]; if(!f)return;
