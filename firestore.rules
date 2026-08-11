@@ -63,6 +63,17 @@ service cloud.firestore {
       allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
     }
 
+    // 📸 Fotos publicadas desde la app (Kia, cuchara, MVP, café y fotos de perfil).
+    // Las ven todos los logueados; solo los admins las publican o borran.
+    // La foto viaja comprimida adentro del documento (límite: ~1MB por doc).
+    match /fotos/{id} {
+      allow read: if request.auth != null;
+      allow create, update: if esAdmin()
+        && request.resource.data.data is string
+        && request.resource.data.data.size() < 1000000;
+      allow delete: if esAdmin();
+    }
+
     // 🙋 Asistencia al próximo domingo: misma lógica que el prode.
     match /asistencia/{id} {
       allow read: if request.auth != null;

@@ -15,6 +15,8 @@ La app guarda todo en Firestore (Firebase). Lo que protege esos datos de un
 | Confirmar/borrar propuestas | Solo admins |
 | Agregar o quitar co-admins | Solo vos (los dueños) |
 | Ver la lista de usuarios logueados | Solo admins |
+| Ver las fotos publicadas desde la app | Cualquiera logueado |
+| Publicar o borrar fotos (Kia, cuchara, MVP, café, perfiles) | Solo admins |
 
 ## Cómo aplicarlas (2 minutos, una sola vez)
 
