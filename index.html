@@ -330,6 +330,7 @@ function textoResultados(f,st){ // el mensaje de resultados para WhatsApp (lo us
     txt+=`🚗🏆 *SE LLEVARON EL KIA:*\n${f.campeon.join(" & ")}\n`;
     const kias=Math.max(...f.campeon.map(n=>(st[n]||{}).camp||0));
     if(kias>1)txt+=`_(ya van ${kias} Kias en la temporada 😱)_\n`;
+    f.campeon.forEach(n=>{const r=rachaKiasDe(n,f.f);if(r>=2)txt+=`🔥 *MENCIÓN ESPECIAL:* ${n} no para de ganar — ${r} Kias al hilo 😱\n`;});
     txt+=`\n`;
   }
   if(f.pala)txt+=`🥄 *Cuchara de madera:* ${f.pala.join(" & ")}\n`;
@@ -541,11 +542,21 @@ function statsPar(list){
 function initials(n){return n.replace(/[^A-Za-zÀ-ÿ ]/g,"").trim().split(/\s+/).map(w=>w[0]).slice(0,2).join("").toUpperCase()||"?";}
 function avatarColor(n){const cols=["#e2102a","#2f7bff","#fb923c","#22c55e","#a78bfa","#f5c518","#ff5da2","#14b8a6"];let h=0;for(const ch of n)h=(h*31+ch.charCodeAt(0))>>>0;return cols[h%cols.length];}
 /* ---- \ud83d\udcf8 Fotos en la nube: se publican desde la app y las ven todos al instante ---- */
+const FOTOS_MAX=4; // hasta 4 fotos por premio y por fecha
 function fotoKey(tipo,k){return tipo+"_"+String(k).replace(/[^A-Za-z0-9_-]/g,"_");}
+function fotoSlotIds(tipo,k){const base=fotoKey(tipo,k);return [base,...Array.from({length:FOTOS_MAX-1},(_,i)=>base+"_"+(i+2))];}
 function fotoNube(tipo,k){const c=FOTOS[fotoKey(tipo,k)];return (c&&c.data)?c.data:null;}
+function fotosNube(tipo,k){return fotoSlotIds(tipo,k).map(id=>FOTOS[id]&&FOTOS[id].data).filter(Boolean);}
 function fotoSrc(tipo,k){return fotoNube(tipo,k)||`fotos/${tipo}/${k}.jpg`;} // nube primero, repo como respaldo
+function fotoCandidatas(tipo,k){ // todas: las de la nube + las posibles del repo (las inexistentes se ocultan solas)
+  return [...fotosNube(tipo,k),`fotos/${tipo}/${k}.jpg`,...Array.from({length:FOTOS_MAX-1},(_,i)=>`fotos/${tipo}/${k}-${i+2}.jpg`)];
+}
 async function publicarFoto(tipo,k,dataURL){
-  await setDoc(doc(db,"fotos",fotoKey(tipo,k)),{tipo,k:String(k),data:dataURL,por:(USER&&USER.email)||"admin",ts:Date.now()});
+  // perfil = una sola foto (se reemplaza); premios = hasta 4 fotos por fecha
+  const libre=tipo==="perfil"?fotoKey(tipo,k):fotoSlotIds(tipo,k).find(id=>!FOTOS[id]);
+  if(!libre)throw new Error("lleno");
+  await setDoc(doc(db,"fotos",libre),{tipo,k:String(k),data:dataURL,por:(USER&&USER.email)||"admin",ts:Date.now()});
+  FOTOS[libre]={tipo,k:String(k),data:dataURL}; // reflejo inmediato (el snapshot lo confirma despu\u00e9s)
 }
 function comprimirCanvas(cv){ // que entre en un documento de la nube (l\u00edmite ~1MB)
   let q=.82, url=cv.toDataURL("image/jpeg",q);
@@ -788,6 +799,7 @@ function renderTicker(){
   let bits=[];
   if(ult&&ult.campeon)bits.push(`<span class="rd">🚗 SE LLEVARON EL KIA</span> ${esc(ult.campeon.join(" & "))}`);
   if(ult&&ult.mvp)bits.push(`<span class="rd">🎖️ MVP</span> <b>${esc(ult.mvp)}</b>`);
+  if(ult&&ult.campeon)ult.campeon.forEach(n=>{const r=rachaKiasDe(n,ult.f);if(r>=2)bits.push(`<span class="rd">🔥 IMPARABLE</span> <b>${esc(n)}</b> (${r} Kias seguidos)`);});
   if(ult&&ult.pala)bits.push(`<span class="rd">🥄 CUCHARA</span> ${esc(ult.pala.join(" & "))}`);
   if(topC&&topC.camp)bits.push(`<span class="rd">👑 MÁS KIAS</span> <b>${esc(topC.n)}</b> (${topC.camp})`);
   if(topJ)bits.push(`<span class="rd">🔥 MÁS PRESENTE</span> <b>${esc(topJ.n)}</b> (${topJ.pj} fechas)`);
@@ -821,10 +833,11 @@ function vInicio(){
           ${ult.pala?`<div class="tag">🥄 Cuchara de madera: <b style="color:var(--txt)">${esc(ult.pala.join(" & "))}</b></div>`:""}
           ${ult.mvp?`<div class="tag">🎖️ MVP: <b style="color:var(--gold)">${esc(ult.mvp)}</b></div>`:""}
           ${ult.sinCafe&&ult.sinCafe.length?`<div class="tag">🏃 Sin café: <b style="color:var(--red2)">${esc(ult.sinCafe.join(", "))}</b></div>`:""}
+          ${ult.campeon.map(n=>{const r=rachaKiasDe(n,ult.f);return r>=2?`<div class="tag">🔥 <b style="color:#fb923c">${r}ª Kia al hilo de ${esc(n)}</b></div>`:"";}).join("")}
           <div class="tag">${ult.confirmada?'<span style="color:#4ade80">✅ Fecha confirmada por el organizador</span>':'<span style="color:#ffcf4d">⏳ A confirmar por el organizador</span>'}</div>
         </div>
         <div class="kiagrid fotoblock" style="grid-template-columns:repeat(4,1fr);margin-top:12px">
-          ${[["kia","🚗 Campeones"],["pala","🥄 Cuchara"],["mvp","🎖️ MVP"],["cafe","☕ Café"]].map(([t,lbl])=>{const s=fotoSrc(t,ult.f);return `<figure><img src="${esc(s)}" alt="" loading="lazy" data-foto="${esc(s)}" data-fototit="${lbl} · ${fmtFecha(ult.f)}" style="cursor:pointer" onerror="this.closest('figure').style.display='none'"><figcaption>${lbl}</figcaption></figure>`;}).join("")}
+          ${[["kia","🚗 Campeones"],["pala","🥄 Cuchara"],["mvp","🎖️ MVP"],["cafe","☕ Café"]].map(([t,lbl])=>fotoCandidatas(t,ult.f).map((s,i)=>`<figure><img src="${esc(s)}" alt="" loading="lazy" data-foto="${esc(s)}" data-fototit="${lbl} · ${fmtFecha(ult.f)}" style="cursor:pointer" onerror="this.closest('figure').style.display='none'"><figcaption>${i?"":lbl}</figcaption></figure>`).join("")).join("")}
         </div>
           <button class="btn" id="flyerBtn" style="flex:1.2;background:#25D366;color:#0a0b0d">🖼️ Flyer + texto al grupo</button>
           <button class="btn ghost" id="waShare" style="flex:1">📲 Solo texto</button>
@@ -1270,7 +1283,7 @@ async function cargarResultado(f){
     paint();
   });
   paint();
-  await new Promise(res=>{
+  const guardo=await new Promise(res=>{
     d.querySelector("[data-ok]").onclick=()=>{
       const cafeNew=est.cafeReg?[...est.sinCafe].sort():null;
       const cafeOld=antes.sinCafe?[...antes.sinCafe].sort():null;
@@ -1280,7 +1293,7 @@ async function cargarResultado(f){
       if(!igual(est.mvp,antes.mvp))cambios++;
       if(JSON.stringify(cafeNew)!==JSON.stringify(cafeOld))cambios++;
       uiClose();
-      if(!cambios){toast("No cambiaste nada — quedó todo como estaba");res();return;}
+      if(!cambios){toast("No cambiaste nada — quedó todo como estaba");res(false);return;}
       f.campeon=est.campeon;
       f.pala=est.pala;
       f.mvp=est.mvp;
@@ -1288,10 +1301,46 @@ async function cargarResultado(f){
       if(completa)(f.versiones||(f.versiones=[])).push({ts:Date.now(),por:(USER&&USER.email)||"admin (este dispositivo)",antes});
       f.confirmada=true; // la carga directa siempre la hace un admin
       save();toast(completa?"🕰️ Corregido — la versión anterior quedó en el historial":"Resultado cargado ✓");render();
-      res();
+      res(true);
     };
-    d.querySelector("[data-x]").onclick=()=>{uiClose();res();};
+    d.querySelector("[data-x]").onclick=()=>{uiClose();res(false);};
   });
+  if(guardo)await ofrecerFotos(f); // 📸 con el resultado guardado, la app ofrece cargar las fotos ahí mismo
+}
+async function ofrecerFotos(f){ // 📸 después de cargar el resultado: fotos del día, varias si hace falta
+  if(!CLOUD||!ISADMIN)return;
+  let primera=true;
+  while(true){
+    const v=await uiPick(primera?`📸 ¿Cargás las fotos del ${fmtFecha(f.f)}?`:`📸 ¿Otra foto más?`,
+      "Elegí de qué es, recortala y se publica al instante. Podés cargar varias (hasta 4 por premio).",[
+      {label:"🚗 Foto de los campeones con el Kia",value:"kia"},
+      {label:"🥄 Foto de la cuchara de madera",value:"pala"},
+      {label:"🎖️ Foto del MVP",value:"mvp"},
+      {label:"☕ Foto del café",value:"cafe"},
+      {label:primera?"✅ Ahora no, sin fotos":"✅ Listo, no hay más fotos",value:"fin"}
+    ]);
+    if(!v||v==="fin")return;
+    const data=await cropFlow("3/4",`📸 Foto del ${fmtFecha(f.f)}`);
+    if(!data){primera=false;continue;}
+    toast("☁️ Publicando…");
+    try{await publicarFoto(v,f.f,data);toast("📸 ¡Publicada! Ya la ven todos");render();}
+    catch(e){
+      if(e&&e.message==="lleno"){toast("Ya hay 4 fotos de eso en esta fecha — podés borrar alguna desde Admin");}
+      else{explicarReglasFoto(data,f.f);return;}
+    }
+    primera=false;
+  }
+}
+function explicarReglasFoto(data,nombre){ // la nube rechazó la foto: falta el paso único de las reglas
+  if(data){const a=document.createElement("a");a.href=data;a.download=`${nombre}.jpg`;a.click();}
+  const d=uiShow("⚠️ La nube rechazó la foto","No es tu culpa: falta un paso ÚNICO de configuración (las reglas de seguridad). Se hace una sola vez y las fotos quedan andando para siempre.",`
+    <div class="note" style="margin-bottom:10px">1) Tocá el botón de abajo (entrás con tu Google).<br>2) Borrá lo que hay, pegá las reglas del archivo <b>firestore.rules</b> y tocá <b>Publicar</b>.<br>3) Volvé y cargá la foto de nuevo.<br><br>El recorte ya se descargó a tu teléfono, así no lo perdés.</div>
+    <button class="mok" data-cons>🔧 Abrir la pantalla de reglas</button>
+    <button class="mopt" data-rules style="text-align:center">📄 Ver las reglas para copiar</button>
+    <button class="mcancel" data-x>Cerrar</button>`);
+  d.querySelector("[data-cons]").onclick=()=>window.open("https://console.firebase.google.com/project/padel-copones/firestore/rules","_blank");
+  d.querySelector("[data-rules]").onclick=()=>window.open("https://raw.githubusercontent.com/miguelippolito3-cloud/Padel-Copones-2026/main/firestore.rules","_blank");
+  d.querySelector("[data-x]").onclick=uiClose;
 }
 
 /* ---------- CONVOCATORIA: parejas, canchas y fecha ---------- */
@@ -1478,6 +1527,15 @@ function proxJuego(){ // próximo domingo 8:30 (si el de hoy ya se jugó, el que
   return {f,d};
 }
 function rachaActualDe(n){ let r=0; for(const f of DATA.fechas){ if(f.parejas.some(t=>t.includes(n)))r++; else break; } return r; }
+function rachaKiasDe(n,desdeF){ // 🔥 Kias consecutivos ganados (cuenta solo fechas con campeón cargado)
+  let r=0;
+  for(const f of DATA.fechas){
+    if(desdeF&&f.f>desdeF)continue;
+    if(!f.campeon)continue;
+    if(f.campeon.includes(n))r++; else break;
+  }
+  return r;
+}
 function rachasTop(){ // rachas vivas (jugó la última)
   if(!DATA.fechas.length)return [];
   return DATA.jugadores.map(j=>({n:j.n,r:rachaActualDe(j.n)})).filter(x=>x.r>=3).sort((a,b)=>b.r-a.r).slice(0,3);
@@ -1562,6 +1620,7 @@ function datoSemanal(){ // 📊 el dato del lunes (rota por semana)
   const datos=[];
   const tops=rachasTop(); if(tops.length)datos.push(`🔥 ${tops[0].n} lleva ${tops[0].r} domingos seguidos sin faltar. ¿Quién lo baja?`);
   DATA.jugadores.forEach(j=>{const u=DATA.fechas.slice(0,5).filter(f=>f.campeon);const w=u.filter(f=>f.campeon.includes(j.n)).length;if(w>=3)datos.push(`😱 ${j.n} ganó ${w} de los últimos ${u.length} Kias. Está para el dopaje.`);});
+  DATA.jugadores.forEach(j=>{const r=rachaKiasDe(j.n);if(r>=2)datos.push(`🔥 ${j.n} viene de ganar ${r} fechas seguidas. ¿Nadie lo va a bajar del Kia?`);});
   let nD=0;for(const f of DATA.fechas){if(!f.campeon)continue;if(f.campeon.some(x=>coponDe(x)==="D"))break;nD++;}
   if(nD>=5)datos.push(`🧊 Hace ${nD} fechas con campeón que un copón D no toca el Kia.`);
   const rj=[...arr].sort((a,b)=>(b.nocafe||0)-(a.nocafe||0))[0];
@@ -2185,8 +2244,8 @@ function bind(){
       const data=await cropFlow("1/1",`📸 Foto de perfil de ${PARAM}`);
       if(!data)return;
       toast("☁️ Publicando…");
-      try{await publicarFoto("perfil",slugName(PARAM),data);toast("📸 ¡Foto de perfil publicada!");}
-      catch(e){toast("⚠️ No se pudo publicar (¿faltan las reglas nuevas?)");}
+      try{await publicarFoto("perfil",slugName(PARAM),data);toast("📸 ¡Foto de perfil publicada!");render();}
+      catch(e){explicarReglasFoto(data,slugName(PARAM));}
     };
   }
 
@@ -2356,10 +2415,13 @@ function bind(){
       const fkFecha=document.getElementById("fkFecha"), fkJug=document.getElementById("fkJug"),
             fkDel=document.getElementById("fkDel"), wrapF=document.getElementById("fkFechaWrap"), wrapJ=document.getElementById("fkJugWrap");
       const keyAct=()=>fkTipo.value==="perfil"?slugName(fkJug.value):fkFecha.value;
+      const slotsAct=()=>fotoSlotIds(fkTipo.value,keyAct()).filter(id=>FOTOS[id]);
       const upd=()=>{
         wrapF.classList.toggle("hidden",fkTipo.value==="perfil");
         wrapJ.classList.toggle("hidden",fkTipo.value!=="perfil");
-        fkDel.classList.toggle("hidden",!FOTOS[fotoKey(fkTipo.value,keyAct())]);
+        const n=slotsAct().length;
+        fkDel.classList.toggle("hidden",!n);
+        if(n)fkDel.textContent=`🗑️ Sacar la${n===1?"":"s"} ${n===1?"foto publicada":n+" fotos publicadas"} de esta selección`;
       };
       fkTipo.onchange=upd;fkFecha.onchange=upd;fkJug.onchange=upd;upd();
       document.getElementById("fkPub").onclick=async()=>{
@@ -2370,13 +2432,14 @@ function bind(){
         toast("☁️ Publicando…");
         try{await publicarFoto(t,k,data);toast("📸 ¡Publicada! Ya la ven todos en la app");upd();}
         catch(e){
-          const a=document.createElement("a");a.href=data;a.download=`${k}.jpg`;a.click();
-          toast("⚠️ No se pudo publicar (¿faltan las reglas nuevas?) — te descargué el recorte para no perderlo");
+          if(e&&e.message==="lleno")toast("Ya hay 4 fotos acá — sacá alguna con el botón de abajo");
+          else explicarReglasFoto(data,k);
         }
       };
       fkDel.onclick=async()=>{
-        if(!await uiConfirm("🗑️ ¿Sacar esta foto?","Se borra la foto publicada desde la app (si hay una subida al repo, vuelve a verse esa).","🗑️ Sí, sacala"))return;
-        try{await deleteDoc(doc(db,"fotos",fotoKey(fkTipo.value,keyAct())));toast("Foto borrada");}catch(e){toast("⚠️ No se pudo borrar");}
+        const ids=slotsAct();
+        if(!await uiConfirm("🗑️ ¿Sacar estas fotos?",`Se borra${ids.length===1?" la foto publicada":"n las "+ids.length+" fotos publicadas"} desde la app (si hay alguna subida al repo, vuelve a verse esa).`,"🗑️ Sí"))return;
+        try{for(const id of ids){await deleteDoc(doc(db,"fotos",id));delete FOTOS[id];}toast("Fotos borradas");upd();render();}catch(e){toast("⚠️ No se pudo borrar");}
       };
     }
     document.querySelectorAll("[data-delf]").forEach(b=>b.onclick=async()=>{
