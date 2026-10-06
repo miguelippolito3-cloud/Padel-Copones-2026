@@ -395,11 +395,12 @@ const RENOMBRES=[["Rafa","Mike Rafa"]]; // correcciones automáticas de una sola
 const PARCHES=[
   { id:"2026-10-06-fechas-sep-oct", aplicar:d=>{
     const fechaNueva=f=>{ if(!d.fechas.some(x=>x.f===f.f)) d.fechas.push(f); };
-    fechaNueva({f:"2026-09-06",parejas:[["Calambre","Track"],["Toto","TIS"]],campeon:["Calambre","Track"],pala:["Toto","TIS"],confirmada:true});
-    fechaNueva({f:"2026-09-13",parejas:[["Pachuza","Bati"],["Mike Rafa","Track"]],campeon:["Mike Rafa","Track"],pala:["Pachuza","Bati"],mvp:"Mike Rafa",confirmada:true});
-    fechaNueva({f:"2026-09-20",parejas:[["TIS","Negro Mon"],["Chuck","Track"]],campeon:["TIS","Negro Mon"],pala:["Chuck","Track"],confirmada:true});
-    fechaNueva({f:"2026-09-27",parejas:[["Mike Rafa","Matso"],["Taya","Negro Mon"],["TIS","Charly"],["Pachuza","Pati"],["Chichón","Chuck"],["Track","Toto"]],campeon:["TIS","Charly"],pala:null,confirmada:true});
-    fechaNueva({f:"2026-10-04",parejas:[["Chichón","Pachuza"],["Mike Rafa","Track"],["Gato","Chuck"],["Toto","Maren"]],campeon:["Mike Rafa","Track"],pala:["Chichón","Pachuza"],confirmada:true});
+    // fotoQuien = quién aparece en cada foto, de izquierda a derecha
+    fechaNueva({f:"2026-09-06",parejas:[["Calambre","Track"],["Toto","TIS"]],campeon:["Calambre","Track"],pala:["Toto","TIS"],confirmada:true,fotoQuien:{kia:["Calambre","Track"]}});
+    fechaNueva({f:"2026-09-13",parejas:[["Pachuza","Bati"],["Mike Rafa","Track"]],campeon:["Mike Rafa","Track"],pala:["Pachuza","Bati"],mvp:"Mike Rafa",confirmada:true,fotoQuien:{kia:["Mike Rafa","Track"]}});
+    fechaNueva({f:"2026-09-20",parejas:[["TIS","Negro Mon"],["Chuck","Track"]],campeon:["TIS","Negro Mon"],pala:["Chuck","Track"],confirmada:true,fotoQuien:{kia:["TIS","Negro Mon"]}});
+    fechaNueva({f:"2026-09-27",parejas:[["Mike Rafa","Matso"],["Taya","Negro Mon"],["TIS","Charly"],["Pachuza","Pati"],["Chichón","Chuck"],["Track","Toto"]],campeon:["TIS","Charly"],pala:null,confirmada:true,fotoQuien:{kia:["TIS","Charly"]}});
+    fechaNueva({f:"2026-10-04",parejas:[["Chichón","Pachuza"],["Mike Rafa","Track"],["Gato","Chuck"],["Toto","Maren"]],campeon:["Mike Rafa","Track"],pala:["Chichón","Pachuza"],confirmada:true,fotoQuien:{kia:["Mike Rafa","Track"],pala:["Pachuza"]}});
     // 30/8: el sorteo fue "Toto/Chicho" y se cargó Chico (Lucas Ferrarese) por error.
     // Café según Pachu ese día: se quedaron Juli (Track), Juanchi, TIS, Chicho y él.
     const f30=d.fechas.find(x=>x.f==="2026-08-30");
@@ -621,13 +622,19 @@ function toast(t){const el=document.getElementById("toast");el.textContent=t;el.
 
 /* ---------- MODALES PROPIOS (reemplazan a prompt/confirm) ---------- */
 function uiClose(){const m=document.getElementById("uimodal");if(m)m.remove();}
-function verFoto(url,titulo){ // 📸 visor interno: la foto se abre EN la app (nada de pestañas nuevas)
+function quienEnFoto(f,tipo,src){ // "👈 Mike Rafa · Track 👉": solo para la foto del repo, que es la identificada
+  const q=f&&f.fotoQuien&&f.fotoQuien[tipo];
+  if(!Array.isArray(q)||!q.length||src!==`fotos/${tipo}/${f.f}.jpg`)return "";
+  return q.length===1?q[0]:`👈 ${q.join(" · ")} 👉`;
+}
+function verFoto(url,titulo,quien){ // 📸 visor interno: la foto se abre EN la app (nada de pestañas nuevas)
   const prev=document.getElementById("fotoview"); if(prev)prev.remove();
   const d=document.createElement("div");
   d.id="fotoview"; d.className="modal-ov"; d.style.zIndex="95";
   d.innerHTML=`<div style="max-width:94vw;max-height:88vh;text-align:center">
     <img src="${esc(url)}" alt="" style="max-width:94vw;max-height:78vh;border-radius:14px;border:1px solid var(--line);box-shadow:0 10px 40px rgba(0,0,0,.55)">
     ${titulo?`<div class="tag" style="margin-top:10px;justify-content:center;display:flex">${titulo}</div>`:""}
+    ${quien?`<div style="margin-top:6px;font-weight:800;font-size:15px">${esc(quien)}</div>`:""}
     <div class="note" style="margin-top:6px;text-align:center">Tocá en cualquier lado para volver</div></div>`;
   d.onclick=()=>d.remove();
   document.body.appendChild(d);
@@ -880,7 +887,7 @@ function vInicio(){
           <div class="tag">${ult.confirmada?'<span style="color:#4ade80">✅ Fecha confirmada por el organizador</span>':'<span style="color:#ffcf4d">⏳ A confirmar por el organizador</span>'}</div>
         </div>
         <div class="kiagrid fotoblock" style="grid-template-columns:repeat(4,1fr);margin-top:12px">
-          ${[["kia","🚗 Campeones"],["pala","🥄 Cuchara"],["mvp","🎖️ MVP"],["cafe","☕ Café"]].map(([t,lbl])=>fotoCandidatas(t,ult.f).map((s,i)=>`<figure><img src="${esc(s)}" alt="" loading="lazy" data-foto="${esc(s)}" data-fototit="${lbl} · ${fmtFecha(ult.f)}" style="cursor:pointer" onerror="this.closest('figure').style.display='none'"><figcaption>${i?"":lbl}</figcaption></figure>`).join("")).join("")}
+          ${[["kia","🚗 Campeones"],["pala","🥄 Cuchara"],["mvp","🎖️ MVP"],["cafe","☕ Café"]].map(([t,lbl])=>fotoCandidatas(t,ult.f).map((s,i)=>`<figure><img src="${esc(s)}" alt="" loading="lazy" data-foto="${esc(s)}" data-fototit="${lbl} · ${fmtFecha(ult.f)}" data-fotoquien="${esc(quienEnFoto(ult,t,s))}" style="cursor:pointer" onerror="this.closest('figure').style.display='none'"><figcaption>${i?"":lbl}</figcaption></figure>`).join("")).join("")}
         </div>
           <button class="btn" id="flyerBtn" style="flex:1.2;background:#25D366;color:#0a0b0d">🖼️ Flyer + texto al grupo</button>
           <button class="btn ghost" id="waShare" style="flex:1">📲 Solo texto</button>
@@ -1162,13 +1169,13 @@ function vPerfil(name){
         const kias=allFechas().filter(f=>f.campeon&&f.campeon.includes(name)).map(f=>({f,src:fotoNube("kia",f.f)||f.fotoKia||`fotos/kia/${f.f}.jpg`}));
         return kias.length?`<div class="row fotoblock" style="display:block;border-bottom:0">
           <div class="tag" style="margin-bottom:4px">🚗 Sus fotos con el Kia</div>
-          <div class="kiagrid">${kias.map(k=>`<figure><img src="${esc(k.src)}" alt="Campeones ${fmtFecha(k.f.f)}" loading="lazy" data-foto="${esc(k.src)}" data-fototit="🏆 ${esc(k.f.campeon.join(' & '))} · ${fmtFecha(k.f.f)}" style="cursor:pointer" onerror="this.closest('figure').style.display='none'"><figcaption>${fmtFecha(k.f.f)} · con ${esc((k.f.campeon.find(x=>x!==name))||"")}</figcaption></figure>`).join("")}</div>
+          <div class="kiagrid">${kias.map(k=>`<figure><img src="${esc(k.src)}" alt="Campeones ${fmtFecha(k.f.f)}" loading="lazy" data-foto="${esc(k.src)}" data-fototit="🏆 ${esc(k.f.campeon.join(' & '))} · ${fmtFecha(k.f.f)}" data-fotoquien="${esc(quienEnFoto(k.f,"kia",k.src))}" style="cursor:pointer" onerror="this.closest('figure').style.display='none'"><figcaption>${fmtFecha(k.f.f)} · con ${esc((k.f.campeon.find(x=>x!==name))||"")}</figcaption></figure>`).join("")}</div>
         </div>`:"";})()}
       ${(()=>{ // 🥄 galería de cucharas retratadas (solo si existe la foto del día)
         const palas=allFechas().filter(f=>Array.isArray(f.pala)&&f.pala.includes(name));
         return palas.length?`<div class="row fotoblock" style="display:block;border-bottom:0">
           <div class="tag" style="margin-bottom:4px">🥄 Sus cucharas retratadas</div>
-          <div class="kiagrid">${palas.map(f=>{const s=fotoSrc("pala",f.f);return `<figure><img src="${esc(s)}" alt="" loading="lazy" data-foto="${esc(s)}" data-fototit="🥄 ${esc(f.pala.join(' & '))} · ${fmtFecha(f.f)}" style="cursor:pointer" onerror="this.closest('figure').style.display='none'"><figcaption>${fmtFecha(f.f)}</figcaption></figure>`;}).join("")}</div>
+          <div class="kiagrid">${palas.map(f=>{const s=fotoSrc("pala",f.f);return `<figure><img src="${esc(s)}" alt="" loading="lazy" data-foto="${esc(s)}" data-fototit="🥄 ${esc(f.pala.join(' & '))} · ${fmtFecha(f.f)}" data-fotoquien="${esc(quienEnFoto(f,"pala",s))}" style="cursor:pointer" onerror="this.closest('figure').style.display='none'"><figcaption>${fmtFecha(f.f)}</figcaption></figure>`;}).join("")}</div>
         </div>`:"";})()}
       <button class="btn block" id="share" style="margin-top:14px">📲 Compartir mis estadísticas</button>
       ${CLOUD?(MYPLAYER===name
@@ -2171,7 +2178,7 @@ function parseDuo(s){const p=(s||"").split(",").map(x=>x.trim()).filter(Boolean)
 
 /* ================= BIND ================= */
 function bind(){
-  document.querySelectorAll("[data-foto]").forEach(el=>el.onclick=e=>{e.stopPropagation();verFoto(el.dataset.foto,el.dataset.fototit||"");});
+  document.querySelectorAll("[data-foto]").forEach(el=>el.onclick=e=>{e.stopPropagation();verFoto(el.dataset.foto,el.dataset.fototit||"",el.dataset.fotoquien||"");});
   // si ninguna foto del bloque existe, se oculta el bloque entero (título incluido)
   setTimeout(()=>{document.querySelectorAll(".fotoblock").forEach(bl=>{const figs=[...bl.querySelectorAll("figure")];if(figs.length&&figs.every(f=>f.style.display==="none"))bl.style.display="none";});},1500);
   document.querySelectorAll("[data-go2]").forEach(b=>b.onclick=()=>go(b.dataset.go2));
