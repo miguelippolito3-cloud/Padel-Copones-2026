@@ -422,6 +422,10 @@ const PARCHES=[
     apodo("Pachuza","Tapiachu"); apodo("Gato","Cat"); apodo("Calambre","Feke"); apodo("Calambre","Fecke");
     d.fechas.sort((a,b)=>b.f.localeCompare(a.f));
   }},
+  { id:"2026-10-10-parejas-11-10", aplicar:d=>{ // parejas del sorteo del 11/10 (las pasó Mike desde el modo pantalla)
+    if(!d.fechas.some(x=>x.f==="2026-10-11")) d.fechas.push({f:"2026-10-11",parejas:[["Pati","Taya"],["Negro Mon","Mike Rafa"],["TIS","Pachuza"],["Chichón","Chuck"],["Alba","MP"],["Don (Diegui)","Bati"],["Matso","Calambre"],["Track","Toto"]],campeon:null,pala:null,mvp:null});
+    d.fechas.sort((a,b)=>b.f.localeCompare(a.f));
+  }},
 ];
 let PARCHE_PENDIENTE=false; // se aplicó un parche que la nube todavía no tiene
 const LS="padel_espn_v1";
