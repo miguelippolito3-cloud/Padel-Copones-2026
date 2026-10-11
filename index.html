@@ -179,7 +179,7 @@
   .field label{font-family:"Barlow Condensed";font-weight:700;font-size:12px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase}
   input,select,textarea{background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:11px 12px;font-family:inherit;font-size:16px;font-weight:600}
   input:focus,select:focus{outline:none;border-color:var(--red)}
-  #drawMsg{scroll-margin-top:calc(64px + env(safe-area-inset-top))} /* que no lo tape la barra de arriba */
+  #drawMsg,.hero,#prodeCard{scroll-margin-top:calc(64px + env(safe-area-inset-top))} /* que no lo tape la barra de arriba */
   .savebar{margin-top:10px;padding:10px 12px;border:1px solid var(--red);border-radius:12px;background:rgba(226,16,42,.07);color:var(--txt)}
   .savebar .warn{color:var(--red2)} .savebar.ok{border-color:#22c55e;background:rgba(34,197,94,.08)} .savebar.info{border-color:var(--line);background:var(--card2)}
   .pairwrap{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-top:12px}
@@ -392,8 +392,50 @@ const FIREBASE_CONFIG = {
 };
 const ADMINS = ["miguelippolito3@gmail.com","miguel.ippolito@grupomitre.com.ar"];
 const APP_URL="https://miguelippolito3-cloud.github.io/Padel-Copones-2026/";
+// 🔗 link directo a una sección (#ranking, #perfil=Nombre…); los paréntesis también van codificados, así WhatsApp no corta el link
+function linkApp(v,p){ return APP_URL+"#"+v+(p?"="+encodeURIComponent(p).replace(/[()!'*]/g,c=>"%"+c.charCodeAt(0).toString(16).toUpperCase()):""); }
 function shareWA(txt){ window.open("https://wa.me/?text="+encodeURIComponent(txt),"_blank"); }
-function textoResultados(f,st){ // el mensaje de resultados para WhatsApp (lo usan el botón de texto y el flyer)
+/* 🪝 GANCHOS para el grupo: "lo que no está en el flyer". Todo sale de los datos de ESA fecha: si no es verdad, no aparece.
+   Prioridad: ranking › prode › logro secreto › fotos › novedad de la app › hito. Van hasta 4. */
+const NOVEDADES=[ // se anuncian solo en las 2 primeras fechas después de publicarlas (corte fijo: no se toca DATA)
+  {desde:"2026-10-11",hasta:"2026-10-18",txt:"⚔️ Nuevo: *Cara a cara* — compará tus números con cualquiera",corto:"⚔️ NUEVO: CARA A CARA",v:"jugadores"}];
+function posRanking(list){ const orden=(a,b)=>b.camp-a.camp||b.pj-a.pj, arr=Object.values(statsInd(list)).sort(orden), pu=puestos(arr,orden), r={}; arr.forEach((p,i)=>r[p.n]=pu[i]); return r; } // puesto de cada uno (mismo orden y empates que la tabla)
+function fechaCorta(s){ return fmtFecha(s).replace(/ \d{4}$/,""); } // "18 oct"
+function hayFotosDe(f){ return ["kia","pala","mvp","cafe","grupo"].some(t=>fotosNube(t,f.f).length||FOTO_OK.has(`fotos/${t}/${f.f}.jpg`)); } // 📸 solo las que existen: de la nube o del repo ya cargadas
+function rachaHasta(n,f){ let r=0; for(const x of fechasJugadas().filter(x=>x.f<=f.f)){ if(x.parejas.some(t=>t.includes(n)))r++; else break; } return r; }
+function prodeAbierto(){ const f0=DATA.fechas[0]; return f0&&!f0.campeon&&f0.parejas.length>=2&&f0.f>=hoyISO()&&!prodeCerrado(f0.f)?f0:null; }
+function ganchosFecha(f){ try{ return ganchosDe(f); }catch(e){ console.warn(e); return {lista:[],mov:false}; } } // un dato raro no deja sin mensaje
+function ganchosDe(f){ // → {lista:[{txt,corto,url}], mov: ¿alguien cambió de puesto?}
+  const g=[], add=(txt,corto,v,p)=>g.push({txt,corto,url:linkApp(v,p)}), pl=(n,uno,v)=>n===1?uno:`${n} ${v}`;
+  // 📈 ranking: antes vs. después de esta fecha (sin decir quién: ese es el anzuelo)
+  const antes=posRanking(DATA.fechas.filter(x=>x.f<f.f)), desp=posRanking(DATA.fechas.filter(x=>x.f<=f.f));
+  const dif=Object.keys(desp).filter(n=>antes[n]).map(n=>antes[n]-desp[n]), max=Math.max(0,...dif), cuantos=dif.filter(d=>d===max).length;
+  if(dif.length){
+    const top=(p,k)=>Object.keys(p).filter(n=>p[n]<=k);
+    const punta=top(desp,1).filter(n=>antes[n]!==1), entraron=top(desp,3).filter(n=>!(antes[n]<=3)), salieron=top(antes,3).filter(n=>!(desp[n]<=3));
+    if(punta.length)add(top(antes,1).every(n=>desp[n]===1)?"👑 Alguien *alcanzó la punta del ranking* 👀":"👑 *Hay nuevo puntero en el ranking* 👀","👑 ¿QUIÉN QUEDÓ PUNTERO?","ranking");
+    else if(entraron.length)add(`🥉 *Cambió el podio del ranking*: ${pl(entraron.length,"uno entró","entraron")}${salieron.length?" y "+pl(salieron.length,"otro se cayó","se cayeron"):""} 👀`,"🥉 ¿QUIÉN ENTRÓ AL PODIO?","ranking");
+    else if(max>=2)add(`📈 *¿Quién trepó más en el ranking?* ${cuantos===1?"Uno subió":cuantos+" subieron"} ${max} puestos 👀`,`📈 ¿${cuantos===1?"QUIÉN TREPÓ":"QUIÉNES TREPARON"} ${max} PUESTOS?`,"ranking");
+  }
+  // 🎲 prode de la fecha que viene (ya sorteada y sin cerrar)
+  const px=prodeAbierto(); if(px&&px.f>f.f)add(`🎲 Ya podés jugar el *prode del ${fechaCorta(px.f)}*: ¿quién se lleva el Kia?`,`🎲 PRODE DEL ${+px.f.slice(8)}/${+px.f.slice(5,7)} ABIERTO`,"inicio");
+  // 🔓 logros secretos que se destrabaron ESE día (no se dice de quién)
+  const jugaron=[...new Set(f.parejas.flat())].filter(n=>!esGenerico(n)), hasta=allFechas().filter(x=>x.f<=f.f), previas=hasta.filter(x=>x.f<f.f);
+  const indA=statsInd(previas), indD=statsInd(hasta), sec=(n,ind,l)=>logrosSecretos(n,ind[n]||{},l).map(b=>b[1]);
+  const nSec=jugaron.reduce((a,n)=>{const v=new Set(sec(n,indA,previas));return a+sec(n,indD,hasta).filter(t=>!v.has(t)).length;},0);
+  if(nSec)add(nSec===1?"🔓 Alguien destrabó un *logro secreto* 🤫":`🔓 Se destrabaron *${nSec} logros secretos* 🤫`,nSec===1?"🔓 UN LOGRO SECRETO DESTRABADO":`🔓 ${nSec} LOGROS SECRETOS DESTRABADOS`,"jugadores");
+  if(hayFotosDe(f))add("📸 Ya están las *fotos del domingo* en la app","📸 LAS FOTOS DEL DÍA","inicio");
+  NOVEDADES.filter(n=>f.f>=n.desde&&f.f<=n.hasta).forEach(n=>add(n.txt,n.corto,n.v));
+  // 🎉 un hito de alguien que jugó: su 1er Kia › fechas redondas › la racha de asistencia más larga (5+)
+  const primera=(f.campeon||[]).find(n=>!esGenerico(n)&&!(indA[n]||{}).camp);
+  const redondo=jugaron.find(n=>{const k=(indD[n]||{}).pj||0;return k>=10&&(k%10===0||k===25||k===75);});
+  const racha=jugaron.map(n=>({n,r:rachaHasta(n,f)})).sort((a,b)=>b.r-a.r)[0];
+  if(primera)add(`🐣 *${primera}* se llevó el *primer Kia* de su vida 🚗`,`🐣 EL 1ER KIA DE ${primera.toUpperCase()}`,"perfil",primera);
+  else if(redondo)add(`🎉 *${redondo}* cumplió *${indD[redondo].pj} fechas* en el grupo`,`🎉 ${indD[redondo].pj} FECHAS DE ${redondo.toUpperCase()}`,"perfil",redondo);
+  else if(racha&&racha.r>=5)add(`🔥 *${racha.n}* ya lleva *${racha.r} fechas seguidas* sin faltar`,`🔥 ${racha.r} SEGUIDAS DE ${racha.n.toUpperCase()}`,"perfil",racha.n);
+  return {lista:g.slice(0,4),mov:dif.some(d=>d)};
+}
+function textoResultados(f,st,flyer){ // el mensaje de resultados para WhatsApp (lo usan el botón de texto y el flyer)
   let txt=`🎾🔥 *PÁDEL COPONES BV*\n📅 Resultados del ${fmtFecha(f.f)}\n\n`;
   if(f.campeon){
     txt+=`🚗🏆 *SE LLEVARON EL KIA:*\n${f.campeon.join(" & ")}\n`;
@@ -407,7 +449,9 @@ function textoResultados(f,st){ // el mensaje de resultados para WhatsApp (lo us
   if(Array.isArray(f.sinCafe))txt+=f.sinCafe.length
     ?`🏃 *Se rajaron sin café:* ${f.sinCafe.join(", ")} 👀\n`
     :`☕ *Café:* se quedaron todos 👏\n`;
-  txt+=`\n👉 *Mirá el ranking, tu perfil y tus logros en la app:*\n${APP_URL}\n\n_Copones Buena Vista · Domingos 8:30 🎾_`;
+  const g=ganchosFecha(f); // 🪝 lo que no está en el flyer, cada uno con su link directo
+  if(g.lista.length)txt+=`\n${flyer?"🤫 *Lo que no está en el flyer:*":"👀 *Y en la app hay más:*"}\n`+g.lista.map(x=>`${x.txt}\n${x.url}`).join("\n")+"\n";
+  txt+=`\n👉 *${g.mov?"Buscá tu nombre: ¿subiste o bajaste?":"Mirá cómo quedó el ranking"}*\n${linkApp("ranking")}\n\n_Copones Buena Vista · Domingos 8:30 🎾_`;
   return txt;
 }
 /* 📲 App instalable (PWA): service worker + botón de instalar */
@@ -569,6 +613,7 @@ if(CLOUD){
     AUTHREADY=true;
     USER=u;ISADMIN=!!(u&&ADMINS.includes(u.email));MILINK=null;
     if(u){
+      try{sessionStorage.removeItem("cb_volver");}catch(e){} // ya entró: la sección del link ya está en pantalla
       // registra el ingreso (para el panel de usuarios del admin)
       setDoc(doc(db,"usuarios",u.uid),{email:u.email,nombre:u.displayName||"",ultimoIngreso:Date.now()},{merge:true}).catch(()=>{});
       // ⭐ Este soy yo: recupera el jugador vinculado a esta cuenta
@@ -640,6 +685,7 @@ function subAdmin(){ // suscripciones en vivo que solo necesita el admin
   onSnapshot(collection(db,"admins"),qs=>{COADMINS=qs.docs.map(x=>({id:x.id,...x.data()}));if(VIEW==="admin")renderVivo();});
 }
 window.fbLogin=async()=>{
+  try{sessionStorage.setItem("cb_volver",location.hash);}catch(e){} // 🔗 si el login vuelve por redirección sin el #, se recupera la sección del link
   try{ await signInWithPopup(auth,new GoogleAuthProvider()); }
   catch(e){
     // en celulares el popup suele estar bloqueado: probamos con redirección
@@ -1029,6 +1075,7 @@ function route(v,p){
   const m=document.getElementById("uimodal");
   if(m){ const mx=m.querySelector("[data-mx]"); if(mx)mx.click(); else m.remove(); }
   const bs=document.querySelector(".bigshow"); if(bs)bs.click();
+  if(VIEW==="inicio"&&(v||"inicio")!=="inicio"&&DV_PEND)guardarVisto(DV_PEND); // 👋 te fuiste del Inicio: "Desde tu última visita" ya la viste
   POS[HASH_VISTO]=window.scrollY; HASH_VISTO=location.hash||"#inicio"; // dónde quedó la pantalla que se deja
   const y=VOLVIENDO?(POS[HASH_VISTO]||0):0; VOLVIENDO=false;
   VIEW=v||"inicio";PARAM=p||null; marcarNav(); render(true); arriba(y);
@@ -1050,6 +1097,8 @@ function vBloqueo(){ // 🔒 sin sesión no se ve NADA: bienvenida + login oblig
       ${AUTHREADY
         ?`<div class="note" style="margin-bottom:14px">La app del grupo: <b>ranking histórico</b>, <b>perfiles con fotos</b>, el <b>prode del Kia</b> 🎲, el sorteo transparente 🥁 y la lista de anotados del domingo 🙋.<br><br><b>Es solo para los del grupo:</b> registrate una única vez con tu cuenta de Google y entrás directo para siempre.</div>
       <button class="btn block" onclick="fbLogin()">🔑 Ingresar / Registrarme con Google</button>
+      ${(()=>{const d={ranking:"📊 el ranking",jugadores:"👤 los perfiles",sorteo:"🎾 el sorteo"}[VIEW]||(VIEW==="perfil"&&PARAM?`👤 el perfil de <b>${esc(PARAM)}</b>`:"");
+        return d?`<div class="note" id="lockDest" style="margin-top:10px;color:var(--txt)">👉 Después de ingresar vas directo a ${d}</div>`:"";})()}
       <div class="note" style="margin-top:10px;font-size:12px">Domingos 8:30 · Gracias Kia 🚗</div>`
         :`<div class="note">Verificando tu sesión…</div>`}
     </div>
@@ -1188,6 +1237,52 @@ function domingoHTML(prox){
     ${h}
   </div>`;
 }
+/* 👋 DESDE TU ÚLTIMA VISITA: lo que cambió desde la última vez que viste el Inicio EN ESTE CELU (localStorage cb_visto).
+   Queda vista con "👍 Listo" o al salir del Inicio (lo más simple: si te fuiste, ya la viste). La 1ª vez no muestra nada: guarda cómo está todo. */
+let DV_PEND=null, DV_MIO=null; // la foto del estado que se está mostrando (se guarda al darla por vista) y lo tuyo para el grupo
+function logrosTodos(n){ const ind=statsInd(allFechas())[n]; return ind?[...logrosDe(ind).map(([e,t])=>e+" "+t),...logrosSecretos(n,ind).map(([e,t])=>"✨ "+e+" "+t)]:[]; }
+function estadoVisita(){ // última fecha con resultado, puesto de cada uno, tus logros y el prode abierto
+  const ult=DATA.fechas.find(f=>f.campeon), px=prodeAbierto(), yo=MYPLAYER||null;
+  return {f:ult?ult.f:null,ini:(DATA.fechas[DATA.fechas.length-1]||{}).f||null,pos:posRanking(DATA.fechas),yo,logros:yo?logrosTodos(yo):[],prode:px?px.f:null,ts:Date.now()};
+}
+function guardarVisto(s){ try{localStorage.setItem("cb_visto",JSON.stringify(s));}catch(e){} DV_PEND=null; }
+function visitaHTML(){ try{ return visitaDe(); }catch(e){ console.warn(e); DV_PEND=DV_MIO=null; try{localStorage.removeItem("cb_visto");}catch(e2){} return ""; } } // roto: arranca de cero la próxima
+function visitaDe(){
+  DV_PEND=DV_MIO=null;
+  if(!DATA.fechas.length||(CLOUD&&(!USER||!hayNubeFresca())))return ""; // solo con los datos frescos de la nube
+  let v=null; try{v=JSON.parse(localStorage.getItem("cb_visto")||"null");}catch(e){}
+  const hoy=estadoVisita(), yo=hoy.yo, it=[], mio=[], pl=(n,s,p)=>n+" "+(n===1?s:p), fila=(h,attr)=>`<div class="row"${attr||""}><span>${h}</span>${attr?"<span>→</span>":""}</div>`;
+  if(!v||!v.pos||typeof v.pos!=="object"){ guardarVisto(hoy); return ""; } // primera vez en este celu (o guardado roto): sin aluvión
+  const nuevas=v.f?DATA.fechas.filter(f=>f.campeon&&f.f>v.f):[], ult=DATA.fechas.find(f=>f.campeon);
+  nuevas.slice(0,3).forEach(f=>it.push(fila(`🆕 <b>${fechaCorta(f.f)}</b> · 🚗 ${esc(f.campeon.join(" & "))}${f.mvp?` · 🎖️ ${esc(f.mvp)}`:""}${Array.isArray(f.pala)&&f.pala.length?` · 🥄 ${esc(f.pala.join(" & "))}`:""}`,f===ult?' data-dvhero role="link" tabindex="0"':"")));
+  if(nuevas.length>3)it.push(`<div class="note">… y ${pl(nuevas.length-3,"fecha más","fechas más")} 📅</div>`);
+  if(yo)nuevas.forEach(f=>{ // 🏆 tu premio del día
+    if(!f.parejas.some(p=>p.includes(yo)))return;
+    const d=fechaCorta(f.f), comp=f.campeon.filter(n=>n!==yo).join(" & "), a=` data-perfil="${esc(yo)}"`;
+    if(f.campeon.includes(yo)){it.push(fila(`🚗 <b>¡Te llevaste el Kia el ${d}!</b>`,a));mio.push(`🚗 ¡Me llevé el Kia el ${d}${comp?" con "+comp:""}!`);}
+    if(f.mvp===yo){it.push(fila(`🎖️ <b>¡Fuiste el MVP del ${d}!</b>`,a));mio.push(`🎖️ ¡Fui el MVP del ${d}! 😎`);}
+    if(Array.isArray(f.pala)&&f.pala.includes(yo)){it.push(fila(`🥄 Te tocó la cuchara de madera el ${d} 🙈`,a));mio.push(`🥄 Me tocó la cuchara de madera el ${d} 🙈`);}
+  });
+  const pa=yo&&v.ini===hoy.ini?v.pos[yo]:0, pb=yo?hoy.pos[yo]:0; // 📈 tu puesto (misma temporada)
+  if(pa&&pb&&(pa!==pb||nuevas.length)){
+    it.push(fila(pa>pb?`📈 <b>Subiste ${pl(pa-pb,"puesto","puestos")}</b> en el ranking: ahora estás <b>${pb}º</b>`:pa<pb?`📉 Bajaste ${pl(pb-pa,"puesto","puestos")} en el ranking: ahora estás <b>${pb}º</b>`:`➖ Seguís <b>${pb}º</b> en el ranking`,' data-go2="ranking" role="link" tabindex="0"'));
+    if(pa>pb)mio.push(`📈 Subí ${pl(pa-pb,"puesto","puestos")} en el ranking: ahora estoy ${pb}º`);
+  }
+  if(yo&&v.yo===yo&&Array.isArray(v.logros)){ const ya=new Set(v.logros); // 🏅 logros nuevos (los secretos, solo a vos)
+    hoy.logros.filter(k=>!ya.has(k)).forEach(k=>it.push(fila(k.startsWith("✨ ")?`✨ <b>Logro secreto:</b> ${esc(k.slice(2))}`:`🏅 <b>Logro nuevo:</b> ${esc(k)}`,` data-perfil="${esc(yo)}"`))); }
+  const px=prodeAbierto();
+  if(px&&px.f!==v.prode&&!miProdeDe(px.f))it.push(fila(`🎲 Ya podés jugar el <b>prode del ${fechaCorta(px.f)}</b>`,' data-dvprode role="link" tabindex="0"'));
+  if(!it.length){ guardarVisto(hoy); return ""; } // nada nuevo para vos: queda al día sin mostrar nada
+  DV_PEND=hoy; DV_MIO=mio.length?mio:null;
+  return `<div class="card pad" id="desdeVisita" style="border-color:var(--A);box-shadow:0 0 14px rgba(245,197,24,.18)">
+    <div class="tag" style="margin-bottom:2px;color:var(--aT)">👋 Desde tu última visita</div>
+    ${it.join("")}
+    <div style="display:flex;gap:8px;margin-top:10px">
+      ${DV_MIO?`<button class="btn sm" id="dvShare" style="flex:2;background:#25D366;color:#0a0b0d;white-space:nowrap">📲 Contalo en el grupo</button>`:""}
+      <button class="btn ghost sm" id="dvOk" style="flex:1">👍 Listo</button>
+    </div>
+  </div>`;
+}
 function vInicio(){
   const ind=statsInd(), arr=Object.values(ind);
   const h=new Date(), hoyS=h.getFullYear()+"-"+String(h.getMonth()+1).padStart(2,"0")+"-"+String(h.getDate()).padStart(2,"0");
@@ -1243,7 +1338,7 @@ function vInicio(){
   const prodeHTML=CLOUD&&USER&&fProde?(()=>{ // 🎲 PRODE: abierto hasta las 8:30 del domingo; desde ahí, cerrado hasta que se carga el Kia
     const mio=miProdeDe(fProde.f), cerrado=prodeCerrado(fProde.f);
     const cuantos=PRODE.filter(x=>x.f===fProde.f).length;
-    return `<div class="card pad" style="border-color:#7c3aed">
+    return `<div class="card pad" id="prodeCard" style="border-color:#7c3aed">
       <div class="tag" style="margin-bottom:6px;color:var(--lilaT)">🎲 PRODE · ¿Quién se lleva el Kia?${cerrado?" · 🔒 CERRADO":""}</div>
       ${mio?`<div class="note" style="margin-bottom:8px">Tu pronóstico: <b style="color:var(--lilaT)">🎯 ${esc(Array.isArray(mio.pareja)?mio.pareja.map(nombreActual).join(" & "):"?")}</b></div>`
            :`<div class="note" style="margin-bottom:8px">${cerrado?"No jugaste pronóstico esta vez.":"Jugá tu pronóstico hasta el domingo a las 8:30 (ahí se cierra). No vale plata, vale honor."}</div>`}
@@ -1254,6 +1349,7 @@ function vInicio(){
   return `
   <section class="dash">
     ${CLOUD&&CLOUDSTATE==="conectando"&&!DATA.fechas.length?`<div class="card pad" style="text-align:center;margin-bottom:12px"><div style="font-size:30px">☁️</div><div class="note">Cargando datos de la nube…</div></div>`:""}
+    ${visitaHTML()}
     ${ISADMIN&&CLOUD&&PROPUESTAS.length?`<div class="card pad" style="border-color:#7c3aed;box-shadow:0 0 14px rgba(124,58,237,.25)">
       <div class="tag" style="margin-bottom:8px;color:var(--lilaT)">📥 ${PROPUESTAS.length===1?"HAY 1 PROPUESTA":"HAY "+PROPUESTAS.length+" PROPUESTAS"} ESPERANDO TU CONFIRMACIÓN</div>
       <div class="note" style="margin-bottom:10px">Alguien del grupo cargó datos de una fecha. Revisalos y confirmalos con un toque.</div>
@@ -1866,9 +1962,8 @@ function guardarParches(){ // un admin con la nube conectada deja los parches gu
 }
 
 /* ---------- LOGROS ---------- */
-function badgesHTML(ind,name){
+function logrosDe(ind){ // los que se ven en el perfil (los secretos van aparte)
   const b=[];
-  const secretos=name?logrosSecretos(name,ind):[];
   if(ind.camp>=1)b.push(["🚗","Se llevó el Kia"]);
   if(ind.camp>=3)b.push(["🏎️","Concesionaria Kia (3+)"]);
   if(ind.mvp>=1)b.push(["🎖️","MVP del día"]);
@@ -1878,6 +1973,11 @@ function badgesHTML(ind,name){
   if(ind.nocafe>=3)b.push(["🏃","Rajador serial (3+ sin café)"]);
   if(ind.pala>=1)b.push(["🥄","Catador de Blindex"]);
   if(ind.camp===0&&ind.pj>=8)b.push(["🧊","Bola fría (8+ fechas sin Kia)"]);
+  return b;
+}
+function badgesHTML(ind,name){
+  const b=logrosDe(ind);
+  const secretos=name?logrosSecretos(name,ind):[];
   if(!b.length&&!secretos.length&&!name)return "";
   const faltan=Math.max(0,SECRETOS_TOTAL-secretos.length);
   return `<div class="row" style="display:block;border-bottom:0">
@@ -1960,14 +2060,21 @@ async function flyerResultado(f){
     b.ls.forEach((l,i)=>x.fillText(l,vx,y+rh/2+4+(i-(b.ls.length-1)/2)*(b.s+8)));
     y+=rh+gap;
   });
-  // pie (derecha primero, para que la URL no se le encime)
-  x.textAlign="right";x.font=anton(36);x.fillStyle="#f4f6fa";x.fillText("DOMINGOS 8:30",W-64,H-148);
-  x.font='700 22px "Barlow Condensed"';x.fillStyle="#98a0ad";sp("4px");x.fillText("NOS VEMOS EN LA CANCHA",W-64,H-108);sp("0px");
-  x.textAlign="left";
-  x.font='700 27px "Barlow Condensed"';x.fillStyle="#98a0ad";x.fillText("RANKING COMPLETO, PERFILES Y LOGROS 👇",64,H-148);
-  const url="miguelippolito3-cloud.github.io/Padel-Copones-2026";
-  const us=fit(url,28,s=>`800 ${s}px Inter`,W-128-340);
-  x.font=`800 ${us}px Inter`;x.fillStyle="#f5c518";x.fillText(url,64,H-106);
+  // 📲 franja de la app al pie: 1-2 ganchos (los mismos del texto, en corto) + la URL legible. Se achica hasta entrar: nunca se corta
+  const encaja=(t,base,tpl,maxW)=>{let s=base;x.font=tpl(s);while(s>10&&x.measureText(t).width>maxW){s--;x.font=tpl(s);}return s;};
+  const fy=1134, fh=170, mw=W-132-60, barlow=s=>`700 ${s}px "Barlow Condensed"`;
+  g=x.createLinearGradient(66,0,W-66,0);g.addColorStop(0,"rgba(245,197,24,.18)");g.addColorStop(1,"rgba(124,58,237,.26)");
+  rr(66,fy,W-132,fh,24);x.fillStyle=g;x.fill();x.strokeStyle="#f5c518";x.lineWidth=3;x.stroke();
+  x.textAlign="center";x.font=barlow(24);x.fillStyle="#f5c518";sp("6px");x.fillText("👀 LO QUE NO ESTÁ EN EL FLYER",W/2,fy+36);sp("0px");
+  const gs=ganchosFecha(f).lista.map(o=>o.corto);
+  let gl=gs.length?gs.slice(0,2).join("  ·  "):"RANKING, PERFILES, FOTOS Y LOGROS", gz=encaja(gl,46,anton,mw);
+  if(gs.length>1&&gz<30){gl=gs[0];gz=encaja(gl,46,anton,mw);} // si los 2 no entran grandes, va 1 solo
+  x.fillStyle="#fff";x.font=anton(gz);x.fillText(gl,W/2,fy+88);
+  const url="miguelippolito3-cloud.github.io/Padel-Copones-2026", pre="ENTRÁ 👉 ";
+  encaja(pre+url,38,barlow,mw);
+  const w1=x.measureText(pre).width, x0=W/2-(w1+x.measureText(url).width)/2;
+  x.textAlign="left";x.fillStyle="#f4f6fa";x.fillText(pre,x0,fy+136);x.fillStyle="#f5c518";x.fillText(url,x0+w1,fy+136);
+  x.textAlign="center";x.font=barlow(22);x.fillStyle="#98a0ad";sp("4px");x.fillText("DOMINGOS 8:30 · NOS VEMOS EN LA CANCHA",W/2,H-22);sp("0px");
   return cv;
 }
 async function compartirFlyer(f,st){
@@ -1976,7 +2083,7 @@ async function compartirFlyer(f,st){
     const cv=await flyerResultado(f);
     const blob=await new Promise(r=>cv.toBlob(r,"image/png"));
     const file=new File([blob],`copones-${f.f}.png`,{type:"image/png"});
-    const txt=textoResultados(f,st);
+    const txt=textoResultados(f,st,true);
     if(navigator.canShare&&navigator.canShare({files:[file]})){
       await navigator.share({files:[file],text:txt}); // en WhatsApp la imagen entra con el texto de epígrafe
     }else{ // sin Web Share (ej: compu): baja la imagen y abre WhatsApp con el texto
@@ -2156,20 +2263,20 @@ async function abrirComparar(a){ // ⚔️ elegir con quién (los que más coinc
   d.onclick=e=>{if(e.target===d)uiClose();};
 }
 const SECRETOS_TOTAL=10;
-function logrosSecretos(name,ind){ // 🏅 se revelan solo al desbloquearse
-  const b=[];
-  const fs=[...allFechas()].filter(f=>f.parejas.some(p=>p.includes(name)));
+function logrosSecretos(name,ind,fl){ // 🏅 se revelan solo al desbloquearse (fl: con qué fechas; por defecto, todas)
+  fl=fl||allFechas(); const b=[];
+  const fs=fl.filter(f=>f.parejas.some(p=>p.includes(name)));
   const asc=[...fs].sort((a,b)=>a.f.localeCompare(b.f));
   if(Object.keys(ind.comp||{}).length>=10)b.push(["🤝","Hermano de todos (jugó con 10+ compañeros)"]);
-  const champComp=new Set();allFechas().forEach(f=>{if(f.campeon&&f.campeon.includes(name))f.campeon.forEach(x=>{if(x!==name)champComp.add(x);});});
+  const champComp=new Set();fl.forEach(f=>{if(f.campeon&&f.campeon.includes(name))f.campeon.forEach(x=>{if(x!==name)champComp.add(x);});});
   if(champComp.size>=3)b.push(["🎰","Gana con cualquiera (Kia con 3+ compañeros distintos)"]);
   let sp=0,spx=0;asc.forEach(f=>{if(f.pala&&f.pala.includes(name)){sp++;spx=Math.max(spx,sp);}else sp=0;});
   if(spx>=2)b.push(["🥄🥄","Coleccionista serial (2 cucharas seguidas)"]);
-  if(allFechas().some(f=>f.campeon&&f.campeon.includes(name)&&f.mvp===name))b.push(["💎","La doble perfecta (Kia + MVP el mismo día)"]);
+  if(fl.some(f=>f.campeon&&f.campeon.includes(name)&&f.mvp===name))b.push(["💎","La doble perfecta (Kia + MVP el mismo día)"]);
   let cs=0,c2=0;asc.forEach(f=>{if(f.campeon&&f.campeon.includes(name)){cs++;c2=Math.max(c2,cs);}else cs=0;});
   if(c2>=2)b.push(["🔁","Bicampeón (2 domingos seguidos)"]);
   if(asc.length&&asc[0].campeon&&asc[0].campeon.includes(name))b.push(["🐣","Debut soñado (campeón en su primera fecha)"]);
-  if(rachaMaxDe(allFechas(),name)>=10)b.push(["⛓️","Inoxidable (10+ fechas seguidas)"]);
+  if(rachaMaxDe(fl,name)>=10)b.push(["⛓️","Inoxidable (10+ fechas seguidas)"]);
   if((ind.pj||0)>=20)b.push(["🐔","Gallo del domingo (20+ fechas)"]);
   if((ind.cafe||0)>=10)b.push(["🫖","Socio vitalicio del café (10+)"]);
   if((ind.camp||0)>=1&&(ind.pala||0)>=1)b.push(["🎭","Del cielo al Blindex (tiene Kia y cuchara)"]);
@@ -2858,6 +2965,14 @@ function bind(){
         toast("🎲 ¡Pronóstico jugado! Se resuelve el domingo");
       }catch(e){toast("⚠️ No se pudo guardar (¿reglas actualizadas?)");}
     };
+    // 👋 desde tu última visita: Listo, ir al resultado / al prode y contarlo en el grupo
+    const dvo=document.getElementById("dvOk"); if(dvo)dvo.onclick=()=>{guardarVisto(DV_PEND||estadoVisita());render();};
+    const dvh=document.querySelector("[data-dvhero]"), hero=document.querySelector("#app .hero"); if(dvh)dvh.onclick=()=>{if(hero)hero.scrollIntoView({behavior:suave(),block:"start"});};
+    const dvp=document.querySelector("[data-dvprode]"), pc=document.getElementById("prodeCard"); if(dvp)dvp.onclick=()=>{if(pc)pc.scrollIntoView({behavior:suave(),block:"start"});};
+    document.querySelectorAll('#desdeVisita [role="link"]').forEach(el=>el.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();el.click();}});
+    const dsh=document.getElementById("dvShare");
+    if(dsh)dsh.onclick=async()=>{ const yo=MYPLAYER, t=`🎾 *Copones BV*\n${(DV_MIO||[]).join("\n")}\n\n👉 Mirá mi perfil: ${linkApp("perfil",yo)}`;
+      if(navigator.share){try{await navigator.share({text:t});}catch(e){}} else shareWA(t); };
     // 📊 compartir el dato del lunes
     const ds=document.getElementById("datoShare");
     if(ds)ds.onclick=()=>{const dato=datoSemanal();if(dato)shareWA(`📊 *EL DATO DEL LUNES* · Copones BV\n\n${dato.replace(/<[^>]+>/g,"")}\n\n👉 Toda la data: ${APP_URL}`);};
@@ -3267,6 +3382,7 @@ function bind(){
 
 /* ================= INIT ================= */
 (function init(){
+  if(!location.hash)try{const v=sessionStorage.getItem("cb_volver");if(v&&v.length>1){history.replaceState(history.state,"",v);HASH_VISTO=v;}}catch(e){} // 🔗 volvió del login de Google sin el #: a la sección del link
   const h=location.hash.slice(1);
   if(h){const [v,p]=h.split("=");VIEW=v||"inicio";PARAM=p?decodeURIComponent(p):null;}
   if(history.state&&history.state.ov)try{history.replaceState(null,"");}catch(e){} // recargó con un modal abierto: esa entrada ya no tiene modal
