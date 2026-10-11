@@ -600,22 +600,29 @@ async function pedirCopon(nombre){
   ]);
   return v||"B";
 }
+// 👥 "Invitado" (o "Invitado sorpresa", "Invitada"…) es un comodín que junta a distintas personas:
+// no se rankea como jugador, pero la fecha cuenta igual para su compañero.
+function esGenerico(n){ return /^\s*invitad[oa]s?\b/i.test(String(n)); }
 function todosLosNombres(){
   const s=new Set(DATA.jugadores.map(j=>j.n));
-  DATA.fechas.forEach(f=>f.parejas.forEach(p=>p.forEach(n=>s.add(n))));
+  DATA.fechas.forEach(f=>f.parejas.forEach(p=>p.forEach(n=>{ if(!esGenerico(n))s.add(n); })));
   return [...s];
 }
 function allFechas(){ return [...DATA.fechas, ...((DATA.historial||[]).flatMap(t=>t.fechas||[]))].sort((a,b)=>b.f.localeCompare(a.f)); }
+// 📅 ¿ya se jugó? Ya pasó, es hoy y ya son las 11 (mismo corte que fechasPendientes) o ya tiene campeón.
+// Una fecha sorteada que todavía no se jugó no suma en ninguna estadística (la ven la próxima fecha y el sorteo).
+function fechaJugada(f){ const hoy=hoyISO(); return !!f.campeon||f.f<hoy||(f.f===hoy&&new Date().getHours()>=11); }
+function fechasJugadas(l){ return (l||DATA.fechas).filter(fechaJugada); }
 function eachFechaArr(d){ return [d.fechas||[], ...(((d&&d.historial)||[]).map(t=>t.fechas||[]))]; }
-function statsInd(list){
-  list=list||DATA.fechas;
+function statsInd(list,conGen){ // conGen: incluir a los genéricos (solo para el perfil del propio "Invitado")
+  list=fechasJugadas(list);
   const m={};
-  const get=n=>m[n]||(m[n]={n,pj:0,camp:0,pala:0,mvp:0,cafe:0,nocafe:0,cafeReg:0,comp:{}});
+  const get=n=>!conGen&&esGenerico(n)?{comp:{}}:(m[n]||(m[n]={n,pj:0,camp:0,pala:0,mvp:0,cafe:0,nocafe:0,cafeReg:0,comp:{}}));
   list.forEach(f=>{
     const enFecha=new Set();
     f.parejas.forEach(team=>{
       team.forEach(n=>enFecha.add(n));
-      team.forEach(a=>team.forEach(b=>{ if(a!==b) get(a).comp[b]=(get(a).comp[b]||0)+1; }));
+      team.forEach(a=>team.forEach(b=>{ if(a!==b&&(conGen||!esGenerico(b))) get(a).comp[b]=(get(a).comp[b]||0)+1; }));
     });
     enFecha.forEach(n=>get(n).pj++);
     if(f.campeon){f.campeon.forEach(n=>get(n).camp++);}
@@ -629,11 +636,11 @@ function statsInd(list){
   return m;
 }
 function statsPar(list){
-  list=list||DATA.fechas;
+  list=fechasJugadas(list);
   const m={};
   list.forEach(f=>{
     f.parejas.forEach(team=>{
-      if(team.length!==2) return;
+      if(team.length!==2||team.some(esGenerico)) return; // "X & Invitado" no es una pareja para rankear
       const [a,b]=team;
       const k=key(a,b); const o=m[k]||(m[k]={a,b,veces:0,camp:0});
       o.veces++;
@@ -986,7 +993,7 @@ function renderTicker(){
   if(topJ)bits.push(`<span class="rd">🔥 MÁS PRESENTE</span> <b>${esc(topJ.n)}</b> (${topJ.pj} fechas)`);
   const topR=[...arr].sort((a,b)=>b.nocafe-a.nocafe)[0];
   if(topR&&topR.nocafe)bits.push(`<span class="rd">🏃 SE RAJA SIN CAFÉ</span> <b>${esc(topR.n)}</b> (${topR.nocafe})`);
-  bits.push(`<b>${DATA.fechas.length}</b> fechas registradas`);
+  bits.push(`<b>${fechasJugadas().length}</b> fechas jugadas`);
   bits.push(`<b>${todosLosNombres().length}</b> jugadores`);
   const line=bits.join(" &nbsp;•&nbsp; ");
   document.getElementById("ticker").innerHTML=line+" &nbsp;•&nbsp; "+line;
@@ -1031,7 +1038,7 @@ function vInicio(){
       </div>`;
     }
   }
-  const totalFechas=DATA.fechas.length;
+  const totalFechas=fechasJugadas().length; // la sorteada que todavía no se jugó no suma
   const totalCamp=DATA.fechas.filter(f=>f.campeon).length;
   return `
   <section>
@@ -1176,29 +1183,32 @@ function vRanking(){
       <button data-t="prode" class="${RKTAB==='prode'?'on':''}">🎲 Adivinos</button>
     </div>
     <div class="card" id="rktable">${RKTAB==='jug'?tablaJug():RKTAB==='par'?tablaPar():tablaProde()}</div>
-    <div class="note" style="margin-top:10px">PJ = fechas jugadas · 🚗 = Kias (campeonatos) · 🎖️ = MVP del día · 🥄 = cucharas de madera · ☕ = se quedó al café · 🏃 = se rajó sin café. Tocá un nombre para ver su perfil.</div>
+    <div class="note" style="margin-top:10px">PJ = fechas jugadas · 🚗 = Kias (campeonatos) · 🎖️ = MVP del día · 🥄 = cucharas de madera · ☕ = se quedó al café · 🏃 = se rajó sin café. Orden: más 🚗; a igualdad, más PJ; si siguen iguales, comparten puesto. «Invitado» no se rankea (la fecha le cuenta al compañero). Tocá un nombre para ver su perfil.</div>
   </section>`;
 }
+// 🏅 puesto compartido: los empates exactos llevan el mismo número (1, 2, 2, 4…) sin tocar el orden
+function puestos(arr,cmp){ const r=[]; arr.forEach((x,i)=>r.push(i&&!cmp(arr[i-1],x)?r[i-1]:i+1)); return r; }
 function tablaJug(){
   const orden=(a,b)=>b.camp-a.camp||b.pj-a.pj;
-  const arr=Object.values(statsInd(seasonFechas())).sort(orden);
+  const arr=Object.values(statsInd(seasonFechas())).sort(orden), pu=puestos(arr,orden);
   if(!arr.length)return `<div class="empty">Sin datos</div>`;
-  // 📈 movimiento vs. la semana pasada (sin la última fecha)
-  const prevPos={};
-  if(RKSEASON==="actual"&&DATA.fechas.length>1){
-    Object.values(statsInd(DATA.fechas.slice(1))).sort(orden).forEach((p,i)=>prevPos[p.n]=i);
+  // 📈 movimiento vs. la semana pasada: puesto de hoy contra el de antes de la última fecha JUGADA
+  const prevPos={}, jug=fechasJugadas();
+  if(RKSEASON==="actual"&&jug.length>1){
+    const prev=Object.values(statsInd(jug.slice(1))).sort(orden), pp=puestos(prev,orden);
+    prev.forEach((p,i)=>prevPos[p.n]=pp[i]);
   }
   const mv=(n,i)=>{
     if(RKSEASON!=="actual")return "";
     if(prevPos[n]===undefined)return ' <small class="mvx" style="color:#4ade80;font-weight:800">🆕</small>';
-    const d=prevPos[n]-i;
+    const d=prevPos[n]-pu[i];
     if(d>0)return ` <small class="mvx" style="color:#4ade80;font-weight:800">▲${d}</small>`;
     if(d<0)return ` <small class="mvx" style="color:var(--red2);font-weight:800">▼${-d}</small>`;
     return ' <small class="mvx" style="color:var(--muted)">=</small>';
   };
   return `<table class="stand"><thead><tr><th>Jugador</th><th>PJ</th><th>🚗</th><th>🎖️</th><th>🥄</th><th>☕</th><th>🏃</th></tr></thead><tbody>
     ${arr.map((p,i)=>`<tr>
-      <td><span class="rk ${i<3?'g'+(i+1):''}">${i+1}</span><span class="pname" data-perfil="${esc(p.n)}">${chip(p.n)} <span class="nm">${esc(p.n)}</span></span>${mv(p.n,i)}</td>
+      <td><span class="rk ${pu[i]<=3?'g'+pu[i]:''}">${pu[i]}</span><span class="pname" data-perfil="${esc(p.n)}">${chip(p.n)} <span class="nm">${esc(p.n)}</span></span>${mv(p.n,i)}</td>
       <td style="text-align:right"><span class="big">${p.pj}</span></td>
       <td style="text-align:right;color:var(--gold);font-weight:800">${p.camp||"·"}</td>
       <td style="text-align:right;color:var(--A);font-weight:800">${p.mvp||"·"}</td>
@@ -1209,11 +1219,12 @@ function tablaJug(){
   </tbody></table>`;
 }
 function tablaPar(){
-  const arr=Object.values(statsPar(seasonFechas())).sort((a,b)=>b.camp-a.camp||b.veces-a.veces);
+  const orden=(a,b)=>b.camp-a.camp||b.veces-a.veces;
+  const arr=Object.values(statsPar(seasonFechas())).sort(orden), pu=puestos(arr,orden);
   if(!arr.length)return `<div class="empty">Sin datos</div>`;
   return `<table class="stand"><thead><tr><th>Pareja</th><th>Veces</th><th>🏆</th></tr></thead><tbody>
     ${arr.slice(0,40).map((p,i)=>`<tr>
-      <td><span class="rk ${i<3?'g'+(i+1):''}">${i+1}</span> <b>${esc(p.a)}</b> <span class="amp">&</span> <b>${esc(p.b)}</b></td>
+      <td><span class="rk ${pu[i]<=3?'g'+pu[i]:''}">${pu[i]}</span> <b>${esc(p.a)}</b> <span class="amp">&</span> <b>${esc(p.b)}</b></td>
       <td style="text-align:right"><span class="big">${p.veces}</span></td>
       <td style="text-align:right;color:var(--gold);font-weight:800">${p.camp||"·"}</td>
     </tr>`).join("")}
@@ -1227,7 +1238,7 @@ function vJugadores(){
   const q=PQ.trim().toLowerCase();
   const match=(n,real)=>!q||n.toLowerCase().includes(q)||(real||"").toLowerCase().includes(q);
   const roster=new Set(DATA.jugadores.map(j=>j.n));
-  const inv=todosLosNombres().filter(n=>!roster.has(n)&&n!=="Invitado"&&match(n,"")).sort();
+  const inv=todosLosNombres().filter(n=>!roster.has(n)&&match(n,"")).sort(); // sin "Invitado": todosLosNombres ya lo saca
   return `<section>
     <div class="sechead"><span class="bar"></span><h2>Plantel</h2><span class="sub">${DATA.jugadores.length} jugadores</span></div>
     <input id="psearch" placeholder="🔍 Buscar jugador o apodo…" value="${esc(PQ)}" style="width:100%;margin-bottom:12px">
@@ -1258,12 +1269,14 @@ function copName(c){return c?("Copón "+esc(c)):"Invitado/otro";}
 /* ---------- PERFIL ---------- */
 function vPerfil(name){
   if(!name)return vJugadores();
-  const ind=statsInd(allFechas())[name]||{n:name,pj:0,camp:0,pala:0,mvp:0,comp:{}};
+  const gen=esGenerico(name); // el perfil del comodín "Invitado" muestra lo suyo, pero no se rankea
+  const ind=statsInd(allFechas(),gen)[name]||{n:name,pj:0,camp:0,pala:0,mvp:0,comp:{}};
   const col=avatarColor(name), c=coponDe(name);
   const comps=Object.entries(ind.comp||{}).sort((a,b)=>b[1]-a[1]).slice(0,3);
-  const fechas=allFechas().filter(f=>f.parejas.some(p=>p.includes(name)));
+  const todas=allFechas().filter(f=>f.parejas.some(p=>p.includes(name)));
+  const fechas=todas.filter(fechaJugada), proximas=todas.filter(f=>!fechaJugada(f)); // la sorteada sin jugar va aparte
   const winPct=ind.pj?Math.round(ind.camp/ind.pj*100):0;
-  let racha=0; for(const f of DATA.fechas){ if(f.parejas.some(t=>t.includes(name)))racha++; else break; }
+  const racha=rachaActualDe(name);
   return `<section>
     <button class="btn ghost sm" data-go2="jugadores" style="margin-bottom:14px">← Perfiles</button>
     <div class="card pad">
@@ -1273,6 +1286,7 @@ function vPerfil(name){
           :`<div class="pav" style="background:${col}">${initials(name)}</div>`;})()}
         <div><div class="pn">${esc(name)}</div><div class="pm">${chip(name)} ${copName(c)}${realDe(name)?" · "+esc(realDe(name)):""}</div></div>
       </div>
+      ${gen?`<div class="note" style="margin-top:10px">👥 «${esc(name)}» es un comodín que junta a distintas personas: no se rankea. Cada fecha le cuenta igual a su compañero.</div>`:""}
       <div class="pills" style="margin-top:14px">
         <div class="pill"><div class="n">${ind.pj}</div><div class="k">Fechas</div></div>
         <div class="pill"><div class="n" style="color:var(--gold)">${ind.camp}</div><div class="k">🚗 Kias</div></div>
@@ -1318,6 +1332,13 @@ function vPerfil(name){
 
     <section>
       <div class="sechead"><span class="bar"></span><h2>Historial</h2><span class="sub">${fechas.length} fechas</span></div>
+      ${proximas.map(f=>{ // 📅 sorteada pero todavía no se jugó: aparte, no suma
+        const comp=f.parejas.find(p=>p.includes(name)).filter(x=>x!==name).join(" & ")||"—";
+        return `<div class="card pad" style="display:flex;align-items:center;gap:12px;border-style:dashed">
+          <div style="font-size:22px">📅</div>
+          <div style="flex:1"><b>con ${esc(comp)}</b><div class="tag" style="margin-top:2px;color:var(--A)">${fmtFecha(f.f)} · Próxima fecha</div></div>
+        </div>`;
+      }).join("")}
       ${fechas.length?fechas.map(f=>{
         const team=f.parejas.find(p=>p.includes(name));
         const comp=team.filter(x=>x!==name).join(" & ")||"—";
@@ -1328,7 +1349,7 @@ function vPerfil(name){
           <div style="font-size:22px">${fueCamp?"🏆":fuePala?"🥄":"🎾"}</div>
           <div style="flex:1"><b>con ${esc(comp)}</b><div class="tag" style="margin-top:2px">${fmtFecha(f.f)}${fueCamp?' · Campeón':fuePala?' · Cuchara de madera':''}${f.mvp===name?' · 🎖️ MVP':''}${seRajo?' · 🏃 sin café':''}</div></div>
         </div>`;
-      }).join(""):`<div class="empty">Sin fechas registradas</div>`}
+      }).join(""):(proximas.length?"":`<div class="empty">Sin fechas registradas</div>`)}
     </section>
   </section>`;
 }
@@ -1739,7 +1760,7 @@ function proxJuego(){ // próximo domingo 8:30 (si el de hoy ya se jugó, el que
   const f=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
   return {f,d};
 }
-function rachaActualDe(n){ let r=0; for(const f of DATA.fechas){ if(f.parejas.some(t=>t.includes(n)))r++; else break; } return r; }
+function rachaActualDe(n){ let r=0; for(const f of fechasJugadas()){ if(f.parejas.some(t=>t.includes(n)))r++; else break; } return r; }
 function rachaKiasDe(n,desdeF){ // 🔥 Kias consecutivos ganados (cuenta solo fechas con campeón cargado)
   let r=0;
   for(const f of DATA.fechas){
@@ -1753,12 +1774,13 @@ function rachasTop(){ // rachas vivas (jugó la última)
   if(!DATA.fechas.length)return [];
   return DATA.jugadores.map(j=>({n:j.n,r:rachaActualDe(j.n)})).filter(x=>x.r>=3).sort((a,b)=>b.r-a.r).slice(0,3);
 }
-function rachasRotas(){ // venía con racha de 3+ y faltó a la última fecha 💔
-  if(DATA.fechas.length<2)return [];
-  const ult=DATA.fechas[0], rotas=[];
+function rachasRotas(){ // venía con racha de 3+ y faltó a la última fecha JUGADA 💔
+  const fj=fechasJugadas();
+  if(fj.length<2)return [];
+  const ult=fj[0], rotas=[];
   DATA.jugadores.forEach(j=>{
     if(ult.parejas.some(t=>t.includes(j.n)))return;
-    let r=0; for(const f of DATA.fechas.slice(1)){ if(f.parejas.some(t=>t.includes(j.n)))r++; else break; }
+    let r=0; for(const f of fj.slice(1)){ if(f.parejas.some(t=>t.includes(j.n)))r++; else break; }
     if(r>=3)rotas.push({n:j.n,r});
   });
   return rotas.sort((a,b)=>b.r-a.r).slice(0,2);
@@ -1800,6 +1822,7 @@ function duelosDe(name){ // ⚔️ por títulos del día: gano si salí campeón
     const my=f.parejas.find(p=>p.includes(name)); if(!my)return;
     const yoCamp=f.campeon.includes(name);
     f.parejas.forEach(p=>{ if(p===my)return; p.forEach(riv=>{
+      if(esGenerico(riv))return; // "Invitado" no es un rival de verdad
       const o=m[riv]||(m[riv]={w:0,l:0});
       if(yoCamp)o.w++;
       else if(f.campeon.some(x=>p.includes(x)))o.l++;
@@ -1834,7 +1857,7 @@ function datoSemanal(){ // 📊 el dato del lunes (rota por semana)
   const arr=Object.values(statsInd());
   const datos=[];
   const tops=rachasTop(); if(tops.length)datos.push(`🔥 ${tops[0].n} lleva ${tops[0].r} domingos seguidos sin faltar. ¿Quién lo baja?`);
-  DATA.jugadores.forEach(j=>{const u=DATA.fechas.slice(0,5).filter(f=>f.campeon);const w=u.filter(f=>f.campeon.includes(j.n)).length;if(w>=3)datos.push(`😱 ${j.n} ganó ${w} de los últimos ${u.length} Kias. Está para el dopaje.`);});
+  DATA.jugadores.forEach(j=>{const u=fechasJugadas().slice(0,5).filter(f=>f.campeon);const w=u.filter(f=>f.campeon.includes(j.n)).length;if(w>=3)datos.push(`😱 ${j.n} ganó ${w} de los últimos ${u.length} Kias. Está para el dopaje.`);});
   DATA.jugadores.forEach(j=>{const r=rachaKiasDe(j.n);if(r>=2)datos.push(`🔥 ${j.n} viene de ganar ${r} fechas seguidas. ¿Nadie lo va a bajar del Kia?`);});
   let nD=0;for(const f of DATA.fechas){if(!f.campeon)continue;if(f.campeon.some(x=>coponDe(x)==="D"))break;nD++;}
   if(nD>=5)datos.push(`🧊 Hace ${nD} fechas con campeón que un copón D no toca el Kia.`);
@@ -1860,7 +1883,7 @@ function recuerdoSemanal(){ // 📸 un día como hoy (rota por semana entre fech
 /* ---------- GALA DE TEMPORADA ---------- */
 function rachaMaxDe(fechas,n){
   let max=0,cur=0;
-  [...fechas].sort((a,b)=>a.f.localeCompare(b.f)).forEach(f=>{
+  fechasJugadas(fechas).sort((a,b)=>a.f.localeCompare(b.f)).forEach(f=>{
     if(f.parejas.some(t=>t.includes(n))){cur++;if(cur>max)max=cur;}else cur=0;
   });
   return max;
@@ -1887,9 +1910,10 @@ function mostrarGala(nombre,fechas){
   if(!p.length){toast("Todavía no hay datos para la gala");return;}
   const inner=p.map(([e,t,v])=>`<div class="mopt" style="cursor:default"><b>${e} ${t}</b><small>${esc(v)}</small></div>`).join("")+
     `<button class="mok" data-wa>📲 Mandar la gala al grupo</button><button class="mcancel" data-x>Cerrar</button>`;
-  const d=uiShow(`🏆✨ Gala · ${esc(nombre)}`,`${fechas.length} fechas jugadas · los premios de la temporada`,inner);
+  const nj=fechasJugadas(fechas).length; // la sorteada que todavía no se jugó no cuenta
+  const d=uiShow(`🏆✨ Gala · ${esc(nombre)}`,`${nj} fechas jugadas · los premios de la temporada`,inner);
   d.querySelector("[data-wa]").onclick=()=>{
-    let txt=`🏆✨ *GALA COPONES BV* · ${nombre} ✨🏆\n_${fechas.length} fechas jugadas_\n\n`;
+    let txt=`🏆✨ *GALA COPONES BV* · ${nombre} ✨🏆\n_${nj} fechas jugadas_\n\n`;
     txt+=p.map(([e,t,v])=>`${e} *${t}:* ${v}`).join("\n");
     txt+=`\n\n👉 Toda la data en la app:\n${APP_URL}`;
     shareWA(txt);
