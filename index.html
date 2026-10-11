@@ -190,8 +190,8 @@
   .pl.swapable:active{transform:scale(.97)}
   .pl.swapsel{outline:2px dashed var(--A);outline-offset:1px;background:rgba(245,197,24,.12)}
   .amp{color:var(--muted);font-family:"Anton";font-size:15px;padding-left:2px}
-  .sortcols{display:grid;grid-template-columns:repeat(5,1fr);gap:9px}
-  @media(max-width:700px){.sortcols{grid-template-columns:repeat(2,1fr)}}
+  .sortcols{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px}
+  @media(max-width:700px){.sortcols{grid-template-columns:repeat(2,minmax(0,1fr))}}
   .sortcol{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px;border-top:3px solid var(--cc,#444)}
   .co-A{--cc:var(--A);--ccT:var(--aT)}.co-B{--cc:var(--B);--ccT:var(--bT)}.co-C{--cc:var(--C);--ccT:var(--cT)}.co-D{--cc:var(--D);--ccT:var(--dT)}.co-S{--cc:#22c55e;--ccT:var(--sorT)}
   .sortcol .sh{font-family:"Anton";font-size:15px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:baseline;color:var(--ccT,var(--cc,#ccc))}
@@ -227,6 +227,8 @@
   /* bottom nav */
   .nav{position:fixed;left:0;right:0;bottom:0;z-index:50;background:rgba(10,11,13,.94);backdrop-filter:blur(10px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
   .navin{max-width:720px;margin:0 auto;display:flex;padding:0 env(safe-area-inset-right) 0 env(safe-area-inset-left)}
+  /* 📱↔️ iPhone apaisado: desde 800 px el centrado (720) ya deja 40 px a cada lado; el margen del notch no se suma */
+  @media(min-width:800px){.wrap,.topin{padding-left:14px;padding-right:14px}.navin{padding:0}}
   .nav a{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 4px 8px;color:var(--muted);font-family:"Barlow Condensed";font-weight:700;font-size:11px;letter-spacing:.06em;text-transform:uppercase}
   .nav a .ic{font-size:19px;line-height:1}
   .nav a.on{color:var(--txt)}
@@ -236,7 +238,7 @@
   .navdot{position:absolute;top:3px;left:calc(50% + 8px);background:var(--red2);color:#fff;font-size:10px;font-weight:800;min-width:16px;height:16px;border-radius:999px;display:flex;align-items:center;justify-content:center;padding:0 4px;box-shadow:0 0 8px rgba(255,51,80,.6);font-family:"Inter",sans-serif}
 
   .hidden{display:none}
-  .toast{position:fixed;left:50%;bottom:calc(86px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#000;border:1px solid var(--line);color:#fff;padding:10px 16px;border-radius:10px;font-weight:700;font-size:14px;z-index:80;opacity:0;transition:.25s;pointer-events:none}
+  .toast{position:fixed;left:50%;bottom:calc(86px + env(safe-area-inset-bottom));transform:translateX(-50%);width:max-content;max-width:calc(100vw - 32px);text-align:center;background:#000;border:1px solid var(--line);color:#fff;padding:10px 16px;border-radius:10px;font-weight:700;font-size:14px;z-index:80;opacity:0;transition:.25s;pointer-events:none}
   .toast.show{opacity:1}
   /* 🔄 pastilla de novedades: llegó algo de la nube y no se redibujó para no borrarte lo que estabas haciendo */
   .novedades{position:fixed;left:50%;bottom:calc(132px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:85;background:var(--A);color:#000;border:0;border-radius:999px;padding:10px 16px;font-weight:800;font-size:14px;font-family:inherit;white-space:nowrap;box-shadow:0 6px 24px rgba(0,0,0,.55);cursor:pointer;animation:fadein .25s}
@@ -282,6 +284,7 @@
   .mx{width:44px;height:44px}
   #themeBtn,#authBtn{min-height:44px}
   .adline button{min-width:44px;min-height:44px}
+  .adline select{min-height:44px} #addsorp{min-width:44px}
   .adline{padding-top:2px;padding-bottom:2px;min-height:48px}
   [data-perfil]{cursor:pointer}
   .row[data-perfil]{min-height:44px} tr[data-perfil]{height:44px}
@@ -335,6 +338,7 @@
   body.light .hero{background:linear-gradient(135deg,#ffffff,#eef1f6 55%,#e6ebf4)}
   body.light .toast{background:#131720;color:#fff;border-color:#131720}
   body.light .rk{color:#5c6573}
+  body.light .rk.g1,body.light .rk.g2,body.light .rk.g3{color:#111}
   body.light .pcard .no{color:#c3c9d4}
   body.light .seg button.on{color:#fff}
 </style>
@@ -759,12 +763,17 @@ function slugName(n){return String(n).replace(/\(.*?\)/g,"").normalize("NFD").re
 function fmtFecha(s){const x=/^(\d{4})-(\d{2})-(\d{2})$/.exec(s);if(!x)return esc(String(s)); // lo que no es una fecha vuelve escapado (puede venir de afuera)
   const ms=["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];return `${+x[3]} ${ms[+x[2]-1]||x[2]} ${x[1]}`;}
 // 📸 fotos que ya fallaron: no se vuelven a pedir ni a dibujar (si no, cada redibujo hace saltar la pantalla).
-// Las del repo se recuerdan en la sesión (sessionStorage): recargar no repite los 404 de las -2/-3/-4 que no existen
-const FOTO_MAL=new Set((()=>{try{return JSON.parse(sessionStorage.getItem("cb_fotomal")||"[]");}catch(e){return [];}})());
+// Las del repo que NO existen (404 confirmado) se recuerdan en la sesión (sessionStorage): recargar no repite los 404 de las -2/-3/-4.
+// Si falló la red (señal floja), no: el próximo redibujo o la recarga la vuelven a pedir
+const FOTO_404=new Set((()=>{try{return JSON.parse(sessionStorage.getItem("cb_fotomal")||"[]");}catch(e){return [];}})());
+const FOTO_MAL=new Set(FOTO_404);
 const FOTO_OK=new Set(); // 📸 las que sí cargaron (la -2 se prueba recién cuando cargó la base, y así)
 function fotoMal(s){
-  if(!s)return; FOTO_MAL.add(s);
-  if(navigator.onLine&&/^fotos\//.test(s))try{sessionStorage.setItem("cb_fotomal",JSON.stringify([...FOTO_MAL].filter(x=>/^fotos\//.test(x))));}catch(e){} // sin señal no se anota: puede existir
+  if(!s||FOTO_MAL.has(s))return; FOTO_MAL.add(s);
+  if(/^fotos\//.test(s))fetch(s,{method:"HEAD",cache:"no-store"}).then(r=>{
+    if(r.status!==404){FOTO_MAL.delete(s);return;} // existe (fue la red): se reintenta en el próximo redibujo
+    FOTO_404.add(s); try{sessionStorage.setItem("cb_fotomal",JSON.stringify([...FOTO_404]));}catch(e){}
+  },()=>FOTO_MAL.delete(s)); // sin señal: tampoco se anota, puede existir
 }
 function fotoMin(s){ // 📸 miniatura liviana (360 px) de una foto del repo: fotos/<tipo>/min/<nombre>.jpg; si ya falló, la grande
   const m=/^(fotos\/[a-z]+\/)([^/]+\.jpg)$/.exec(s||""), mi=m&&m[1]+"min/"+m[2];
@@ -829,12 +838,12 @@ function overlayArriba(){return document.querySelector(".bigshow")||document.get
 function abrirOverlay(){if(!(history.state&&history.state.ov)){try{history.pushState({ov:1},"");}catch(e){}}}
 function alCerrarOverlay(){ // después de cerrar (si no se abrió otro paso del mismo flujo)
   setTimeout(()=>{
-    if(!overlayArriba()&&history.state&&history.state.ov){POP_PROPIO=true;history.back();}
+    if(!overlayArriba()&&history.state&&history.state.ov){POP_PROPIO=true;history.back();return;} // las novedades, en el popstate (con el historial ya asentado)
     if(PEND_RENDER&&!ocupado())render(); // terminó la acción: ahora sí, las novedades
   },80);
 }
 window.addEventListener("popstate",()=>{
-  if(POP_PROPIO){POP_PROPIO=false;if(overlayArriba())abrirOverlay();return;}
+  if(POP_PROPIO){POP_PROPIO=false;if(overlayArriba())abrirOverlay();else if(PEND_RENDER&&!ocupado())render();return;}
   const o=overlayArriba();
   if(!o){if(history.state&&history.state.ov){POP_PROPIO=true;history.back();}return;} // entrada vieja: se saltea
   if(o.id==="uimodal"){const x=o.querySelector("[data-mx]");if(x)x.click();else uiClose();} // = tocar la ✕ (el flujo cancela bien)
@@ -904,14 +913,14 @@ function uiMulti(title,sub,names,okEmpty){ // selección múltiple → Promise<a
     d.querySelector("[data-x]").onclick=()=>{uiClose();res(undefined);};
   });
 }
-function uiCafe(title,sub,names,iniSel){ // ☕/🏃 por jugador → Promise<array de rajados|undefined si "dejar como está">
+function uiCafe(title,sub,names,iniSel){ // ☕/🏃 por jugador → Promise<array de rajados | null si "dejar como está" | undefined si cancela (✕ o atrás)>
   return new Promise(res=>{
     const sel=new Set(iniSel||[]);
     const d=uiShow(title,sub,
       `<div class="modal-s" style="margin-top:-4px">Todos arrancan en ☕ <b>se quedó</b>. Tocá a los que se fueron para pasarlos a 🏃.</div>
        <div class="mgrid">${names.map((n,i)=>`<button class="mopt cafeopt" data-i="${i}"></button>`).join("")}</div>
        <button class="mok" data-ok></button>
-       <button class="mcancel" data-x>↩️ Dejar como está</button>`);
+       <button class="mcancel" data-ns>↩️ Dejar como está</button>`);
     const paint=()=>{
       d.querySelectorAll(".cafeopt").forEach(b=>{
         const n=names[+b.dataset.i];
@@ -929,7 +938,8 @@ function uiCafe(title,sub,names,iniSel){ // ☕/🏃 por jugador → Promise<arr
     });
     paint();
     d.querySelector("[data-ok]").onclick=()=>{uiClose();res([...sel]);};
-    d.querySelector("[data-x]").onclick=()=>{uiClose();res(undefined);};
+    d.querySelector("[data-ns]").onclick=()=>{uiClose();res(null);};
+    d.querySelector("[data-mx]").onclick=()=>{uiClose();res(undefined);}; // la ✕ (y el atrás, que la toca) cancela todo, como en los otros pasos
   });
 }
 function cropFlow(aspect,titulo){ // 📸 elegir foto → recortar en un modal → Promise<dataURL|null>
@@ -2019,8 +2029,7 @@ function tablaProde(){ // 🎯 ranking de adivinos
   const cerradas={}; allFechas().forEach(f=>{if(f.campeon)cerradas[f.f]=f.campeon;});
   const m={}, na=nombreActualFn(); // 🔁 renombrados/unidos: el prode guardado con el nombre viejo suma en el de hoy
   PRODE.forEach(p=>{
-    const win=cerradas[p.f]; if(!win)return;
-    if(typeof p.ts==="number"&&p.ts>=cierreProde(p.f))return; // jugado con el partido en curso (antes de las reglas nuevas): no cuenta
+    const win=cerradas[p.f]; if(!win)return; // (el cierre de las 8:30 lo ponen la app y firestore.rules de acá en adelante: los pronósticos viejos cuentan como se jugaron)
     const who=(p.jugador&&na(p.jugador))||p.nombre||"?";
     const o=m[who]||(m[who]={n:who,total:0,ok:0});
     o.total++;
@@ -2881,7 +2890,8 @@ function bind(){
       }
       if(faltan.includes("cafe")){
         const v=await uiCafe("☕ ¿Quiénes se quedaron al café?",`${dia} · si no sabés, tocá "Dejar como está" (lo demás se manda igual)`,jugadores,[]);
-        if(v!==undefined){prop.sinCafe=v;cambios++;} // no sabe del café: no se inventa, se manda el resto
+        if(v===undefined)return; // ✕ o atrás: no se manda nada
+        if(v!==null){prop.sinCafe=v;cambios++;} // "dejar como está" (no sabe del café): no se inventa, se manda el resto
       }
       if(!cambios){toast("No cargaste ningún dato");return;}
       addDoc(collection(db,"propuestas"),prop)
@@ -3139,7 +3149,7 @@ function bind(){
       save();toast(n+" dado de alta como jugador estable ✓");render();
     });
     document.getElementById("addFecha").onclick=async()=>{ // ➕ fecha + parejas; el resultado se carga con botones (cargarResultado)
-      const g0=NUBE_GEN, f=document.getElementById("afecha").value, malas=[];
+      const f=document.getElementById("afecha").value, malas=[]; // (sin g0: después de cada modal se vuelve a buscar en DATA, y la transacción de save() cuida la nube)
       const pares=parsePairs(document.getElementById("apar").value,malas);
       if(!RXFECHA.test(f)||!pares.length){toast("Falta fecha o parejas");return;}
       const nombres=pares.flat(), rep=nombres.find((n,i)=>nombres.indexOf(n)!==i&&!esGenerico(n));
@@ -3154,7 +3164,7 @@ function bind(){
         const js=pares.flat(), noVa=e=>["campeon","pala","mvp","sinCafe"].filter(k=>Array.isArray(e[k])?(k==="sinCafe"?!e[k].every(n=>js.includes(n)):!pares.some(t=>misma(t,e[k]))):(k==="mvp"&&typeof e.mvp==="string"&&!js.includes(e.mvp)));
         const pierde=noVa(ex);
         if(!await uiConfirm(`🔁 Ya existe la fecha del ${fmtFecha(f)}`,`Está cargada con:<br><b>${esc(ex.parejas.map(p=>p.join(" & ")).join(" · "))}</b><br><br>¿Reemplazo sus parejas por estas? La fecha no se duplica y lo de ahora queda en el historial de cambios 🕓.${pierde.length?`<br><br>⚠️ Esto no es de las parejas nuevas y queda <b>sin cargar</b> (lo cargás de nuevo enseguida): ${pierde.map(k=>`${NOMDATO[k]} ${esc(valorTxt(k,ex[k]))}`).join(" · ")}`:""}`,"🔁 Reemplazar las parejas","Cancelar"))return;
-        ex=DATA.fechas.find(x=>x.f===f); if(!ex){toast(CAMBIO_FECHA,5000);render();return;} // (si la nube cambió, save(g0) no pisa nada)
+        ex=DATA.fechas.find(x=>x.f===f); if(!ex){toast(CAMBIO_FECHA,5000);render();return;} // (la nube cambió con el modal abierto y ya no está)
         (ex.versiones||(ex.versiones=[])).push({ts:Date.now(),por:(USER&&USER.email)||"admin (este dispositivo)",antes:{parejas:ex.parejas,...estadoDe(ex)}});
         ex.parejas=pares;
         noVa(ex).forEach(k=>{if(k==="sinCafe")delete ex.sinCafe;else ex[k]=null;}); // el resultado que sigue siendo de estas parejas se conserva
@@ -3165,7 +3175,7 @@ function bind(){
         hecho="nueva";
       }
       if(hecho==="igual")toast(`✓ El ${fmtFecha(f)} ya estaba cargado con esas parejas`);
-      else{ if(!await save(g0))return; toast(hecho==="nueva"?"📅 Fecha agregada":"🔁 Parejas reemplazadas — las de antes quedaron en el historial",3500); }
+      else{ if(!await save())return; toast(hecho==="nueva"?"📅 Fecha agregada":"🔁 Parejas reemplazadas — las de antes quedaron en el historial",3500); }
       render();
       const fe=DATA.fechas.find(x=>x.f===f);
       if(fe&&(f<hoyISO()||prodeCerrado(f)))await cargarResultado(fe); // ya se jugó: Kia, cuchara, MVP y café con botones (nada de nombres tipeados)
