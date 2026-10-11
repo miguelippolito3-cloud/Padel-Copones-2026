@@ -426,6 +426,13 @@ const PARCHES=[
     if(!d.fechas.some(x=>x.f==="2026-10-11")) d.fechas.push({f:"2026-10-11",parejas:[["Pati","Taya"],["Negro Mon","Mike Rafa"],["TIS","Pachuza"],["Chichón","Chuck"],["Alba","MP"],["Don (Diegui)","Bati"],["Matso","Calambre"],["Track","Toto"]],campeon:null,pala:null,mvp:null});
     d.fechas.sort((a,b)=>b.f.localeCompare(a.f));
   }},
+  { id:"2026-10-11-resultado", aplicar:d=>{ // resultado del 11/10 (lo pasó Mike): Kia Matso & Ficky (Calambre), la cuchara a Patán (Pati), se fueron sin café TIS, Pati y Chichón
+    const f=d.fechas.find(x=>x.f==="2026-10-11"); if(!f)return;
+    if(!f.campeon){ f.campeon=["Matso","Calambre"]; f.confirmada=true; }
+    if(f.pala===undefined||f.pala===null)f.pala=["Pati"];
+    if(!Array.isArray(f.sinCafe))f.sinCafe=["TIS","Pati","Chichón"];
+    if(f.campeon.join()==="Matso,Calambre")f.fotoQuien={...(f.fotoQuien||{}),kia:["Matso","Calambre"]};
+  }},
 ];
 let PARCHE_PENDIENTE=false; // se aplicó un parche que la nube todavía no tiene
 const LS="padel_espn_v1";
@@ -891,7 +898,7 @@ function vInicio(){
           <div class="tag">${ult.confirmada?'<span style="color:#4ade80">✅ Fecha confirmada por el organizador</span>':'<span style="color:#ffcf4d">⏳ A confirmar por el organizador</span>'}</div>
         </div>
         <div class="kiagrid fotoblock" style="grid-template-columns:repeat(4,1fr);margin-top:12px">
-          ${[["kia","🚗 Campeones"],["pala","🥄 Cuchara"],["mvp","🎖️ MVP"],["cafe","☕ Café"]].map(([t,lbl])=>fotoCandidatas(t,ult.f).map((s,i)=>`<figure><img src="${esc(s)}" alt="" loading="lazy" data-foto="${esc(s)}" data-fototit="${lbl} · ${fmtFecha(ult.f)}" data-fotoquien="${esc(quienEnFoto(ult,t,s))}" style="cursor:pointer" onerror="this.closest('figure').style.display='none'"><figcaption>${i?"":lbl}</figcaption></figure>`).join("")).join("")}
+          ${[["kia","🚗 Campeones"],["pala","🥄 Cuchara"],["mvp","🎖️ MVP"],["cafe","☕ Café"],["grupo","👥 El grupo"]].map(([t,lbl])=>fotoCandidatas(t,ult.f).map((s,i)=>`<figure><img src="${esc(s)}" alt="" loading="lazy" data-foto="${esc(s)}" data-fototit="${lbl} · ${fmtFecha(ult.f)}" data-fotoquien="${esc(quienEnFoto(ult,t,s))}" style="cursor:pointer" onerror="this.closest('figure').style.display='none'"><figcaption>${i?"":lbl}</figcaption></figure>`).join("")).join("")}
         </div>
           <button class="btn" id="flyerBtn" style="flex:1.2;background:#25D366;color:#0a0b0d">🖼️ Flyer + texto al grupo</button>
           <button class="btn ghost" id="waShare" style="flex:1">📲 Solo texto</button>
@@ -1379,6 +1386,7 @@ async function ofrecerFotos(f){ // 📸 después de cargar el resultado: fotos d
       {label:"🥄 Foto de la cuchara de madera",value:"pala"},
       {label:"🎖️ Foto del MVP",value:"mvp"},
       {label:"☕ Foto del café",value:"cafe"},
+      {label:"👥 Foto del grupo",value:"grupo"},
       {label:primera?"✅ Ahora no, sin fotos":"✅ Listo, no hay más fotos",value:"fin"}
     ]);
     if(!v||v==="fin")return;
@@ -2077,6 +2085,7 @@ function vAdmin(){
           <option value="pala">🥄 Cuchara de madera</option>
           <option value="mvp">🎖️ MVP</option>
           <option value="cafe">☕ Café</option>
+          <option value="grupo">👥 El grupo</option>
           <option value="perfil">👤 Foto de perfil</option>
         </select></div>
         <div class="field" style="flex:1;min-width:130px" id="fkFechaWrap"><label>Fecha</label><select id="fkFecha">${DATA.fechas.map(f=>`<option value="${f.f}">${fmtFecha(f.f)}${f.campeon?" 🏆":""}</option>`).join("")}</select></div>
