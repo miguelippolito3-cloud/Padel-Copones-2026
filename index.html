@@ -160,6 +160,9 @@
   .field label{font-family:"Barlow Condensed";font-weight:700;font-size:12px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase}
   input,select,textarea{background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:11px 12px;font-family:inherit;font-size:16px;font-weight:600}
   input:focus,select:focus{outline:none;border-color:var(--red)}
+  #drawMsg{scroll-margin-top:calc(64px + env(safe-area-inset-top))} /* que no lo tape la barra de arriba */
+  .savebar{margin-top:10px;padding:10px 12px;border:1px solid var(--red);border-radius:12px;background:rgba(226,16,42,.07);color:var(--txt)}
+  .savebar .warn{color:var(--red2)} .savebar.ok{border-color:#22c55e;background:rgba(34,197,94,.08)} .savebar.info{border-color:var(--line);background:var(--card2)}
   .pairwrap{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-top:12px}
   .pcard{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--red);border-radius:12px;padding:12px;position:relative}
   .pcard .no{position:absolute;top:9px;right:12px;font-family:"Anton";font-size:20px;color:#3a3f49}
@@ -249,6 +252,7 @@
   .bigshow .bs-pair{font-family:"Anton",Impact,sans-serif;font-size:min(7.5vw,46px);line-height:1.12;animation:slideup .5s ease both}
   .bigshow .bs-pair .bs-no{color:var(--red2);margin-right:12px}
   .bigshow .bs-sup{color:var(--muted);font-size:min(5vw,28px);font-family:"Barlow Condensed";font-weight:700}
+  .bigshow .bs-act{margin:min(3vh,20px) auto 0;font-size:min(5vw,22px);padding:14px 22px;animation:slideup .5s ease both}
 
   /* ===== MOBILE / UX ===== */
   .btn{min-height:44px}
@@ -382,6 +386,8 @@ let MYPLAYER=null; try{MYPLAYER=localStorage.getItem("cb_myplayer")||null;}catch
 let MILINK=null; // el jugador vinculado a esta cuenta EN LA NUBE (usuarios/{uid}): es el único que aceptan las reglas
 let PROPUESTAS=[], propSub=false;
 let USUARIOS=[], COADMINS=[], SORTEO_FECHA=null;
+let SORP_LOCAL={}; // 🎁 sorpresas que sumó alguien que no es admin: entran a SU sorteo, no se guardan en la app
+let PEND_FIX=null; // 🆚 fecha cuyo fixture se pidió desde el Inicio: se sortea apenas se dibuja Sorteo
 let PRODE=[], ASIS=[], socialSub=false; // 🎲 prode y 🙋 asistencia (colecciones nuevas)
 let FOTOS={}; // 📸 fotos publicadas desde la app (viven en la nube, se ven al instante)
 const CANCHAS_ABONO=2; // canchas fijas del abono de los domingos
@@ -590,7 +596,7 @@ function realDe(n){const j=DATA.jugadores.find(x=>x.n===n);return j?(j.real||"")
 
 /* ================= HELPERS ================= */
 function key(a,b){return [a,b].sort().join(" ‑ ");}
-function coponDe(n){ const j=DATA.jugadores.find(x=>x.n===n); if(j)return j.c; return (DATA.bolsaCop&&DATA.bolsaCop[n])||""; }
+function coponDe(n){ const j=DATA.jugadores.find(x=>x.n===n); if(j)return j.c; return (DATA.bolsaCop&&DATA.bolsaCop[n])||SORP_LOCAL[n]||""; }
 async function pedirCopon(nombre){
   const v=await uiPick(`🎁 ¿Qué copón es ${esc(nombre)}?`,"Para que el sorteo lo empareje bien",[
     {label:`<span class="cchip chA">A</span> Crack`,value:"A"},
@@ -1369,6 +1375,7 @@ function allKnownNames(){
   looseNames().forEach(n=>s.add(n));
   return [...s].sort((a,b)=>a.localeCompare(b));
 }
+function sorpresasSorteo(){ const s=looseNames(); Object.keys(SORP_LOCAL).forEach(n=>{if(!s.includes(n))s.push(n);}); return s; } // + las que sumó un no admin en este celu
 function fechasDe(n){return DATA.fechas.filter(f=>f.parejas.some(t=>t.includes(n))).length;}
 
 /* ---------- LECTOR DE LISTAS DE WHATSAPP ---------- */
@@ -1569,8 +1576,8 @@ function explicarReglasFoto(data,nombre){ // la nube rechazó la foto: falta el 
 }
 
 /* ---------- CONVOCATORIA: parejas, canchas y fecha ---------- */
-function proxDomingo(){
-  const d=new Date(); d.setDate(d.getDate()+((7-d.getDay())%7));
+function proxDomingo(){ // el domingo del sorteo: hoy si es domingo antes de las 11 (todavía se juega), si no el que viene
+  const d=new Date(); d.setDate(d.getDate()+(d.getDay()===0&&d.getHours()>=11?7:(7-d.getDay())%7));
   return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
 }
 function resumenConvocados(scrollTop){
@@ -1981,7 +1988,7 @@ function vSorteo(){
         }).join("");})()}
         <div class="sortcol co-S">
           <div class="sh" style="color:#22c55e">🎁 Sorpresas<small id="cnt-S"></small></div>
-          ${looseNames().map(n=>`<button class="ptoggle k-S ${SEL.has(n)?'on':''}" data-tog="${esc(n)}">${esc(n)}${coponDe(n)?` <small style="opacity:.75">(${esc(coponDe(n))})</small>`:""}</button>`).join("")||'<div class="note" style="font-size:12px;margin-bottom:6px">—</div>'}
+          ${sorpresasSorteo().map(n=>`<button class="ptoggle k-S ${SEL.has(n)?'on':''}" data-tog="${esc(n)}">${esc(n)} <small style="opacity:.75">(${esc(coponDe(n)||"B?")})</small></button>`).join("")||'<div class="note" style="font-size:12px;margin-bottom:6px">—</div>'}
           <div style="display:flex;gap:5px;margin-top:6px">
             <input id="newsorp" placeholder="Nuevo…" style="flex:1;min-width:0;padding:8px">
             <button class="btn sm" id="addsorp" style="padding:7px 11px">+</button>
@@ -2012,9 +2019,10 @@ function draw(){
   const msg=document.getElementById("drawMsg");
   if(!seedRaw){msg.innerHTML='<span class="warn">Poné un Nº de la suerte.</span>';return;}
   const rnd=mulberry32(seedHash(seedRaw));
-  let all=[...SEL].map(n=>({n,c:coponDe(n),k:rnd()}));
+  // mismo Nº + mismos presentes = mismas parejas: se ordena antes de repartir el azar (no importa en qué orden se marcaron)
+  let all=[...SEL].sort((a,b)=>a<b?-1:a>b?1:0).map(n=>({n,c:coponDe(n),k:rnd()}));
   if(all.length<2){msg.innerHTML='<span class="warn">Marcá al menos 2 jugadores.</span>';document.getElementById("pairsOut").innerHTML="";return;}
-  const rk=p=>{const i="ABCD".indexOf(p.c);return i>=0?i:1;}; // sin copón declarado = nivel B
+  const rk=p=>{const i=p.c?"ABCD".indexOf(p.c):-1;return i>=0?i:1;}; // sin copón declarado = nivel B (ojo: indexOf("") da 0 = A)
   all.sort((a,b)=>rk(a)-rk(b)||a.k-b.k);
   let sup=null;
   if(all.length%2){sup=all.splice(Math.floor(all.length/2),1)[0];}
@@ -2041,7 +2049,7 @@ function drawFixtureFecha(f){ // fixture de cruces y canchas con las parejas YA 
   if(ci)ci.value=Math.min(12,Math.max(1,Math.ceil(f.parejas.length/2)));
   const rnd=mulberry32(seedHash(seedRaw));
   const orden=shuffle(f.parejas.map(p=>p.map(n=>({n,c:coponDe(n)}))),rnd);
-  revelar(orden,{sup:null,problemas:[],seedRaw,manual:true});
+  revelar(orden,{sup:null,problemas:[],seedRaw,manual:true,fecha:f});
 }
 function drawManual(){ // parejas ya armadas a mano → solo se sortea el fixture
   const msg=document.getElementById("drawMsg");
@@ -2053,9 +2061,49 @@ function drawManual(){ // parejas ya armadas a mano → solo se sortea el fixtur
   const orden=shuffle(pares.map(p=>p.map(n=>({n,c:coponDe(n)}))),rnd);
   revelar(orden,{sup:null,problemas:[],seedRaw,manual:true});
 }
-function revelar(orden,{sup,problemas,seedRaw,manual}){
+const diaSem=iso=>["dom","lun","mar","mié","jue","vie","sáb"][new Date(iso+"T12:00:00").getDay()]||"";
+function revelar(orden,{sup,problemas,seedRaw,manual,fecha}){ // fecha = la fecha cargada de la que salen las parejas (solo se sortean los cruces)
   const msg=document.getElementById("drawMsg");
   const courts=Math.max(1,parseInt(document.getElementById("courts").value)||1);
+  // 💾 a qué fecha va: la de las parejas cargadas, la detectada en la lista o el domingo (hoy si es domingo antes de las 11)
+  const fDest=fecha?fecha.f:(SORTEO_FECHA||proxDomingo()), destTxt=`${diaSem(fDest)} ${fmtFecha(fDest)}`;
+  const puede=()=>!CLOUD||ISADMIN; // en la app guarda solo el admin: el resto lo manda al grupo
+  let guardado=!!fecha, guardando=false, selSwap=null, edited=false, estado=()=>{}; // las de una fecha cargada ya están guardadas (hasta que se retoquen)
+  const nombresPar=()=>orden.map(p=>p.map(x=>x.n));
+  const compartir=()=>{
+    const pares=nombresPar(), r1=buildRounds(pares.map((p,i)=>({id:i+1,label:p.join(" & ")})))[0];
+    let txt="🎾🔥 *PAREJAS DEL DOMINGO*\nCopones Buena Vista\n\n"+pares.map((p,i)=>`*${i+1})* ${p.join(" & ")}`).join("\n");
+    if(sup)txt+=`\n⏳ Suplente rotativo: ${sup.n}`;
+    txt+="\n\n🆚 *1ª ronda:*\n"+r1.map((m,mi)=>m[0]&&m[1]?`${mi<courts?"Cancha "+(mi+1):"⏳ Espera"}: ${m[0].label} vs ${m[1].label}`:`Libre: ${(m[0]||m[1]).label}`).join("\n");
+    txt+=`\n\n🔀 Sorteo transparente · Nº de la suerte: *${seedRaw}*${edited?" · _con retoques a mano_":""}\n¿Cuál es el bueno? 🤔`;
+    txt+=`\n\n👉 *${guardado?"Las parejas, el ranking y tu perfil":"El ranking y tu perfil"} en la app:*\n${APP_URL}\n\n_Nos vemos el domingo 8:30 ☕🎾_`;
+    shareWA(txt);
+  };
+  const guardar=async()=>{ // 💾 nunca duplica una fecha: si ya existe y no se jugó, ofrece reemplazar sus parejas (las de antes van al historial)
+    if(!puede()){toast("Las parejas las guarda el organizador: mandáselas al grupo 📲",3500);return;}
+    if(guardando)return; guardando=true;
+    try{
+      const g0=NUBE_GEN, nuevas=nombresPar(), f=fDest, igual=(a,b)=>{const k=t=>JSON.stringify(t.map(p=>p.slice().sort()).sort());return k(a)===k(b);};
+      let ex=DATA.fechas.find(x=>x.f===f);
+      if(ex&&fechaJugada(ex)){toast(`⚠️ El ${fmtFecha(f)} ya se jugó: sus parejas no se tocan`,4500);return;}
+      if(ex&&igual(ex.parejas,nuevas)){guardado=true;estado();toast(`✓ Esas parejas ya están en la fecha del ${fmtFecha(f)}`);return;}
+      if(ex){
+        const np=PRODE.filter(x=>x.f===f).length;
+        if(!await uiConfirm(`🔁 Ya hay parejas para el ${destTxt}`,`Esa fecha ya está cargada con:<br><b>${esc(ex.parejas.map(p=>p.join(" & ")).join(" · "))}</b><br><br>¿Las reemplazo por las de este sorteo? La fecha no se duplica y las de ahora quedan en el historial de cambios.${np?`<br><br>⚠️ Ya hay <b>${np}</b> pronóstico${np===1?"":"s"} del prode sobre las parejas de ahora.`:""}`,"🔁 Reemplazar las parejas","Cancelar"))return;
+        ex=DATA.fechas.find(x=>x.f===f); // con el modal abierto pudo llegar otra versión de la nube (si cambió, save(g0) no pisa nada)
+        if(!ex||fechaJugada(ex)){toast(CAMBIO_FECHA,5000);return;}
+        (ex.versiones||(ex.versiones=[])).push({ts:Date.now(),por:(USER&&USER.email)||"admin (este dispositivo)",antes:{parejas:ex.parejas}});
+        ex.parejas=nuevas;
+      }else{
+        DATA.fechas.push({f,parejas:nuevas,campeon:null,pala:null,mvp:null});
+        DATA.fechas.sort((a,b)=>b.f.localeCompare(a.f));
+      }
+      if(!await save(g0))return; // save() ya avisó por qué (y volvió a lo de la nube): sigue "sin guardar"
+      guardado=true; estado();
+      toast(ex?`🔁 Parejas del ${fmtFecha(f)} reemplazadas — las de antes quedaron en el historial`:`📅 Fecha del ${fmtFecha(f)} guardada — después solo cargás el resultado`,4000);
+    }finally{guardando=false;}
+  };
+  const accion=()=>guardado?null:puede()?{t:`💾 Guardar parejas del ${destTxt}`,aviso:"⚠️ Sorteo sin guardar",fn:guardar}:{t:"📲 Mandar al grupo",fn:compartir};
 
   // 🥁 bolillero con suspenso (más corto si las parejas ya se conocen)
   const out=document.getElementById("pairsOut");
@@ -2068,28 +2116,38 @@ function revelar(orden,{sup,problemas,seedRaw,manual}){
   msg.innerHTML="🥁 🥁 🥁";
   if(navigator.vibrate)navigator.vibrate([10,80,10,80,10,80,10]);
   const iv=setInterval(()=>{const el=document.getElementById("drumName");if(el)el.textContent=nombres[Math.floor(Math.random()*nombres.length)];},85);
-  if(BIGMODE)bigShow(orden,sup,manual); // 📺 bolillero gigante en paralelo
+  if(BIGMODE)bigShow(orden,sup,manual,accion); // 📺 bolillero gigante en paralelo
 
   setTimeout(()=>{
     clearInterval(iv);
     if(!out.isConnected)return; // se fue de Sorteo durante el bolillero
     if(navigator.vibrate)navigator.vibrate([15,40,15,40,80]);
     let baseMsg=manual
-      ?`Fixture sorteado con Nº <b>${esc(seedRaw)}</b> · ${orden.length} parejas (armadas a mano) · ${courts} canchas.`
+      ?`Fixture sorteado con Nº <b>${esc(seedRaw)}</b> · ${orden.length} parejas (${fecha?`las de la fecha del ${fmtFecha(fecha.f)}`:"armadas a mano"}) · ${courts} canchas.`
       :`Sorteo con Nº <b>${esc(seedRaw)}</b> · ${orden.length} parejas · ${courts} canchas. <span style="color:var(--muted)">¿Cuál es el bueno? 🤔</span>`;
     if(sup)baseMsg+=`<br><span class="warn">Impar:</span> ${esc(sup.n)} queda de suplente rotativo.`;
     if(orden.length>courts*2)baseMsg+=`<br><span class="warn">Ojo:</span> hay más parejas que lugares — algunas esperan turno.`;
     if(problemas.length)baseMsg+=`<br><span class="warn">⚠️ No alcanzan los C/D:</span> ${problemas.map(p=>`<b>${esc(p[0].n)} & ${esc(p[1].n)}</b>`).join(", ")} quedó como pareja fuerte. Recalificá copones en Admin o sumá un C/D.`;
-    let selSwap=null, edited=false;
+    const barra=()=>guardado // 💾 arriba de las parejas: se ve apenas sale el sorteo
+      ?`<div class="savebar ok">✅ ${fecha&&!edited?`Son las parejas guardadas en la fecha del <b>${destTxt}</b>: acá solo se sortearon los cruces.`:`Parejas guardadas en la fecha del <b>${destTxt}</b>.`}</div>`
+      :puede()
+        ?`<div class="savebar"><b class="warn">⚠️ Sorteo sin guardar</b> — hasta que lo guardes, el Inicio, el prode y la carga del resultado no lo ven.<button class="btn block" id="saveTop" style="margin-top:8px">💾 Guardar parejas del ${destTxt}</button></div>`
+        :`<div class="savebar info">ℹ️ <b>Este sorteo queda solo en tu celu:</b> las parejas de la fecha las guarda el organizador. Si es el que vale, mandáselo al grupo.<button class="btn block" id="sendTop" style="margin-top:8px">📲 Mandar al grupo</button></div>`;
+    const pintarMsg=()=>{
+      msg.innerHTML=baseMsg+(edited?`<br>✏️ <b>Parejas editadas a mano</b> — cruces recalculados.`:"")+barra();
+      const st=msg.querySelector("#saveTop"); if(st)st.onclick=guardar;
+      const se=msg.querySelector("#sendTop"); if(se)se.onclick=compartir;
+    };
 
     const paint=(first)=>{ // pinta parejas + cruces; se re-ejecuta en cada intercambio
-      LASTPAIRS=orden.map(p=>p.map(x=>x.n));
+      LASTPAIRS=nombresPar();
       const teams=orden.map((p,i)=>({id:i+1,label:p.map(x=>x.n).join(" & ")}));
       const rounds=buildRounds(teams);
+      const sinGuardar=puede()&&!guardado;
       out.innerHTML=`
       <div class="pairwrap">${orden.map((p,i)=>`
         <div class="pcard" style="animation-delay:${first?(i*0.3).toFixed(1):0}s"><div class="no">${i+1}</div>
-          ${p.map((x,j)=>`<div class="pl swapable" data-swap="${i}:${j}"><span class="cchip ${COL[x.c]||"ch0"}">${esc(x.c||"·")}</span>${esc(x.n)}</div>`).join('<div class="amp">&</div>')}
+          ${p.map((x,j)=>`<div class="pl swapable" data-swap="${i}:${j}"><span class="cchip ${COL[x.c]||"ch0"}">${esc(x.c||"B?")}</span>${esc(x.n)}</div>`).join('<div class="amp">&</div>')}
         </div>`).join("")}
       </div>
       <div class="note" style="margin-top:8px;font-size:12px">✏️ ¿Quedó alguien mal parado? <b>Tocá un nombre y después otro</b> para intercambiarlos — los cruces se rearman solos.</div>
@@ -2103,8 +2161,8 @@ function revelar(orden,{sup,problemas,seedRaw,manual}){
         ${rounds.length>3?`<div class="note" style="margin-top:8px">…y ${rounds.length-3} ronda${rounds.length-3===1?"":"s"} más si el cuerpo aguanta ☕</div>`:""}
       </div>
       <div style="display:flex;gap:8px;margin-top:14px">
-        <button class="btn" id="sharePairs" style="flex:1">📲 Compartir</button>
-        <button class="btn ghost" id="saveFecha" style="flex:1">💾 Guardar fecha</button>
+        <button class="btn ${sinGuardar?"ghost":""}" id="sharePairs" style="flex:1">📲 ${puede()?"Compartir":"Mandar al grupo"}</button>
+        ${sinGuardar?`<button class="btn" id="saveFecha" style="flex:1">💾 Guardar fecha</button>`:""}
       </div>`;
       out.querySelectorAll("[data-swap]").forEach(el=>el.onclick=()=>{
         const [i,j]=el.dataset.swap.split(":").map(Number);
@@ -2112,33 +2170,20 @@ function revelar(orden,{sup,problemas,seedRaw,manual}){
         const [i0,j0]=selSwap;
         if(i0===i&&j0===j){selSwap=null;el.classList.remove("swapsel");return;}
         const t=orden[i0][j0];orden[i0][j0]=orden[i][j];orden[i][j]=t;
-        selSwap=null;edited=true;
+        selSwap=null;edited=true;guardado=false; // cambiaron las parejas: lo guardado ya no es esto
         if(navigator.vibrate)navigator.vibrate(15);
-        paint(false);
-        msg.innerHTML=baseMsg+`<br>✏️ <b>Parejas editadas a mano</b> — cruces recalculados.`;
+        paint(false);pintarMsg();
       });
-      document.getElementById("sharePairs").onclick=()=>{
-        let txt="🎾🔥 *PAREJAS DEL DOMINGO*\nCopones Buena Vista\n\n"+LASTPAIRS.map((p,i)=>`*${i+1})* ${p.join(" & ")}`).join("\n");
-        txt+="\n\n🆚 *1ª ronda:*\n"+rounds[0].map((m,mi)=>m[0]&&m[1]?`${mi<courts?"Cancha "+(mi+1):"⏳ Espera"}: ${m[0].label} vs ${m[1].label}`:`Libre: ${(m[0]||m[1]).label}`).join("\n");
-        txt+=`\n\n🔀 Sorteo transparente · Nº de la suerte: *${seedRaw}*${edited?" · _con retoques a mano_":""}\n¿Cuál es el bueno? 🤔`;
-        txt+=`\n\n👉 *Seguí el fixture, el ranking y tu perfil en la app:*\n${APP_URL}\n\n_Nos vemos el domingo 8:30 ☕🎾_`;
-        shareWA(txt);
-      };
-      document.getElementById("saveFecha").onclick=()=>{
-        const f=SORTEO_FECHA||proxDomingo();
-        if(DATA.fechas.some(x=>x.f===f)&&!confirm(`Ya hay una fecha guardada el ${fmtFecha(f)}. ¿Agregar otra igual?`))return;
-        DATA.fechas.unshift({f,parejas:LASTPAIRS,campeon:null,pala:null,mvp:null});
-        DATA.fechas.sort((a,b)=>b.f.localeCompare(a.f));
-        save();
-        toast(`📅 Fecha del ${fmtFecha(f)} guardada — después solo cargás el resultado`);
-        go("inicio");
-      };
+      out.querySelector("#sharePairs").onclick=compartir;
+      const sf=out.querySelector("#saveFecha"); if(sf)sf.onclick=guardar;
     };
+    estado=()=>{if(out.isConnected){paint(false);pintarMsg();}};
     paint(true);
-    msg.innerHTML=baseMsg;
+    pintarMsg();
+    msg.scrollIntoView({behavior:"smooth",block:"start"}); // arranca el resultado: mensaje + 💾 guardar + primeras parejas a la vista
   },manual?1100:1900);
 }
-function bigShow(orden,sup,manual){ // 📺 sorteo a pantalla completa, para proyectar o pasar en ronda
+function bigShow(orden,sup,manual,accion){ // 📺 sorteo a pantalla completa, para proyectar o pasar en ronda. accion() → botón del final (guardar / mandar)
   const ov=document.createElement("div");ov.className="bigshow";document.body.appendChild(ov);abrirOverlay();
   const nombres=orden.flat().map(x=>x.n).concat(sup?[sup.n]:[]);
   ov.innerHTML=`<div class="bs-brand">🎾 Copones Buena Vista · Sorteo transparente</div>
@@ -2148,8 +2193,9 @@ function bigShow(orden,sup,manual){ // 📺 sorteo a pantalla completa, para pro
   const timers=[];
   timers.push(setTimeout(()=>{
     clearInterval(iv);
+    const a0=accion&&accion();
     ov.innerHTML=`<div class="bs-brand">🎾 Copones Buena Vista · Parejas del domingo</div>
-      <div class="bs-list"></div><div class="bs-note">Tocá para cerrar</div>`;
+      <div class="bs-list"></div><div class="bs-note">${a0&&a0.aviso?a0.aviso+" · ":""}Tocá para cerrar</div>`;
     const list=ov.querySelector(".bs-list");
     orden.forEach((p,i)=>{
       timers.push(setTimeout(()=>{
@@ -2164,6 +2210,12 @@ function bigShow(orden,sup,manual){ // 📺 sorteo a pantalla completa, para pro
       row.textContent=`⏳ ${sup.n} — suplente rotativo`;
       list.appendChild(row);row.scrollIntoView({block:"nearest"});
     },600+orden.length*1400));
+    timers.push(setTimeout(()=>{ // 💾 al terminar: guardar (admin) o mandar al grupo, sin salir de la pantalla gigante a buscarlo
+      const a=accion&&accion(); if(!a)return;
+      const bt=document.createElement("button");bt.className="btn bs-act";bt.textContent=a.t;
+      bt.onclick=e=>{e.stopPropagation();ov.onclick();a.fn();};
+      list.appendChild(bt);bt.scrollIntoView({block:"nearest"});
+    },600+orden.length*1400+(sup?500:0)));
   },manual?1100:1900));
   ov.onclick=()=>{clearInterval(iv);timers.forEach(clearTimeout);ov.remove();alCerrarOverlay();};
 }
@@ -2550,7 +2602,7 @@ function bind(){
     const lr=document.getElementById("loadResBtn");
     if(lr)lr.onclick=()=>cargarResultado(fPend||DATA.fechas[0]);
     const fx=document.getElementById("fixtureBtn");
-    if(fx)fx.onclick=()=>{go("sorteo");requestAnimationFrame(()=>drawFixtureFecha(fProx));};
+    if(fx)fx.onclick=()=>{PEND_FIX=fProx.f;go("sorteo");}; // lo sortea Sorteo apenas se dibuja (un rAF corría antes del cambio de pantalla)
     // 📲 instalar como app
     const pw=document.getElementById("pwaBtn");
     if(pw)pw.onclick=async()=>{ if(!PWAPROMPT)return; PWAPROMPT.prompt(); try{await PWAPROMPT.userChoice;}catch(e){} PWAPROMPT=null; render(); };
@@ -2609,7 +2661,7 @@ function bind(){
     const updCounts=()=>{
       document.getElementById("selcount").textContent=SEL.size;
       ["A","B","C","D"].forEach(c=>{const js=DATA.jugadores.filter(j=>j.c===c);const sel=js.filter(j=>SEL.has(j.n)).length;const el=document.getElementById("cnt-"+c);if(el)el.textContent=sel+"/"+js.length;});
-      const loose=looseNames();const elS=document.getElementById("cnt-S");if(elS)elS.textContent=loose.filter(n=>SEL.has(n)).length+"/"+loose.length;
+      const loose=sorpresasSorteo();const elS=document.getElementById("cnt-S");if(elS)elS.textContent=loose.filter(n=>SEL.has(n)).length+"/"+loose.length;
     };
     updCounts();
     document.querySelectorAll("[data-tog]").forEach(b=>b.onclick=()=>{const n=b.dataset.tog;if(navigator.vibrate)navigator.vibrate(8);if(SEL.has(n)){SEL.delete(n);b.classList.remove("on");}else{SEL.add(n);b.classList.add("on");}updCounts();resumenConvocados(false);});
@@ -2623,8 +2675,12 @@ function bind(){
     document.getElementById("selNone").onclick=()=>{SEL.clear();route("sorteo");};
     const addSorp=async()=>{
       const inp=document.getElementById("newsorp");const v=inp.value.trim();if(!v)return;
-      if(allKnownNames().includes(v)){toast("Ese nombre ya existe");return;}
+      if(allKnownNames().includes(v)||SORP_LOCAL[v]){toast("Ese nombre ya existe");return;}
       const c=await pedirCopon(v);
+      if(CLOUD&&!ISADMIN){ // 🎁 sin ser admin no se guarda nada: juega en TU sorteo y al plantel lo suma el organizador
+        SORP_LOCAL[v]=c;SEL.add(v);route("sorteo");
+        toast(`🎁 ${v} entra a este sorteo como copón ${c} (solo en tu celu: al plantel lo suma el organizador)`,4000);return;
+      }
       (DATA.bolsa||(DATA.bolsa=[])).push(v);
       (DATA.bolsaCop||(DATA.bolsaCop={}))[v]=c;
       SEL.add(v);save();route("sorteo");
@@ -2644,10 +2700,10 @@ function bind(){
       });
       if(noRec.length&&await uiConfirm(`✨ Reconocí ${ok} jugador${ok===1?"":"es"}`,`No reconocí a: <b>${esc(noRec.join(", "))}</b>.<br><br>¿Los agrego como jugadores sorpresa? Te pregunto el copón de cada uno.`,"🎁 Sí, agregalos","No, dejalos afuera")){
         for(const n of noRec){ // (DATA se vuelve a leer después de cada modal: la nube pudo reemplazarlo)
-          if(!allKnownNames().includes(n)){const c=await pedirCopon(n);(DATA.bolsa||(DATA.bolsa=[])).push(n);(DATA.bolsaCop||(DATA.bolsaCop={}))[n]=c;}
+          if(!allKnownNames().includes(n)&&!SORP_LOCAL[n]){const c=await pedirCopon(n);if(CLOUD&&!ISADMIN)SORP_LOCAL[n]=c;else{(DATA.bolsa||(DATA.bolsa=[])).push(n);(DATA.bolsaCop||(DATA.bolsaCop={}))[n]=c;}}
           SEL.add(n);
         }
-        save();
+        if(!CLOUD||ISADMIN)save(); // sin ser admin quedan solo para este sorteo
       }
       const dm=txt.match(/(\d{1,2})\/(\d{1,2})/);
       if(dm&&+dm[1]>=1&&+dm[1]<=31&&+dm[2]>=1&&+dm[2]<=12){
@@ -2664,6 +2720,10 @@ function bind(){
       toast(`✨ ${SEL.size} presentes marcados`);
       resumenConvocados(true);
     };
+    if(PEND_FIX){ // 🆚 "Sortear cruces y canchas" del Inicio: con la pantalla ya dibujada (y después del scroll de route)
+      const f=DATA.fechas.find(x=>x.f===PEND_FIX); PEND_FIX=null;
+      if(f&&f.parejas.length>=2)setTimeout(()=>{if(VIEW==="sorteo")drawFixtureFecha(f);},0);
+    }
   }
 
   if(VIEW==="admin"){
@@ -2801,8 +2861,8 @@ function bind(){
       const f=fechaActual(f0)||f0; if(!f||!f.versiones)return;
       const lineas=[...f.versiones].reverse().map(v=>{
         const d=new Date(v.ts), t=`${d.getDate()}/${d.getMonth()+1} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
-        const a=v.antes||{};
-        return `<div class="mopt" style="cursor:default"><b>${t}</b> · lo cambió ${esc(v.por)}<small>Decía: 🚗 ${a.campeon?esc(a.campeon.join(" & ")):"—"} · 🥄 ${a.pala?esc(a.pala.join(" & ")):"—"} · 🎖️ ${a.mvp?esc(a.mvp):"—"} · ☕ ${Array.isArray(a.sinCafe)?(a.sinCafe.length?"se rajaron "+esc(a.sinCafe.join(", ")):"se quedaron todos"):"—"}</small></div>`;
+        const a=v.antes||{}, res=["campeon","pala","mvp","sinCafe"].some(k=>k in a); // un reemplazo de parejas no trae resultado
+        return `<div class="mopt" style="cursor:default"><b>${t}</b> · lo cambió ${esc(v.por)}<small>Decía: ${Array.isArray(a.parejas)?`👥 ${esc(a.parejas.map(p=>p.join(" & ")).join(" · "))}${res?"<br>":""}`:""}${res?`🚗 ${a.campeon?esc(a.campeon.join(" & ")):"—"} · 🥄 ${a.pala?esc(a.pala.join(" & ")):"—"} · 🎖️ ${a.mvp?esc(a.mvp):"—"} · ☕ ${Array.isArray(a.sinCafe)?(a.sinCafe.length?"se rajaron "+esc(a.sinCafe.join(", ")):"se quedaron todos"):"—"}`:""}</small></div>`;
       });
       const d=uiShow(`🕰️ Historial de cambios`,`Fecha del ${fmtFecha(f.f)} · la versión vigente es la que se ve en la app`,lineas.join("")+`<button class="mcancel" data-x>Cerrar</button>`);
       d.querySelector("[data-x]").onclick=uiClose;
