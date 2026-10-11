@@ -1013,6 +1013,7 @@ function vInicio(){
   // la última fecha YA JUGADA con datos pendientes (aunque haya una futura cargada encima)
   const pend=fechaPendiente();
   const prox=(f0&&!f0.campeon&&f0.f>=hoyS&&f0!==pend)?f0:null;           // todavía no se jugó
+  const fProde=(f0&&!f0.campeon&&f0.parejas.length>=2&&(f0.f>=hoyS||miProdeDe(f0.f)))?f0:null; // el prode se ve hasta que se carga el Kia
   const ult=DATA.fechas.find(f=>f.campeon)||DATA.fechas[0];
   const topJ=[...arr].sort((a,b)=>b.pj-a.pj).slice(0,5);
   const topC=[...arr].sort((a,b)=>b.camp-a.camp||b.pj-a.pj).slice(0,5);
@@ -1033,6 +1034,7 @@ function vInicio(){
         <div class="kiagrid fotoblock" style="grid-template-columns:repeat(4,1fr);margin-top:12px">
           ${[["kia","🚗 Campeones"],["pala","🥄 Cuchara"],["mvp","🎖️ MVP"],["cafe","☕ Café"]].map(([t,lbl])=>fotoCandidatas(t,ult.f).map((s,i)=>`<figure><img src="${esc(s)}" alt="" loading="lazy" data-foto="${esc(s)}" data-fototit="${lbl} · ${fmtFecha(ult.f)}" data-fotoquien="${esc(quienEnFoto(ult,t,s))}" style="cursor:pointer" onerror="this.closest('figure').style.display='none'"><figcaption>${i?"":lbl}</figcaption></figure>`).join("")).join("")}
         </div>
+        <div style="display:flex;gap:8px;margin-top:14px">
           <button class="btn" id="flyerBtn" style="flex:1.2;background:#25D366;color:#0a0b0d">🖼️ Flyer + texto al grupo</button>
           <button class="btn ghost" id="waShare" style="flex:1">📲 Solo texto</button>
         </div>
@@ -1078,17 +1080,19 @@ function vInicio(){
       <div class="tag" style="margin-bottom:8px;color:var(--A)">🎾 PRÓXIMA FECHA · ${fmtFecha(prox.f)}</div>
       ${prox.parejas.map((p,i)=>`<div class="row" style="padding:7px 0"><span><b>${i+1})</b> ${esc(p.join(" & "))}</span><span class="tag" title="Probabilidad de Kia según la historia">🎯 ${pr[i]}%</span></div>`).join("")}
       ${prox.parejas.length>=2?`<button class="btn block" id="fixtureBtn" style="margin-top:10px">🆚 Sortear cruces y canchas de esta fecha</button>`:""}
-      ${CLOUD?`<button class="btn block" id="propBtn2" style="margin-top:10px;background:var(--card2);border:1px solid var(--line);color:var(--txt)">📝 Proponer resultado (lo aprueba el organizador)</button>`:""}
+      ${prodeCerrado(prox.f) // ya arrancó (8:30 del día): el resultado de HOY se carga ahí mismo, en el café
+        ?(ISADMIN?`<button class="btn block" id="loadHoyBtn" style="margin-top:10px">👑 Cargar el resultado de hoy</button>`
+          :CLOUD?`<button class="btn block" id="propBtn2" style="margin-top:10px;background:var(--card2);border:1px solid var(--line);color:var(--txt)">📝 Proponer resultado (lo aprueba el organizador)</button>`:""):""}
     </div>`;})():""}
-    ${CLOUD&&USER&&prox&&!prox.campeon&&prox.parejas.length>=2?(()=>{ // 🎲 PRODE
-      const mio=miProdeDe(prox.f), cerrado=prodeCerrado(prox.f);
-      const cuantos=PRODE.filter(x=>x.f===prox.f).length;
+    ${CLOUD&&USER&&fProde?(()=>{ // 🎲 PRODE: abierto hasta las 8:30 del domingo; desde ahí, cerrado hasta que se carga el Kia
+      const mio=miProdeDe(fProde.f), cerrado=prodeCerrado(fProde.f);
+      const cuantos=PRODE.filter(x=>x.f===fProde.f).length;
       return `<div class="card pad" style="margin-bottom:12px;border-color:#7c3aed">
-        <div class="tag" style="margin-bottom:6px;color:#c4b5fd">🎲 PRODE · ¿Quién se lleva el Kia?</div>
+        <div class="tag" style="margin-bottom:6px;color:#c4b5fd">🎲 PRODE · ¿Quién se lleva el Kia?${cerrado?" · 🔒 CERRADO":""}</div>
         ${mio?`<div class="note" style="margin-bottom:8px">Tu pronóstico: <b style="color:#c4b5fd">🎯 ${esc(Array.isArray(mio.pareja)?mio.pareja.join(" & "):"?")}</b></div>`
-             :`<div class="note" style="margin-bottom:8px">${cerrado?"No jugaste pronóstico esta vez.":"Jugá tu pronóstico antes del domingo. No vale plata, vale honor."}</div>`}
-        ${cerrado?`<div class="note" style="text-align:center;font-weight:800">🔒 Prode cerrado: se jugó hasta las 8:30</div>`
-          :`<button class="btn block" id="prodeBtn" style="background:#7c3aed">${mio?"🎲 Cambiar mi pronóstico":"🎲 Hacer mi pronóstico"}</button>`}
+             :`<div class="note" style="margin-bottom:8px">${cerrado?"No jugaste pronóstico esta vez.":"Jugá tu pronóstico hasta el domingo a las 8:30 (ahí se cierra). No vale plata, vale honor."}</div>`}
+        ${cerrado?`<div class="note" id="prodeLock" style="text-align:center;font-weight:800">🔒 Prode cerrado desde las 8:30 del ${fmtFecha(fProde.f)}: ya no se puede jugar ni cambiar.<br>Se resuelve cuando se cargue el Kia 🚗</div>`
+          :`<button class="btn block" id="prodeBtn" style="background:#7c3aed">${mio?"🎲 Cambiar mi pronóstico (hasta las 8:30)":"🎲 Hacer mi pronóstico"}</button>`}
         <div class="note" style="margin-top:6px;text-align:center">${cuantos} pronóstico${cuantos===1?"":"s"} del grupo · el ranking de adivinos está en 📊 Ranking</div>
       </div>`;})():""}
     ${heroHTML}
@@ -1426,17 +1430,21 @@ function cleanLine(l){
 function esEncabezado(l){ return !l || /^(domingo|sabado|sábado|lista|convocados|padel|pádel)/i.test(l) || /\d{1,2}\/\d{1,2}/.test(l) || (!/[a-záéíóúñ]/i.test(l)&&!EMOJI_APODOS.some(([rx])=>rx.test(l))); }
 
 /* ---------- CARGA RÁPIDA DE RESULTADO (admin) ---------- */
-function parseCafe(s){ // "Chuck, Toto" → nombres reconocidos; "" → todos se quedaron
-  const t=(s||"").trim(); if(!t)return [];
-  return t.split(/\s*(?:,|\/|&|\+|-|–|—)\s*|\s+y\s+/i).map(x=>x.trim()).filter(Boolean).map(x=>matchPlayer(x)||x);
-}
 function faltantesDe(f){ // qué datos le faltan a una fecha ("nadie" se guarda como false, así no se vuelve a preguntar)
   const faltan=[];
   if(!f.campeon)faltan.push("campeon");
   if(f.pala===undefined||f.pala===null)faltan.push("pala");
   if(f.mvp===undefined||f.mvp===null)faltan.push("mvp");
-  if(!Array.isArray(f.sinCafe))faltan.push("cafe");
+  if(f.sinCafe===undefined||f.sinCafe===null)faltan.push("cafe"); // sinCafe=false: "🤷 no se sabe" (cerrado sin dato; las estadísticas solo cuentan arrays)
   return faltan;
+}
+const misma=(a,b)=>Array.isArray(a)&&Array.isArray(b)&&a.length===b.length&&[...a].sort().join("|")===[...b].sort().join("|"); // misma pareja, en cualquier orden
+const NOMDATO={campeon:"🚗 Kia",pala:"🥄 Cuchara",mvp:"🎖️ MVP",sinCafe:"☕ Café"};
+function valorTxt(k,v){ // un dato de la fecha, en palabras (texto plano: escapar al usarlo)
+  if(v===undefined||v===null)return "sin cargar";
+  if(k==="sinCafe")return v===false?"no se sabe":Array.isArray(v)?(v.length?"se rajaron "+v.join(", "):"se quedaron todos"):String(v);
+  if(v===false)return "nadie";
+  return Array.isArray(v)?v.join(" & "):String(v);
 }
 function faltantesTxt(f){
   const nom={campeon:"🚗 campeón",pala:"🥄 cuchara",mvp:"🎖️ MVP",cafe:"☕ café"};
@@ -1458,7 +1466,9 @@ function fechaActual(f){
   return DATA.fechas.find(x=>x.f===f.f&&JSON.stringify(x.parejas)===k)||null;
 }
 const CAMBIO_FECHA="⚠️ Esa fecha cambió en la nube mientras tanto (otro admin le tocó las parejas o la borró): NO se guardó. Abrila de nuevo";
-const estadoDe=f=>({campeon:f.campeon||null,pala:(f.pala===undefined?null:f.pala),mvp:(f.mvp===undefined?null:f.mvp),sinCafe:Array.isArray(f.sinCafe)?f.sinCafe.slice():null});
+const estadoDe=f=>({campeon:f.campeon||null,pala:(f.pala===undefined?null:f.pala),mvp:(f.mvp===undefined?null:f.mvp),sinCafe:Array.isArray(f.sinCafe)?f.sinCafe.slice():(f.sinCafe===false?false:null)});
+const normDato=v=>v===undefined?null:Array.isArray(v)?[...v].sort():v; // parejas y café, sin importar el orden
+const mismoDato=(a,b)=>JSON.stringify(normDato(a))===JSON.stringify(normDato(b));
 async function cargarResultado(f){
   // 📝 TODO EN UNA SOLA PANTALLA: campeón, cuchara, MVP y café juntos.
   // Se ve lo ya cargado, se toca solo lo que cambia y se guarda una única vez.
@@ -1474,41 +1484,63 @@ async function cargarResultado(f){
     campeon:f.campeon||null,
     pala:(f.pala===undefined?null:f.pala),
     mvp:(f.mvp===undefined?null:f.mvp),
-    cafeReg:Array.isArray(f.sinCafe),
+    cafe:Array.isArray(f.sinCafe)?"reg":f.sinCafe===false?"nose":null, // ☕ registrado / 🤷 no se sabe / sin cargar
     sinCafe:new Set(Array.isArray(f.sinCafe)?f.sinCafe:[])
   };
+  let palaAuto=false; // con 2 parejas la cuchara se propone sola (la otra), y se puede cambiar
+  if(f.parejas.length===2&&est.pala===null&&f.parejas.some(t=>misma(t,est.campeon))){est.pala=f.parejas.find(t=>!misma(t,est.campeon));palaAuto=true;}
   const parejasBtns=g=>f.parejas.map((p,i)=>`<button class="mopt" data-g="${g}" data-v="${i}">${i+1}) ${esc(p.join(" & "))}</button>`).join("");
   const d=uiShow(`📝 Resultado del ${fmtFecha(f.f)}`,`Está todo junto: tocá lo que quieras cargar o corregir y guardá una sola vez. Lo que dejes sin marcar queda como "sin cargar".`,`
+    <div id="raros"></div>
     <div class="tag" style="margin:6px 0 6px">🚗 ¿Quién se llevó el Kia?</div>
     <div class="mgrid">${parejasBtns("campeon")}</div>
     <div class="tag" style="margin:14px 0 6px">🥄 Cuchara de madera</div>
     <div class="mgrid">${parejasBtns("pala")}<button class="mopt" data-g="pala" data-v="nadie">🤷 Nadie / no hubo</button></div>
+    <div class="note hidden" id="palaAuto" style="margin-top:6px">🥄 Con 2 parejas, la cuchara es la otra: ya quedó marcada (tocá otra opción si no fue así).</div>
     <div class="tag" style="margin:14px 0 6px">🎖️ MVP del día</div>
     <div class="mgrid">${jugadores.map(n=>`<button class="mopt" data-g="mvp" data-v="j:${esc(n)}">${esc(n)}</button>`).join("")}<button class="mopt" data-g="mvp" data-v="nadie">🤷 Nadie / no hubo</button></div>
     <div class="tag" style="margin:14px 0 6px">☕ Café</div>
     <div id="cafeZona"></div>
     <button class="mok" data-ok style="margin-top:14px">💾 Guardar todo</button>
     <button class="mcancel" data-x>Cancelar (no guarda nada)</button>`);
-  const igual=(a,b)=>JSON.stringify(a===undefined?null:a)===JSON.stringify(b===undefined?null:b);
-  const mismo=(k,a,b)=>k==="sinCafe"?igual(a&&[...a].sort(),b&&[...b].sort()):igual(a,b); // el café, sin importar el orden
   const paint=()=>{
-    d.querySelectorAll('[data-g="campeon"]').forEach(b=>b.classList.toggle("on",!!est.campeon&&igual(f.parejas[+b.dataset.v],est.campeon)));
-    d.querySelectorAll('[data-g="pala"]').forEach(b=>b.classList.toggle("on",b.dataset.v==="nadie"?est.pala===false:(Array.isArray(est.pala)&&igual(f.parejas[+b.dataset.v],est.pala))));
+    d.querySelectorAll('[data-g="campeon"]').forEach(b=>b.classList.toggle("on",misma(f.parejas[+b.dataset.v],est.campeon)));
+    d.querySelectorAll('[data-g="pala"]').forEach(b=>{
+      const camp=b.dataset.v!=="nadie"&&misma(f.parejas[+b.dataset.v],est.campeon); // la campeona no puede ser cuchara
+      b.disabled=camp; b.style.opacity=camp?".35":""; b.title=camp?"Es la pareja campeona":"";
+      b.classList.toggle("on",b.dataset.v==="nadie"?est.pala===false:misma(f.parejas[+b.dataset.v],est.pala));
+    });
+    d.querySelector("#palaAuto").classList.toggle("hidden",!palaAuto);
     d.querySelectorAll('[data-g="mvp"]').forEach(b=>b.classList.toggle("on",b.dataset.v==="nadie"?est.mvp===false:(typeof est.mvp==="string"&&("j:"+est.mvp)===b.dataset.v)));
+    // lo cargado que no es de esta fecha (datos viejos) se muestra, para que no parezca "sin cargar"
+    const raros=[["campeon",Array.isArray(est.campeon)&&!f.parejas.some(t=>misma(t,est.campeon))],["pala",Array.isArray(est.pala)&&!f.parejas.some(t=>misma(t,est.pala))],["mvp",typeof est.mvp==="string"&&!jugadores.includes(est.mvp)]].filter(r=>r[1]);
+    d.querySelector("#raros").innerHTML=raros.map(([k])=>`<div class="note warn" style="margin-bottom:6px">⚠️ ${NOMDATO[k]} cargado: <b>${esc(valorTxt(k,est[k]))}</b> — no es de las parejas de esta fecha: elegí de la lista</div>`).join("");
     const cz=d.querySelector("#cafeZona");
-    cz.innerHTML=est.cafeReg
+    cz.innerHTML=est.cafe==="reg"
       ?`<div class="note" style="margin-bottom:8px">Todos arrancan en ☕ <b>se quedó</b>. Tocá a los que se rajaron para pasarlos a 🏃.</div>
         <div class="mgrid">${jugadores.map(n=>`<button class="mopt ${est.sinCafe.has(n)?"on":""}" data-cafe="${esc(n)}">${est.sinCafe.has(n)?"🏃":"☕"} ${esc(n)}</button>`).join("")}</div>
         <button class="mcancel" data-cafeoff style="padding:6px">↩️ No registrar el café de esta fecha</button>`
-      :`<button class="mopt" data-cafeon>➕ Registrar quién se quedó al café</button>`;
-    const on=cz.querySelector("[data-cafeon]"); if(on)on.onclick=()=>{est.cafeReg=true;paint();};
-    const off=cz.querySelector("[data-cafeoff]"); if(off)off.onclick=()=>{est.cafeReg=false;est.sinCafe.clear();paint();};
+      :est.cafe==="nose"
+      ?`<div class="note" style="margin-bottom:8px">🤷 <b>No se sabe</b> quién se quedó: el café queda cerrado sin dato (no suma ni resta en las estadísticas).</div>
+        <button class="mopt" data-cafeon>➕ Mejor sí: registrar quién se quedó al café</button>
+        <button class="mcancel" data-cafeoff style="padding:6px">↩️ Dejarlo sin cargar</button>`
+      :`<button class="mopt" data-cafeon>➕ Registrar quién se quedó al café</button>
+        <button class="mopt" data-cafenose>🤷 No se sabe (cierra el pendiente sin inventar)</button>`;
+    const on=cz.querySelector("[data-cafeon]"); if(on)on.onclick=()=>{est.cafe="reg";paint();};
+    const no=cz.querySelector("[data-cafenose]"); if(no)no.onclick=()=>{est.cafe="nose";est.sinCafe.clear();paint();};
+    const off=cz.querySelector("[data-cafeoff]"); if(off)off.onclick=()=>{est.cafe=null;est.sinCafe.clear();paint();};
     cz.querySelectorAll("[data-cafe]").forEach(b=>b.onclick=()=>{const n=b.dataset.cafe;if(est.sinCafe.has(n))est.sinCafe.delete(n);else est.sinCafe.add(n);if(navigator.vibrate)navigator.vibrate(8);paint();});
   };
   d.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{
     const g=b.dataset.g,v=b.dataset.v;
-    if(g==="campeon"){const p=f.parejas[+v];est.campeon=(est.campeon&&igual(p,est.campeon))?null:p;}
-    if(g==="pala"){ if(v==="nadie")est.pala=(est.pala===false)?null:false; else {const p=f.parejas[+v];est.pala=(Array.isArray(est.pala)&&igual(p,est.pala))?null:p;} }
+    if(g==="campeon"){
+      const p=f.parejas[+v]; est.campeon=misma(p,est.campeon)?null:p;
+      if(palaAuto||misma(est.pala,est.campeon)){est.pala=null;palaAuto=false;} // la campeona no puede quedar de cuchara
+      if(f.parejas.length===2&&est.campeon&&est.pala===null){est.pala=f.parejas.find(t=>!misma(t,est.campeon));palaAuto=true;}
+    }
+    if(g==="pala"){ palaAuto=false;
+      if(v==="nadie")est.pala=(est.pala===false)?null:false;
+      else {const p=f.parejas[+v]; if(misma(p,est.campeon)){toast("Esa pareja se llevó el Kia: no puede ser también la cuchara");return;} est.pala=misma(p,est.pala)?null:p;} }
     if(g==="mvp"){ if(v==="nadie")est.mvp=(est.mvp===false)?null:false; else {const n=v.slice(2);est.mvp=(est.mvp===n)?null:n;} }
     if(navigator.vibrate)navigator.vibrate(8);
     paint();
@@ -1516,20 +1548,26 @@ async function cargarResultado(f){
   paint();
   const guardo=await new Promise(res=>{
     d.querySelector("[data-ok]").onclick=async()=>{
-      const nuevo={campeon:est.campeon,pala:est.pala,mvp:est.mvp,sinCafe:est.cafeReg?[...est.sinCafe]:null};
-      const camb=Object.keys(nuevo).filter(k=>!mismo(k,nuevo[k],antes[k])); // solo lo que tocaste
+      const nuevo={campeon:est.campeon,pala:est.pala,mvp:est.mvp,sinCafe:est.cafe==="reg"?[...est.sinCafe]:est.cafe==="nose"?false:null};
+      if(misma(nuevo.campeon,nuevo.pala)){toast("⚠️ El Kia y la cuchara no pueden ser la misma pareja");return;}
+      const camb=Object.keys(nuevo).filter(k=>!mismoDato(nuevo[k],antes[k])); // solo lo que tocaste
       uiClose();
       if(!camb.length){toast("No cambiaste nada — quedó todo como estaba");res(false);return;}
+      const pisa=camb.filter(k=>antes[k]!==null); // cambia algo que YA estaba cargado: se confirma y queda en el historial
+      if(pisa.length&&!completa){ // (si estaba completa ya pasó por el "¡Momento!")
+        if(!await uiConfirm("🕰️ Estás corrigiendo lo que ya estaba cargado",`${pisa.map(k=>`${NOMDATO[k]}: <b>${esc(valorTxt(k,antes[k]))}</b> → <b>${esc(valorTxt(k,nuevo[k]))}</b>`).join("<br>")}<br><br>Lo de antes queda guardado en el historial de cambios 🕓, con fecha y autor.`,"✍️ Sí, corregir","Cancelar (no guarda nada)")){toast("No se guardó nada");res(false);return;}
+      }
       let cur=fechaActual(f); // la nube pudo cambiar con el modal abierto: se escribe en ESTA fecha de los datos de ahora
       if(!cur){toast(CAMBIO_FECHA,5000);render();res(false);return;}
-      const ahora=estadoDe(cur), choques=camb.filter(k=>!mismo(k,ahora[k],antes[k])&&!mismo(k,ahora[k],nuevo[k]));
+      const ahora=estadoDe(cur), choques=camb.filter(k=>!mismoDato(ahora[k],antes[k])&&!mismoDato(ahora[k],nuevo[k]));
       if(choques.length){ // otro admin cargó ESO MISMO mientras tanto: decidís vos
-        const nom={campeon:"🚗 campeón",pala:"🥄 cuchara",mvp:"🎖️ MVP",sinCafe:"☕ café"};
-        if(!await uiConfirm("⚠️ Otro admin cargó esta fecha recién",`Mientras tenías esto abierto, en la nube cambió <b>${choques.map(k=>nom[k]).join(" · ")}</b> del ${fmtFecha(cur.f)}.<br><br>¿Guardás lo tuyo encima? Lo que había queda en el historial de cambios.`,"✍️ Sí, guardar lo mío","No, dejar lo de la nube")){toast("No se guardó: quedó lo de la nube");render();res(false);return;}
+        if(!await uiConfirm("⚠️ Otro admin cargó esta fecha recién",`Mientras tenías esto abierto, en la nube cambió <b>${choques.map(k=>NOMDATO[k]).join(" · ")}</b> del ${fmtFecha(cur.f)}.<br><br>¿Guardás lo tuyo encima? Lo que había queda en el historial de cambios.`,"✍️ Sí, guardar lo mío","No, dejar lo de la nube")){toast("No se guardó: quedó lo de la nube");render();res(false);return;}
         cur=fechaActual(cur); if(!cur){toast(CAMBIO_FECHA,5000);render();res(false);return;}
       }
-      const previo=estadoDe(cur), corrige=!faltantesDe(cur).length||choques.length>0; // reescribe la historia → con respaldo
-      camb.forEach(k=>{ if(k!=="sinCafe")cur[k]=nuevo[k]; else if(nuevo.sinCafe)cur.sinCafe=nuevo.sinCafe; else delete cur.sinCafe; }); // lo que no tocaste queda como está en la nube
+      const previo=estadoDe(cur), fin={...previo}; camb.forEach(k=>{fin[k]=nuevo[k];});
+      if(misma(fin.campeon,fin.pala)){toast("⚠️ Con lo que hay en la nube, el Kia y la cuchara quedarían iguales: NO se guardó. Abrila de nuevo",5000);render();res(false);return;}
+      const corrige=camb.some(k=>previo[k]!==null); // toca un dato que ya tenía valor (aunque la fecha no esté completa) → con respaldo
+      camb.forEach(k=>{ if(k==="sinCafe"&&nuevo.sinCafe===null)delete cur.sinCafe; else cur[k]=nuevo[k]; }); // lo que no tocaste queda como está en la nube
       if(corrige)(cur.versiones||(cur.versiones=[])).push({ts:Date.now(),por:(USER&&USER.email)||"admin (este dispositivo)",antes:previo});
       cur.confirmada=true; // la carga directa siempre la hace un admin
       const sv=save();toast(corrige?"🕰️ Corregido — la versión anterior quedó en el historial":"Resultado cargado ✓");render();
@@ -1538,6 +1576,7 @@ async function cargarResultado(f){
     d.querySelector("[data-x]").onclick=()=>{uiClose();res(false);};
   });
   if(guardo)await ofrecerFotos(f); // 📸 con el resultado guardado, la app ofrece cargar las fotos ahí mismo
+  return guardo;
 }
 async function ofrecerFotos(f){ // 📸 después de cargar el resultado: fotos del día, varias si hace falta
   if(!CLOUD||!ISADMIN)return;
@@ -1675,6 +1714,9 @@ async function flyerResultado(f){
   const sp=v=>{try{x.letterSpacing=v;}catch(e){}};
   const fit=(t,base,tpl,maxW)=>{let s=base;x.font=tpl(s);while(s>20&&x.measureText(t).width>maxW){s-=2;x.font=tpl(s);}return s;};
   const anton=s=>`${s}px Anton`;
+  // 📃 una lista larga (ej. muchos sin café) se parte por comas en renglones antes que achicarla hasta cortarse
+  const renglones=(t,maxW)=>t.split(", ").reduce((ls,w,i,a)=>{const s=i<a.length-1?w+",":w, u=ls.length?ls[ls.length-1]+" "+s:"";if(u&&x.measureText(u).width<=maxW)ls[ls.length-1]=u;else ls.push(s);return ls;},[]);
+  const bloque=(t,maxW,maxH)=>{for(let s=46;;s-=2){x.font=anton(s);const ls=renglones(t,maxW);if(s<=20||(ls.length*(s+8)<=maxH&&ls.every(l=>x.measureText(l).width<=maxW)))return {s,ls};}};
   // fondo
   x.fillStyle="#0a0b0d";x.fillRect(0,0,W,H);
   const rad=(cx,cy,r,c)=>{const g=x.createRadialGradient(cx,cy,0,cx,cy,r);g.addColorStop(0,c);g.addColorStop(1,"rgba(10,11,13,0)");x.fillStyle=g;x.fillRect(0,0,W,H);};
@@ -1727,9 +1769,9 @@ async function flyerResultado(f){
     x.font='700 26px "Barlow Condensed"';sp("5px");
     const kw=x.measureText(k).width;
     x.fillStyle="#98a0ad";x.fillText(k,196,y+rh/2+2);sp("0px");
-    const vx=Math.max(480,196+kw+50);
-    const vs=fit(v,46,anton,W-94-vx);
-    x.fillStyle="#f4f6fa";x.font=anton(vs);x.fillText(v,vx,y+rh/2+4);
+    const vx=Math.max(480,196+kw+50), b=bloque(v,W-94-vx,rh-16);
+    x.fillStyle="#f4f6fa";x.font=anton(b.s);
+    b.ls.forEach((l,i)=>x.fillText(l,vx,y+rh/2+4+(i-(b.ls.length-1)/2)*(b.s+8)));
     y+=rh+gap;
   });
   // pie (derecha primero, para que la URL no se le encime)
@@ -1805,12 +1847,14 @@ function probsKia(parejas){ // probabilidad de Kia por pareja (softmax del ratin
 }
 function miProdeDe(f){ return USER?PRODE.find(x=>x.f===f&&x.uid===USER.uid):null; }
 // 🔒 el prode de una fecha se cierra a las 8:30 hora Argentina (UTC-3) de ese día, igual que en firestore.rules
-function prodeCerrado(f){ return Date.now()>=new Date(f+"T08:30:00-03:00").getTime(); }
+function cierreProde(f){ return new Date(f+"T08:30:00-03:00").getTime(); }
+function prodeCerrado(f){ return Date.now()>=cierreProde(f); }
 function tablaProde(){ // 🎯 ranking de adivinos
   const cerradas={}; allFechas().forEach(f=>{if(f.campeon)cerradas[f.f]=f.campeon;});
   const m={};
   PRODE.forEach(p=>{
     const win=cerradas[p.f]; if(!win)return;
+    if(typeof p.ts==="number"&&p.ts>=cierreProde(p.f))return; // jugado con el partido en curso (antes de las reglas nuevas): no cuenta
     const who=p.jugador||p.nombre||"?";
     const o=m[who]||(m[who]={n:who,total:0,ok:0});
     o.total++;
@@ -2232,13 +2276,18 @@ function propMal(p){ // 📥 una propuesta la puede escribir cualquiera: si trae
   return "";
 }
 function propNoCoincide(p,fe){ // ¿lo propuesto es de las parejas/jugadores de esa fecha?
-  const igual=(a,b)=>a.length===b.length&&a.every(n=>b.includes(n));
   const js=fe.parejas.flat();
-  if(p.campeon&&!fe.parejas.some(t=>igual(t,p.campeon)))return "el campeón no es una pareja de esa fecha";
-  if(p.pala&&!fe.parejas.some(t=>igual(t,p.pala)))return "la cuchara no es una pareja de esa fecha";
+  if(p.campeon&&!fe.parejas.some(t=>misma(t,p.campeon)))return "el campeón no es una pareja de esa fecha";
+  if(p.pala&&!fe.parejas.some(t=>misma(t,p.pala)))return "la cuchara no es una pareja de esa fecha";
+  if(misma(p.campeon||fe.campeon,p.pala||fe.pala))return "el Kia y la cuchara quedarían la misma pareja";
   if(p.mvp&&!js.includes(p.mvp))return "el MVP no jugó esa fecha";
   if(Array.isArray(p.sinCafe)&&!p.sinCafe.every(n=>js.includes(n)))return "en el café hay alguien que no jugó";
   return "";
+}
+function fechaDeProp(p){ const fs=DATA.fechas.filter(x=>x.f===p.f); return fs.find(x=>!propNoCoincide(p,x))||fs[0]||null; } // si hay dos el mismo día, la de esas parejas
+function difProp(p,fe){ // qué cambiaría la propuesta en la fecha: cambia = todo lo distinto, pisa = lo que YA tenía otro valor
+  const cambia=["campeon","pala","mvp","sinCafe"].filter(k=>p[k]!=null&&!mismoDato(p[k],fe[k]));
+  return {cambia,pisa:cambia.filter(k=>fe[k]!=null)};
 }
 /* ♻️ Reemplazar TODA la nube (Importar / Subir los datos de este dispositivo):
    validar, mostrar qué cambia y bajar un respaldo de la nube actual antes de pisarla */
@@ -2249,7 +2298,7 @@ function fechaMal(f){
   if(f.campeon!=null&&f.campeon!==false&&!listaTxt(f.campeon))return `el campeón del ${f.f} es raro`;
   if(f.pala!=null&&f.pala!==false&&!listaTxt(f.pala))return `la cuchara del ${f.f} es rara`;
   if(f.mvp!=null&&f.mvp!==false&&typeof f.mvp!=="string")return `el MVP del ${f.f} es raro`;
-  if(f.sinCafe!=null&&!listaTxt(f.sinCafe))return `el café del ${f.f} es raro`;
+  if(f.sinCafe!=null&&f.sinCafe!==false&&!listaTxt(f.sinCafe))return `el café del ${f.f} es raro`; // false = "no se sabe"
   return "";
 }
 function datosMal(d){ // "" si son datos de la app bien armados; si no, qué tienen de raro
@@ -2267,7 +2316,7 @@ function resumenCambio(antes,despues,lblAntes,lblDespues){ // 🔎 vista previa:
   const lista=a=>a.length>6?a.slice(0,6).join(", ")+` y ${a.length-6} más`:a.join(", ");
   let h=`<div class="note" style="margin:6px 0">📍 <b>${lblAntes}:</b> ${antes?desc(antes):"vacía (no hay nada)"}<br>➡️ <b>${lblDespues}:</b> ${desc(despues)}</div>`;
   if(!antes)return h;
-  const res=f=>JSON.stringify([f.parejas,f.campeon||null,f.pala==null?null:f.pala,f.mvp==null?null:f.mvp,Array.isArray(f.sinCafe)?f.sinCafe:null]);
+  const res=f=>JSON.stringify([f.parejas,f.campeon||null,f.pala==null?null:f.pala,f.mvp==null?null:f.mvp,Array.isArray(f.sinCafe)||f.sinCafe===false?f.sinCafe:null]);
   const mapa=d=>{const m={};(d.fechas||[]).forEach(f=>{if(!(f.f in m))m[f.f]=f;});return m;};
   const A=mapa(antes),B=mapa(despues);
   const se=Object.keys(A).filter(k=>!(k in B)).sort().reverse(), entran=Object.keys(B).filter(k=>!(k in A)).sort().reverse();
@@ -2350,11 +2399,8 @@ function vAdmin(){
           <span class="an">⚠️ Propuesta inválida (${esc(mal)}) · no se puede confirmar<br><small style="color:var(--muted)">propuso ${esc(p.por||"?")}</small></span>
           <button data-propno="${esc(p.id)}" title="Descartar">🗑️ Descartar</button>
         </div>`;
-          const bits=[];
-          if(p.campeon)bits.push(`🚗 ${esc(p.campeon.join(" & "))}`);
-          if(p.pala)bits.push(`🥄 ${esc(p.pala.join(" & "))}`);
-          if(p.mvp)bits.push(`🎖️ ${esc(p.mvp)}`);
-          if(Array.isArray(p.sinCafe))bits.push(p.sinCafe.length?`🏃 ${esc(p.sinCafe.join(", "))}`:"☕ se quedaron todos");
+          const fe=fechaDeProp(p), {pisa}=fe?difProp(p,fe):{pisa:[]}; // ⚠️ lo que ya está cargado distinto, a la vista
+          const bits=["campeon","pala","mvp","sinCafe"].filter(k=>p[k]!=null).map(k=>`${NOMDATO[k].split(" ")[0]} ${esc(valorTxt(k,p[k]))}${pisa.includes(k)?` <b class="warn">⚠️ ya cargado: ${esc(valorTxt(k,fe[k]))}</b>`:""}`);
           return `<div class="adline" style="flex-wrap:wrap">
           <span class="an">${fmtFecha(p.f)} · ${bits.join(" · ")||"sin datos"}<br><small style="color:var(--muted)">propuso ${esc(p.por||"?")}</small></span>
           <button data-propok="${esc(p.id)}" title="Confirmar" style="color:#4ade80;font-weight:800;font-size:14px">✔️ Confirmar</button>
@@ -2369,16 +2415,10 @@ function vAdmin(){
 
     <div class="card pad">
       <div class="tag" style="margin-bottom:8px">➕ Cargar fecha manual</div>
-      <div class="note" style="margin-bottom:10px">Pegá directo el mensaje de WhatsApp del sorteo: una pareja por línea, con <b>/</b>, <b>coma</b>, <b>y</b> o <b>guión</b> (ej: "1) Alba/Invitado"). Reconoce apodos.</div>
-      <div class="field"><label>Fecha</label><input id="afecha" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
+      <div class="note" style="margin-bottom:10px">Pegá directo el mensaje de WhatsApp del sorteo: una pareja por línea, con <b>/</b>, <b>coma</b>, <b>y</b> o <b>guión</b> (ej: "1) Alba/Invitado"). Reconoce apodos y te avisa los que no conoce. Si la fecha ya se jugó, al guardar se abre la carga del resultado (Kia, cuchara, MVP y café con botones).</div>
+      <div class="field"><label>Fecha</label><input id="afecha" type="date" value="${ultDomingo()}"></div>
       <div class="field" style="margin-top:8px"><label>Parejas</label>
         <textarea id="apar" rows="6" style="width:100%" placeholder="1) Mike/Track&#10;2) Bati y Pati&#10;3) Matso, Toto"></textarea></div>
-      <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
-        <div class="field" style="flex:1;min-width:140px"><label>🚗 Kia / Campeón</label><input id="acamp" placeholder="Matso, Toto"></div>
-        <div class="field" style="flex:1;min-width:140px"><label>🥄 Cuchara</label><input id="apala" placeholder="Pati, Bati"></div>
-        <div class="field" style="flex:1;min-width:140px"><label>🎖️ MVP</label><input id="amvp" placeholder="Track (Juli)"></div>
-        <div class="field" style="flex:1;min-width:140px"><label>🏃 Se rajaron sin café</label><input id="acafe" placeholder="Chuck, Toto (vacío = se quedaron todos)"></div>
-      </div>
       <button class="btn block" id="addFecha" style="margin-top:12px">Guardar fecha</button>
     </div>
 
@@ -2496,13 +2536,14 @@ function vAdmin(){
     </div>
   </section>`;
 }
-function parsePairs(txt){
-  return txt.split("\n").map(cleanLine).filter(l=>l&&!esEncabezado(l)&&!/^parejas/i.test(l)).map(l=>
-    l.split(/\s*(?:,|\/|&|\+|-|–|—)\s*|\s+y\s+/i).map(s=>s.trim()).filter(Boolean)
-      .map(s=>matchPlayer(s)||s)
-  ).filter(p=>p.length>=2&&p.length<=3);
+function parsePairs(txt,malas){ // malas (opcional): junta las líneas que no son una pareja
+  return txt.split("\n").map(cleanLine).filter(l=>l&&!esEncabezado(l)&&!/^parejas/i.test(l)).map(l=>{
+    const p=l.split(/\s*(?:,|\/|&|\+|-|–|—)\s*|\s+y\s+/i).map(s=>s.trim()).filter(Boolean).map(s=>matchPlayer(s)||s);
+    if(malas&&(p.length<2||p.length>3))malas.push(l);
+    return p;
+  }).filter(p=>p.length>=2&&p.length<=3);
 }
-function parseDuo(s){const p=(s||"").split(",").map(x=>x.trim()).filter(Boolean);return p.length===2?p:null;}
+function ultDomingo(){ const d=new Date(); d.setDate(d.getDate()-d.getDay()); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); } // hoy si es domingo (hora local)
 
 /* ================= BIND ================= */
 function bind(){
@@ -2576,7 +2617,8 @@ function bind(){
         if(v){prop.campeon=v;cambios++;}
       }
       if(faltan.includes("pala")){
-        const v=await uiPick("🥄 ¿Cuchara de madera?",`${dia} · la pareja que la pasó peor`,[...parejasOpt,{label:"🤷 No sé",value:null}]);
+        const camp=prop.campeon||f.campeon; // la campeona no puede ser la cuchara
+        const v=await uiPick("🥄 ¿Cuchara de madera?",`${dia} · la pareja que la pasó peor`,[...parejasOpt.filter(o=>!misma(o.value,camp)),{label:"🤷 No sé",value:null}]);
         if(v===undefined)return;
         if(v){prop.pala=v;cambios++;}
       }
@@ -2586,9 +2628,8 @@ function bind(){
         if(v){prop.mvp=v;cambios++;}
       }
       if(faltan.includes("cafe")){
-        const v=await uiCafe("☕ ¿Quiénes se quedaron al café?",`${dia}`,jugadores,[]);
-        if(v===undefined)return;
-        prop.sinCafe=v;cambios++;
+        const v=await uiCafe("☕ ¿Quiénes se quedaron al café?",`${dia} · si no sabés, tocá "Dejar como está" (lo demás se manda igual)`,jugadores,[]);
+        if(v!==undefined){prop.sinCafe=v;cambios++;} // no sabe del café: no se inventa, se manda el resto
       }
       if(!cambios){toast("No cargaste ningún dato");return;}
       addDoc(collection(db,"propuestas"),prop)
@@ -2601,6 +2642,8 @@ function bind(){
     if(pb2)pb2.onclick=()=>proponer(fProx);
     const lr=document.getElementById("loadResBtn");
     if(lr)lr.onclick=()=>cargarResultado(fPend||DATA.fechas[0]);
+    const lh=document.getElementById("loadHoyBtn"); // 👑 domingo después de las 8:30: el resultado de hoy, sin esperar a las 11
+    if(lh)lh.onclick=()=>cargarResultado(fProx);
     const fx=document.getElementById("fixtureBtn");
     if(fx)fx.onclick=()=>{PEND_FIX=fProx.f;go("sorteo");}; // lo sortea Sorteo apenas se dibuja (un rAF corría antes del cambio de pantalla)
     // 📲 instalar como app
@@ -2730,17 +2773,30 @@ function bind(){
     if(CLOUD&&!ISADMIN)return; // vista bloqueada: no hay controles que atar
     const pc=document.getElementById("pushCloud");
     if(pc)pc.onclick=subirEsteDispositivo;
-    document.querySelectorAll("[data-propok]").forEach(b=>b.onclick=()=>{
-      const p=PROPUESTAS.find(x=>x.id===b.dataset.propok); if(!p)return;
-      if(propMal(p)){toast("⚠️ Propuesta inválida: descartala con 🗑️",4500);return;}
-      const fs=DATA.fechas.filter(x=>x.f===p.f), fe=fs.find(x=>!propNoCoincide(p,x))||fs[0]; // si hay dos el mismo día, la de esas parejas
-      if(!fe){toast("Esa fecha ya no existe");deleteDoc(doc(db,"propuestas",p.id)).catch(()=>{});return;}
-      const nc=propNoCoincide(p,fe); if(nc){toast(`⚠️ No se confirmó: ${nc}. Revisala y cargala a mano`,5000);return;}
-      fe.campeon=p.campeon||fe.campeon; fe.pala=p.pala||fe.pala; fe.mvp=p.mvp||fe.mvp; if(Array.isArray(p.sinCafe))fe.sinCafe=p.sinCafe; fe.confirmada=true;
-      save().then(ok=>{ if(!ok)return; // si no entró en la nube, la propuesta queda para reintentar
-        deleteDoc(doc(db,"propuestas",p.id)).catch(()=>{});
-        toast("✔️ Resultado confirmado"); });
+    document.querySelectorAll("[data-propok]").forEach(b=>b.onclick=async()=>{
+      if(b.dataset.yendo)return; b.dataset.yendo="1"; // doble toque: una sola vez
+      try{await confirmarProp(b.dataset.propok);}finally{delete b.dataset.yendo;}
     });
+    const confirmarProp=async id=>{
+      const p=PROPUESTAS.find(x=>x.id===id); if(!p)return;
+      if(propMal(p)){toast("⚠️ Propuesta inválida: descartala con 🗑️",4500);return;}
+      const g0=NUBE_GEN; // si la nube cambia con el modal abierto, save(g0) no pisa nada
+      let fe=fechaDeProp(p);
+      if(!fe){toast("⚠️ Esa fecha ya no existe: no se aplicó nada (descartala con 🗑️)",4500);return;}
+      const nc=propNoCoincide(p,fe); if(nc){toast(`⚠️ No se confirmó: ${nc}. Revisala y cargala a mano`,5000);return;}
+      const {cambia,pisa}=difProp(p,fe);
+      if(!cambia.length){deleteDoc(doc(db,"propuestas",p.id)).catch(()=>{});toast("✓ Eso ya estaba cargado: propuesta archivada");return;}
+      if(pisa.length){ // la fecha ya tiene ESOS datos con otro valor: se muestra lo que hay vs lo propuesto y decidís vos
+        if(!await uiConfirm("⚠️ Esa fecha ya tiene resultado",`${fmtFecha(fe.f)} · propuesta de ${esc(p.por||"?")}:<br><br>${cambia.map(k=>`${NOMDATO[k]}: ${fe[k]!=null?`hoy <b>${esc(valorTxt(k,fe[k]))}</b> → `:""}propuesta <b>${esc(valorTxt(k,p[k]))}</b>`).join("<br>")}<br><br>¿Reemplazo lo cargado? Lo de ahora queda en el historial de cambios 🕓.`,"✍️ Sí, reemplazar","No, dejar lo cargado"))return;
+        fe=fechaActual(fe); if(!fe){toast(CAMBIO_FECHA,5000);render();return;}
+      }
+      const antes=estadoDe(fe);
+      cambia.forEach(k=>{fe[k]=p[k];}); fe.confirmada=true;
+      if(pisa.length)(fe.versiones||(fe.versiones=[])).push({ts:Date.now(),por:`${(USER&&USER.email)||"admin"} (propuesta de ${p.por||"?"})`,antes});
+      if(!await save(g0))return; // si no entró en la nube, la propuesta queda para reintentar
+      deleteDoc(doc(db,"propuestas",p.id)).catch(()=>{});
+      toast(pisa.length?"✔️ Confirmado — lo anterior quedó en el historial":"✔️ Resultado confirmado");
+    };
     document.querySelectorAll("[data-propno]").forEach(b=>b.onclick=()=>{
       deleteDoc(doc(db,"propuestas",b.dataset.propno)).then(()=>toast("Propuesta descartada")).catch(()=>{});
     });
@@ -2801,19 +2857,37 @@ function bind(){
       if(DATA.bolsaCop)delete DATA.bolsaCop[n];
       save();toast(n+" dado de alta como jugador estable ✓");render();
     });
-    document.getElementById("addFecha").onclick=()=>{
-      const f=document.getElementById("afecha").value;
-      const pares=parsePairs(document.getElementById("apar").value);
-      if(!f||!pares.length){toast("Falta fecha o parejas");return;}
-      const mvpVal=document.getElementById("amvp").value.trim();
-      const nueva={f,parejas:pares,campeon:parseDuo(document.getElementById("acamp").value),pala:parseDuo(document.getElementById("apala").value),mvp:mvpVal||null};
-      // el dato del café solo se registra si hay resultado o si se anotó a alguien (una fecha futura no suma cafés)
-      const cafeTxt=document.getElementById("acafe").value;
-      if(cafeTxt.trim()||nueva.campeon)nueva.sinCafe=parseCafe(cafeTxt);
-      if(nueva.campeon)nueva.confirmada=true; // la carga la hace un admin
-      DATA.fechas.unshift(nueva);
-      DATA.fechas.sort((a,b)=>b.f.localeCompare(a.f));
-      save();toast("Fecha agregada");render();
+    document.getElementById("addFecha").onclick=async()=>{ // ➕ fecha + parejas; el resultado se carga con botones (cargarResultado)
+      const g0=NUBE_GEN, f=document.getElementById("afecha").value, malas=[];
+      const pares=parsePairs(document.getElementById("apar").value,malas);
+      if(!RXFECHA.test(f)||!pares.length){toast("Falta fecha o parejas");return;}
+      const nombres=pares.flat(), rep=nombres.find((n,i)=>nombres.indexOf(n)!==i&&!esGenerico(n));
+      if(rep){toast(`⚠️ ${rep} aparece dos veces: revisá las parejas`,4500);return;}
+      const conocidos=new Set(allKnownNames()), nuevos=[...new Set(nombres.filter(n=>!conocidos.has(n)&&!esGenerico(n)))];
+      if((nuevos.length||malas.length)&&!await uiConfirm(nuevos.length?`🤔 No reconocí ${nuevos.length===1?"un nombre":nuevos.length+" nombres"}`:"🤔 Hay líneas que no entendí",
+        `${nuevos.length?`<b>${esc(nuevos.join(", "))}</b> no ${nuevos.length===1?"está":"están"} en el plantel ni jugó antes: si es un apodo mal escrito, corregilo; si es alguien nuevo, entra como jugador sorpresa.`:""}${malas.length?`${nuevos.length?"<br><br>":""}No son una pareja (quedan afuera): <b>${esc(malas.join(" · "))}</b>`:""}`,
+        "✅ Sí, guardar así","✏️ No, corrijo"))return;
+      const clave=t=>JSON.stringify(t.map(p=>p.slice().sort()).sort());
+      let ex=DATA.fechas.find(x=>x.f===f), hecho="igual";
+      if(ex&&clave(ex.parejas)!==clave(pares)){ // 📅 esa fecha ya existe: no se duplica, se reemplazan sus parejas (con respaldo)
+        const js=pares.flat(), noVa=e=>["campeon","pala","mvp","sinCafe"].filter(k=>Array.isArray(e[k])?(k==="sinCafe"?!e[k].every(n=>js.includes(n)):!pares.some(t=>misma(t,e[k]))):(k==="mvp"&&typeof e.mvp==="string"&&!js.includes(e.mvp)));
+        const pierde=noVa(ex);
+        if(!await uiConfirm(`🔁 Ya existe la fecha del ${fmtFecha(f)}`,`Está cargada con:<br><b>${esc(ex.parejas.map(p=>p.join(" & ")).join(" · "))}</b><br><br>¿Reemplazo sus parejas por estas? La fecha no se duplica y lo de ahora queda en el historial de cambios 🕓.${pierde.length?`<br><br>⚠️ Esto no es de las parejas nuevas y queda <b>sin cargar</b> (lo cargás de nuevo enseguida): ${pierde.map(k=>`${NOMDATO[k]} ${esc(valorTxt(k,ex[k]))}`).join(" · ")}`:""}`,"🔁 Reemplazar las parejas","Cancelar"))return;
+        ex=DATA.fechas.find(x=>x.f===f); if(!ex){toast(CAMBIO_FECHA,5000);render();return;} // (si la nube cambió, save(g0) no pisa nada)
+        (ex.versiones||(ex.versiones=[])).push({ts:Date.now(),por:(USER&&USER.email)||"admin (este dispositivo)",antes:{parejas:ex.parejas,...estadoDe(ex)}});
+        ex.parejas=pares;
+        noVa(ex).forEach(k=>{if(k==="sinCafe")delete ex.sinCafe;else ex[k]=null;}); // el resultado que sigue siendo de estas parejas se conserva
+        hecho="reemplazo";
+      }else if(!ex){
+        DATA.fechas.push({f,parejas:pares,campeon:null,pala:null,mvp:null});
+        DATA.fechas.sort((a,b)=>b.f.localeCompare(a.f));
+        hecho="nueva";
+      }
+      if(hecho==="igual")toast(`✓ El ${fmtFecha(f)} ya estaba cargado con esas parejas`);
+      else{ if(!await save(g0))return; toast(hecho==="nueva"?"📅 Fecha agregada":"🔁 Parejas reemplazadas — las de antes quedaron en el historial",3500); }
+      render();
+      const fe=DATA.fechas.find(x=>x.f===f);
+      if(fe&&(f<hoyISO()||prodeCerrado(f)))await cargarResultado(fe); // ya se jugó: Kia, cuchara, MVP y café con botones (nada de nombres tipeados)
     };
     // 📸 fotos: elegir → recortar (modal) → publicar en la nube (aparece al instante)
     const fkTipo=document.getElementById("fkTipo");
@@ -2861,8 +2935,11 @@ function bind(){
       const f=fechaActual(f0)||f0; if(!f||!f.versiones)return;
       const lineas=[...f.versiones].reverse().map(v=>{
         const d=new Date(v.ts), t=`${d.getDate()}/${d.getMonth()+1} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
-        const a=v.antes||{}, res=["campeon","pala","mvp","sinCafe"].some(k=>k in a); // un reemplazo de parejas no trae resultado
-        return `<div class="mopt" style="cursor:default"><b>${t}</b> · lo cambió ${esc(v.por)}<small>Decía: ${Array.isArray(a.parejas)?`👥 ${esc(a.parejas.map(p=>p.join(" & ")).join(" · "))}${res?"<br>":""}`:""}${res?`🚗 ${a.campeon?esc(a.campeon.join(" & ")):"—"} · 🥄 ${a.pala?esc(a.pala.join(" & ")):"—"} · 🎖️ ${a.mvp?esc(a.mvp):"—"} · ☕ ${Array.isArray(a.sinCafe)?(a.sinCafe.length?"se rajaron "+esc(a.sinCafe.join(", ")):"se quedaron todos"):"—"}`:""}</small></div>`;
+        const a=v.antes||{}, partes=[];
+        if(Array.isArray(a.parejas))partes.push(`👥 ${esc(a.parejas.map(p=>p.join(" & ")).join(" · "))}`);
+        const res=["campeon","pala","mvp","sinCafe"].filter(k=>k in a).map(k=>`${NOMDATO[k].split(" ")[0]} ${esc(valorTxt(k,a[k]))}`); // solo lo que guardó esa versión (un reemplazo de parejas no trae resultado)
+        if(res.length)partes.push(res.join(" · "));
+        return `<div class="mopt" style="cursor:default"><b>${t}</b> · lo cambió ${esc(v.por)}<small>Decía: ${partes.join("<br>")||"—"}</small></div>`;
       });
       const d=uiShow(`🕰️ Historial de cambios`,`Fecha del ${fmtFecha(f.f)} · la versión vigente es la que se ve en la app`,lineas.join("")+`<button class="mcancel" data-x>Cerrar</button>`);
       d.querySelector("[data-x]").onclick=uiClose;
