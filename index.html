@@ -2067,10 +2067,10 @@ async function flyerResultado(f){
   // etiqueta campeón
   x.textAlign="left";
   if(f.campeon){
-    x.font='700 32px "Barlow Condensed"';x.fillStyle="#ff3350";sp("9px");x.fillText("🚗 SE LLEVARON EL KIA",64,262);sp("0px");
-    const lw=x.measureText("🚗 SE LLEVARON EL KIA").width;
+    x.font='700 32px "Barlow Condensed"';x.fillStyle="#ff3350";sp("9px");x.fillText("🚗 SE LLEVARON EL KIA",64,262);
+    const lw=x.measureText("🚗 SE LLEVARON EL KIA").width;sp("0px"); // se mide CON el espaciado de letras, si no la línea tacha "KIA"
     g=x.createLinearGradient(64,0,W-64,0);g.addColorStop(0,"#ff3350");g.addColorStop(1,"rgba(255,51,80,0)");
-    x.fillStyle=g;x.fillRect(64+lw+90,254,W-64-(64+lw+90),3);
+    if(64+lw+28<W-120){x.fillStyle=g;x.fillRect(64+lw+28,254,W-64-(64+lw+28),3);}
     // copa + nombres
     x.font="150px serif";x.fillText("🏆",64,470);
     const n1=String(f.campeon[0]||"").toUpperCase(), n2=("& "+String(f.campeon[1]||"")).toUpperCase();
