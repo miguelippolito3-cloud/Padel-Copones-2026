@@ -541,6 +541,14 @@ const PARCHES=[
     if(f.mvp===undefined||f.mvp===null)f.mvp="Calambre"; // MVP: Ficky
     if(f.campeon.join()==="Matso,Calambre")f.fotoQuien={...(f.fotoQuien||{}),kia:["Matso","Calambre"]};
   }},
+  { id:"2026-10-11-partidos-mike", aplicar:d=>{ // 🎾 partidos a un set del 11/10 que pasó Mike (Negro Mon & Mike Rafa). fecha.partidos: [{n,a,b,ga,gb,fin,por}] — ga/gb = games de a/b; 6-5 = tiebreak; fin:false = no se terminó (no cuenta)
+    const f=d.fechas.find(x=>x.f==="2026-10-11"); if(!f)return;
+    const yo=["Negro Mon","Mike Rafa"], ya=f.partidos||[];
+    const m=(n,b,ga,gb,fin)=>({n,a:yo,b,ga,gb,fin,por:"Mike (chat)"});
+    const nuevos=[m(1,["Don (Diegui)","Bati"],3,6,true),m(2,["Track","Toto"],5,6,true),m(3,["Pati","Taya"],6,1,true),m(4,["Chichón","Chuck"],4,2,false)]
+      .filter(x=>!ya.some(y=>y.n===x.n&&[y.a,y.b].some(t=>t.join()===yo.join())));
+    if(nuevos.length)f.partidos=[...ya,...nuevos];
+  }},
 ];
 let PARCHE_PENDIENTE=false; // se aplicó un parche que la nube todavía no tiene
 const LS="padel_espn_v1";
