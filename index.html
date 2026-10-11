@@ -1145,6 +1145,7 @@ function route(v,p){
   if(m){ const mx=m.querySelector("[data-mx]"); if(mx)mx.click(); else m.remove(); }
   const bs=document.querySelector(".bigshow"); if(bs)bs.click();
   if(VIEW==="inicio"&&(v||"inicio")!=="inicio"&&DV_PEND)guardarVisto(DV_PEND); // 👋 te fuiste del Inicio: "Desde tu última visita" ya la viste
+  if(VIEW==="partidos"&&v!=="partidos"&&ptSucio())toast(`📝 Lo que cargaste quedó guardado en este celu: volvé a ${!CLOUD||ISADMIN?"guardarlo":"mandarlo"} desde 🎾`,4000); // nada se pierde (borrador)
   POS[HASH_VISTO]=window.scrollY; HASH_VISTO=location.hash||"#inicio"; // dónde quedó la pantalla que se deja
   const y=VOLVIENDO?(POS[HASH_VISTO]||0):0; VOLVIENDO=false;
   VIEW=v||"inicio";PARAM=p||null; marcarNav(); render(true); arriba(y);
@@ -1295,7 +1296,7 @@ function domingoHTML(prox){
     </details>`;
     if(prox.parejas.length>=2)h+=`<button class="btn ghost block" id="fixtureBtn" style="margin-top:8px">🆚 Fixture tentativo: cruces y canchas</button>`;
     if(prodeCerrado(prox.f)){ // ya arrancó (8:30 del día): el resultado de HOY se carga ahí mismo, en el café; y cada pareja, sus partidos reales
-      if(prox.parejas.length>=2)h+=`<button class="btn block" data-ptgo="${esc(prox.f)}" id="ptHoyBtn" style="margin-top:10px;background:#22c55e;color:#0a0b0d">🎾 Cargá tus partidos de hoy</button>`;
+      if(prox.parejas.length>=2)h+=`<button class="btn block" data-ptgo="${esc(prox.f)}" id="ptHoyBtn" style="margin-top:10px;background:#22c55e;color:#0a0b0d">${ptBotonTxt(prox,"🎾 Cargá tus partidos de hoy","🎾 Cargá tus partidos de hoy")}</button>`;
       h+=ISADMIN?`<button class="btn block" id="loadHoyBtn" style="margin-top:10px">👑 Cargar el resultado de hoy</button>`
         :CLOUD?`<button class="btn block" id="propBtn2" style="margin-top:10px;background:var(--card2);border:1px solid var(--line);color:var(--txt)">📝 Proponer resultado (lo aprueba el organizador)</button>`:"";
     }
@@ -1346,11 +1347,12 @@ function visitaDe(){
   else if(palas.length){ it.push(fila(`🥄 Te tocaron ${palas.length} cucharas de madera 🙈`,a)); mio.push(`🥄 Me tocaron ${palas.length} cucharas de madera desde el ${d0} 🙈`); }
   // 🎾 tus partidos del último domingo que jugaste: si no están, te los pide; si están, tu récord del día
   const fpt=mis.find(f=>f.f>=PARTIDOS_DESDE);
-  if(fpt){ const d=fechaCorta(fpt.f), r=ptDiaDe(fpt,yo), riv=x=>esc(x.el.join(" & "));
-    if(!r.hay&&!ptPendientes(fpt.f).length)it.push(fila(`🎾 <b>Te faltan tus partidos del ${d}</b> — cargalos en 1 minuto`,` data-ptgo="${esc(fpt.f)}" role="link" tabindex="0"`));
-    else if(r.pj){
+  if(fpt){ const d=fechaCorta(fpt.f), r=ptDiaDe(fpt,yo), riv=x=>esc(x.el.join(" & ")), pm=ptMio(fpt), ir=` data-ptgo="${esc(fpt.f)}" role="link" tabindex="0"`;
+    if(pm&&!pm.cargo&&!pm.mand)it.push(fila(pm.borr?`📝 <b>Tus partidos del ${d} quedaron sin mandar</b> — terminá en un toque`
+      :`🎾 <b>Te faltan tus partidos del ${d}</b> — ${r.hay?`${r.hay===1?"un rival ya cargó 1":"tus rivales ya cargaron "+r.hay}: sumá los tuyos en 1 minuto`:"cargalos en 1 minuto"}`,ir)); // lo que cargó un rival no es tu récord del día
+    else if(pm&&pm.cargo&&r.pj){
       const m=r.mejor, pe=r.peleado, sc=x=>`${x.g}-${x.r}${ptTb(x.g,x.r,true)}`;
-      it.push(fila(r.g?`🎾 Ganaste <b>${r.g} de ${r.pj}</b> — ${sc(m)} a ${riv(m)}`:`🎾 Esta vez <b>0 de ${r.pj}</b> — el más peleado: ${sc(pe)} con ${riv(pe)}`,' data-dvpt role="link" tabindex="0"'));
+      it.push(fila(r.g?`🎾 Ganaste <b>${r.g} de ${r.pj}</b> — ${sc(m)} a ${riv(m)}`:`🎾 Esta vez <b>0 de ${r.pj}</b> — ${r.pj>1?"el más peleado:":"perdiste"} ${sc(pe)} con ${riv(pe)}`,' data-dvpt role="link" tabindex="0"'));
       if(r.g)mio.push(`🎾 Gané ${r.g} de ${r.pj} partidos el ${d} — ${sc(m)} a ${m.el.join(" & ")}`);
     }
   }
@@ -1430,7 +1432,7 @@ function vInicio(){
     ${ISADMIN
       ?`<button class="btn block" id="loadResBtn">👑 Cargar lo que falta</button>`
       :(CLOUD?`<button class="btn block" id="propBtn">📝 Cargar lo que falta (lo confirma el organizador)</button>`:"")}
-    ${pend.f>=PARTIDOS_DESDE&&pend.parejas.length>=2?`<button class="btn ghost block" data-ptgo="${esc(pend.f)}" style="margin-top:8px">🎾 ${partidosFecha(pend).length?"¿Falta alguno? Cargá tus partidos":"Cargá tus partidos del "+fechaCorta(pend.f)}</button>`:""}
+    ${pend.f>=PARTIDOS_DESDE&&pend.parejas.length>=2?`<button class="btn ghost block" data-ptgo="${esc(pend.f)}" style="margin-top:8px">${ptBotonTxt(pend,"🎾 Cargá tus partidos del "+fechaCorta(pend.f),partidosFecha(pend).length?"🎾 ¿Falta alguno? Cargá tus partidos":"🎾 Cargá tus partidos del "+fechaCorta(pend.f))}</button>`:""}
   </div>`:"";
   const pendArriba=pend&&(!ult||pend.f>ult.f);
   const prodeHTML=CLOUD&&USER&&fProde?(()=>{ // 🎲 PRODE: abierto hasta las 8:30 del domingo; desde ahí, cerrado hasta que se carga el Kia
@@ -1451,7 +1453,7 @@ function vInicio(){
     ${ISADMIN&&CLOUD&&PROPUESTAS.length?(()=>{ const pp=propsPartidos(), resto=PROPUESTAS.length-pp.length; // 🎾 las de partidos se confirman acá mismo, con un toque
       return `<div class="card pad" id="propInicio" style="border-color:#7c3aed;box-shadow:0 0 14px rgba(124,58,237,.25)">
       <div class="tag" style="margin-bottom:8px;color:var(--lilaT)">📥 ${PROPUESTAS.length===1?"HAY 1 PROPUESTA":"HAY "+PROPUESTAS.length+" PROPUESTAS"} ESPERANDO TU CONFIRMACIÓN</div>
-      ${pp.map(p=>`<div class="adline" style="flex-wrap:wrap;background:var(--card2)"><span class="an">${propPtHTML(p)}<br><small style="color:var(--muted)">propuso ${esc(p.por||"?")}</small></span>
+      ${pp.map(p=>`<div class="adline" style="flex-wrap:wrap;background:var(--card2)"><span class="an">${propPtHTML(p)}<br><small style="color:var(--muted)">propuso ${esc(porTxt(p))}</small></span>
         <button data-ptok="${esc(p.id)}" title="Confirmar" style="color:var(--okT);font-weight:800;font-size:14px">✔️ Confirmar</button></div>`).join("")}
       ${pp.length>=2?`<button class="btn block" data-ptokall style="margin:4px 0 8px;background:#22c55e;color:#0a0b0d">✅ Confirmar todas (🎾 ${pp.length})</button>`:""}
       ${resto||!pp.length?`<div class="note" style="margin-bottom:10px">${pp.length?`Y ${resto===1?"otra":resto+" más"} con datos de una fecha (Kia, cuchara, MVP o café).`:"Alguien del grupo cargó datos de una fecha."} Revisalos y confirmalos con un toque.</div>`:""}
@@ -1554,7 +1556,7 @@ function vRanking(){
       <button data-t="prode" class="${RKTAB==='prode'?'on':''}">🎲 Adivinos</button>
     </div>
     <div class="card" id="rktable">${tablaRK()}</div>
-    <div class="note" style="margin-top:10px">PJ = fechas jugadas · 🚗 = Kias (campeonatos) · 🎖️ = MVP del día · 🥄 = cucharas de madera · ☕ = se quedó al café · 🏃 = se rajó sin café. Orden: más 🚗; a igualdad, más PJ; si siguen iguales, comparten puesto. «Invitado» no se rankea (la fecha le cuenta al compañero). Tocá un nombre para ver su perfil.</div>
+    <div class="note" id="rknota" style="margin-top:10px"${RKTAB==="jug"?"":" hidden"}>PJ = fechas jugadas · 🚗 = Kias (campeonatos) · 🎖️ = MVP del día · 🥄 = cucharas de madera · ☕ = se quedó al café · 🏃 = se rajó sin café. Orden: más 🚗; a igualdad, más PJ; si siguen iguales, comparten puesto. «Invitado» no se rankea (la fecha le cuenta al compañero). Tocá un nombre para ver su perfil.</div>
   </section>`;
 }
 function tablaRK(){ return RKTAB==='jug'?tablaJug():RKTAB==='par'?tablaPar():RKTAB==='partidos'?tablaPartidos():tablaProde(); } // 🎾 Partidos va aparte: no toca la de Jugadores
@@ -1722,7 +1724,7 @@ function vPerfil(name){
         const fueCamp=f.campeon&&f.campeon.includes(name);
         const fuePala=f.pala&&f.pala.includes(name);
         const seRajo=Array.isArray(f.sinCafe)&&f.sinCafe.includes(name);
-        const pt=gen?null:ptDiaDe(f,name); // 🎾 su récord de partidos ese día
+        const pt=gen||!ptCargo(f,team)?null:ptDiaDe(f,name); // 🎾 su récord de partidos ese día (si su pareja cargó lo suyo: lo de los rivales solo es parcial)
         return `<div class="card pad" style="display:flex;align-items:center;gap:12px">
           <div style="font-size:22px">${fueCamp?"🏆":fuePala?"🥄":"🎾"}</div>
           <div style="flex:1"><b>con ${esc(comp)}</b><div class="tag" style="margin-top:2px">${fmtFecha(f.f)}${fueCamp?' · Campeón':fuePala?' · Cuchara de madera':''}${f.mvp===name?' · 🎖️ MVP':''}${seRajo?' · 🏃 sin café':''}${pt&&pt.pj?` · 🎾 ${pt.g}G-${pt.pj-pt.g}P`:""}</div></div>
@@ -1763,6 +1765,7 @@ function fechasDe(n){return DATA.fechas.filter(f=>f.parejas.some(t=>t.includes(n
 /* ---------- LECTOR DE LISTAS DE WHATSAPP ---------- */
 const RX_ACENTOS=new RegExp("["+String.fromCharCode(0x0300)+"-"+String.fromCharCode(0x036f)+"]","g");
 const RX_INVISIBLES=new RegExp("["+String.fromCharCode(0x200b)+"-"+String.fromCharCode(0x200f)+String.fromCharCode(0x2060)+"-"+String.fromCharCode(0x2063)+String.fromCharCode(0xfeff)+String.fromCharCode(0x00a0)+"]","g");
+function nombreMal(n){ return n.length>60?"⚠️ Ese nombre es muy largo (hasta 60 letras)":n.includes("|")?"⚠️ El nombre no puede llevar «|»":""; } // como en los partidos y las reglas: si no, sus partidos quedarían raros
 function normName(s){return String(s).toLowerCase().normalize("NFD").replace(RX_ACENTOS,"").replace(/[^a-z0-9]/g,"");}
 function lev1(a,b){ // ¿difieren en una sola letra? (tolerancia de tipeo)
   if(a===b)return true;
@@ -2453,6 +2456,9 @@ function partidoMal(x,deProp){ // "" si es un partido a un set válido; si no, q
 const ptCruce=(x,y)=>(misma(x.a,y.a)&&misma(x.b,y.b))||(misma(x.a,y.b)&&misma(x.b,y.a)); // las mismas dos parejas
 const ptIgual=(x,y)=>ptCruce(x,y)&&x.fin===y.fin&&(misma(x.a,y.a)?x.ga===y.ga&&x.gb===y.gb:x.ga===y.gb&&x.gb===y.ga); // el mismo partido aunque lo cargue la otra pareja (resultado espejado)
 const ptMismoN=(x,y)=>misma(x.a,y.a)&&x.n===y.n; // el mismo Nº de la misma pareja que lo cargó (su 2º partido es uno solo)
+const ptMismo=(x,y)=>ptIgual(x,y)&&(!misma(x.a,y.a)||x.n===y.n); // el MISMO partido: lo cargó la otra pareja, o la misma con el mismo Nº (la misma con otro Nº pudo jugar dos veces: eso se pregunta, no se adivina)
+const ptCargo=(f,t)=>partidosFecha(f).some(x=>misma(x.a,t)); // la pareja cargó lo suyo (figurar de rival en lo que cargó otro no alcanza)
+function ptHora(ts,f){ const d=new Date(ts); if(typeof ts!=="number"||isNaN(d.getTime()))return ""; const p2=n=>String(n).padStart(2,"0"), iso=d.getFullYear()+"-"+p2(d.getMonth()+1)+"-"+p2(d.getDate()); return (iso===f?"":diaSem(iso)+" "+d.getDate()+" · ")+p2(d.getHours())+":"+p2(d.getMinutes()); } // "10:20" (o "lun 12 · 20:05" si fue otro día)
 function ptDesde(x,P){ const yo=misma(x.a,P); return {el:yo?x.b:x.a,g:yo?x.ga:x.gb,r:yo?x.gb:x.ga,fin:x.fin,propio:yo}; } // visto desde la pareja P (g = sus games)
 const ptLimpio=x=>({n:x.n,a:x.a.slice(),b:x.b.slice(),ga:x.ga,gb:x.gb,fin:x.fin}); // los 6 campos (lo que viaja en una propuesta)
 const ptTb=(g,r,fin)=>fin&&g+r===11?"🎯":""; // 6-5: se definió en tiebreak
@@ -2485,31 +2491,49 @@ function ptDiaDe(f,n){ // 🎾 cómo le fue a un jugador en una fecha: {pj,g,nt,
   const fin=l.filter(d=>d.fin), g=fin.filter(d=>d.g>d.r);
   return {hay:l.length,pj:fin.length,g:g.length,nt:l.length-fin.length,mejor:g.sort((a,b)=>(b.g-b.r)-(a.g-a.r))[0]||null,peleado:fin.filter(d=>d.g<d.r).sort((a,b)=>(a.r-a.g)-(b.r-b.g))[0]||null};
 }
-/* ⏳ lo que mandó este celu y el organizador todavía no confirmó (un jugador no puede leer las propuestas): vive en localStorage cb_ptprop.
-   Se va solo cuando aparece en la fecha (confirmado) o a la semana (si no lo confirmó, no queda colgado) */
+/* ⏳ lo que mandó este celu y el organizador todavía no confirmó (un jugador no puede leer las propuestas): vive en localStorage cb_ptprop
+   ({k, uid, f, p = el partido, ts = el de la propuesta, de = el partido cargado que corrige o discute, si es eso}).
+   Se va solo cuando aparece en la fecha (confirmado), cuando el organizador ya resolvió esa tanda (algo de ella quedó en la fecha con su ts)
+   o a la semana (si no lo confirmó, no queda colgado) */
 function ptPendientes(f){
   let l=[]; try{l=JSON.parse(localStorage.getItem("cb_ptprop")||"[]");}catch(e){}
   if(!Array.isArray(l))l=[];
-  const ahora=Date.now(), vivas=l.filter(x=>x&&typeof x.f==="string"&&!partidoMal(x.p,true)&&ahora-(+x.ts||0)<7*864e5&&!partidosFecha(DATA.fechas.find(y=>y.f===x.f)).some(y=>ptIgual(y,x.p)));
+  const ahora=Date.now(), vivas=l.filter(x=>x&&typeof x.f==="string"&&!partidoMal(x.p,true)&&ahora-(+x.ts||0)<7*864e5&&!partidosFecha(DATA.fechas.find(y=>y.f===x.f)).some(y=>ptMismo(y,x.p)||y.ts===x.ts));
   if(vivas.length!==l.length)try{localStorage.setItem("cb_ptprop",JSON.stringify(vivas));}catch(e){}
   const uid=USER?USER.uid:"";
   return vivas.filter(x=>x.uid===uid&&(!f||x.f===f));
 }
-function ptRecordar(f,partidos){ try{ const l=JSON.parse(localStorage.getItem("cb_ptprop")||"[]"), ts=Date.now(); partidos.forEach((p,i)=>l.push({k:ts+"_"+i,uid:USER?USER.uid:"",f,p,ts})); localStorage.setItem("cb_ptprop",JSON.stringify(l)); }catch(e){} }
-function ptOlvidar(k){ try{ const l=JSON.parse(localStorage.getItem("cb_ptprop")||"[]"); localStorage.setItem("cb_ptprop",JSON.stringify(l.filter(x=>x&&x.k!==k))); }catch(e){} }
+const ptViejo=x=>Date.now()-(+x.ts||0)>12*36e5; // mandado hace más de 12 horas: si no apareció, lo más probable es que el organizador dejó lo que estaba
+function ptRecordar(f,items,ts){ try{ const l=JSON.parse(localStorage.getItem("cb_ptprop")||"[]"); items.forEach((it,i)=>l.push({k:ts+"_"+i,uid:USER?USER.uid:"",f,p:it.p,ts,de:it.de||null})); localStorage.setItem("cb_ptprop",JSON.stringify(l)); }catch(e){} }
+function ptOlvidar(k){ try{ const l=JSON.parse(localStorage.getItem("cb_ptprop")||"[]"), fu=typeof k==="function"?k:x=>x.k===k; localStorage.setItem("cb_ptprop",JSON.stringify(l.filter(x=>x&&!fu(x)))); }catch(e){} } // k: la clave o una condición
+/* 📝 lo cargado y sin mandar sobrevive a una recarga (pasar a WhatsApp y volver, el login con Google): localStorage cb_ptborrador */
+function ptBorradorLeer(f){ try{ const d=JSON.parse(localStorage.getItem("cb_ptborrador")||"null"); return d&&d.f===f.f&&d.fp===JSON.stringify(f.parejas)&&Array.isArray(d.filas)&&Date.now()-(+d.ts||0)<2*864e5&&(!d.uid||!USER||d.uid===USER.uid)?d:null; }catch(e){ return null; } }
+function ptBorradorGuardar(){ try{ if(PT&&ptSucio())localStorage.setItem("cb_ptborrador",JSON.stringify({f:PT.f,fp:PT.fp,pi:PT.pi,elegida:PT.elegida,filas:PT.filas,borrar:PT.borrar,uid:USER?USER.uid:"",ts:Date.now()})); else localStorage.removeItem("cb_ptborrador"); }catch(e){} }
+function ptBorradorN(f){ // cuántos partidos completos quedaron sin mandar para esa fecha (en pantalla o en el borrador)
+  const d=PT&&PT.f===f.f?PT:ptBorradorLeer(f), ok=r=>r&&(r.riv!=null)&&(r.nt?r.sg+r.sr>0:!!r.res);
+  return d&&Array.isArray(d.filas)?d.filas.filter(ok).length:0;
+}
+function ptMio(f){ // 🎾 tu pareja (⭐) en esa fecha y cómo está con sus partidos: cargó (algo cargado por ustedes), mand (⏳ desde este celu), borr (📝 sin mandar)
+  const t=MYPLAYER&&f&&Array.isArray(f.parejas)?f.parejas.find(p=>p.includes(MYPLAYER)):null; if(!t||t.length!==2)return null;
+  return {t,cargo:ptCargo(f,t),mand:ptPendientes(f.f).filter(x=>misma(x.p.a,t)).length,borr:ptBorradorN(f)};
+}
+function ptBotonTxt(f,falta,gen){ // el botón que lleva a cargar: según cómo está TU pareja (falta = no cargaron nada; gen = sin ⭐ en esa fecha)
+  const m=ptMio(f), pl=n=>n===1?"1 partido":n+" partidos";
+  return !m?gen:m.borr?`📝 Tenés ${pl(m.borr)} sin ${!CLOUD||ISADMIN?"guardar":"mandar"}: terminá`:m.cargo?"🎾 ¿Falta alguno? Cargá o corregí los tuyos":m.mand?`⏳ Mandaste ${pl(m.mand)} · ¿falta alguno?`:falta;
+}
 /* 🎾 Partidos del domingo (va pegado al resultado): la lista (ganador en negrita), el récord del día por pareja y quién falta cargar */
 function partidosDiaHTML(f){
   if(!f||!Array.isArray(f.parejas)||f.parejas.length<2)return "";
   const ps=partidosFecha(f);
   if(!ps.length&&f.f<PARTIDOS_DESDE)return ""; // a las fechas de antes de que se cargaran partidos no se les piden
-  const nom=t=>esc(t.join(" & ")), mia=t=>!!MYPLAYER&&t.includes(MYPLAYER), pend=ptPendientes(f.f).length;
+  const nom=t=>esc(t.join(" & ")), mia=t=>!!MYPLAYER&&t.includes(MYPLAYER), pl=ptPendientes(f.f), pend=pl.length;
   const boton=t=>`<button class="btn ghost block" data-ptgo="${esc(f.f)}" style="margin-top:10px">${t}</button>`;
-  const enEspera=pend?`<div class="note" style="margin-top:6px;color:var(--aT)">⏳ Mandaste ${pend===1?"1 partido":pend+" partidos"}: a confirmar por el organizador</div>`:"";
+  const enEspera=pend?`<div class="note" style="margin-top:6px;color:var(--aT)">⏳ Mandaste ${pend===1?"1 partido":pend+" partidos"}: ${pl.every(ptViejo)?"si no aparece"+(pend===1?"":"n")+", el organizador dejó lo que estaba":"a confirmar por el organizador"}</div>`:"";
   if(!ps.length)return `<div class="card pad" id="ptDia">
     <div class="tag" style="margin-bottom:6px">🎾 Partidos del domingo · ${fechaCorta(f.f)}</div>
-    <div style="font-weight:700">Nadie cargó sus partidos todavía — ¿jugaste?</div>
+    <div style="font-weight:700">${pend?"Todavía no hay partidos confirmados":"Nadie cargó sus partidos todavía — ¿jugaste?"}</div>
     <div class="note">Un set por partido: ganados, perdidos y games. No cambia el ranking oficial (Kias).</div>${enEspera}
-    ${boton("🎾 Cargalos en 1 minuto")}
+    ${boton(ptBotonTxt(f,"🎾 Cargalos en 1 minuto","🎾 Cargalos en 1 minuto"))}
   </div>`;
   const idx=t=>{const i=f.parejas.findIndex(p=>misma(p,t));return i<0?99:i;};
   const filas=[...ps].sort((x,y)=>idx(x.a)-idx(y.a)||x.n-y.n).map(x=>{
@@ -2517,15 +2541,18 @@ function partidosDiaHTML(f){
     const ga=x.ga>x.gb, w=ga?x.a:x.b, l=ga?x.b:x.a, g=Math.max(x.ga,x.gb), r=Math.min(x.ga,x.gb);
     return `<div class="ptl"><b>${nom(w)}</b><span class="sc">${g}-${r}${ptTb(g,r,true)}</span><span>${nom(l)}</span></div>`;
   }).join("");
-  const rec=recordDia(f), faltan=f.parejas.filter(t=>t.length===2&&!rec.some(o=>misma(o.t,t)));
+  // 🕐 una pareja "cargó" si cargó lo suyo (figurar de rival no alcanza: su récord sería solo lo que cargaron los otros); la tuya, también con ⏳ mandados
+  const cargo=t=>ps.some(x=>misma(x.a,t)), mand=t=>mia(t)&&pl.some(x=>misma(x.p.a,t));
+  const rec=recordDia(f).sort((a,b)=>cargo(b.t)-cargo(a.t)), faltan=f.parejas.filter(t=>t.length===2&&!cargo(t)&&!mand(t));
   return `<div class="card pad" id="ptDia">
     <div class="tag" style="margin-bottom:2px">🎾 Partidos del domingo · ${fechaCorta(f.f)}</div>
     ${filas}
     <div class="note" style="font-size:12px;margin-top:4px">En negrita, el que ganó · <span style="white-space:nowrap">🎯 = tiebreak (6-5)</span></div>
     <div class="tag" style="margin:12px 0 2px">📊 Récord del día por pareja</div>
-    ${rec.map(o=>`<div class="ptrec${mia(o.t)?" yo":""}"><span>${nom(o.t)}${mia(o.t)?" ⭐":""}</span><b>${o.g+o.p?`${o.g}G-${o.p}P`:"—"}</b><small>${o.g+o.p?`games ${o.gf}-${o.gc}`:""}${o.nt?`${o.g+o.p?"<br>":""}⏱️ ${o.nt} sin terminar`:""}</small></div>`).join("")}
+    ${rec.map(o=>{ const c=cargo(o.t), r=o.g+o.p?`${o.g}G-${o.p}P`:"—";
+      return `<div class="ptrec${mia(o.t)?" yo":""}"><span>${nom(o.t)}${mia(o.t)?" ⭐":""}</span><b${c?"":' style="color:var(--muted)"'}>${r}</b><small>${c?`${o.g+o.p?`games ${o.gf}-${o.gc}`:""}${o.nt?`${o.g+o.p?"<br>":""}⏱️ ${o.nt} sin terminar`:""}`:mand(o.t)?"⏳ lo suyo, a confirmar":"🕐 según sus rivales"}</small></div>`;}).join("")}
     ${faltan.length?`<div class="note" style="margin-top:8px">🕐 Todavía sin cargar: ${faltan.map(nom).join(" · ")}</div>`:""}${enEspera}
-    ${boton(faltan.some(mia)?"🎾 Te faltan los tuyos: cargalos":"🎾 ¿Falta alguno? Cargá o corregí los tuyos")}
+    ${boton(ptBotonTxt(f,"🎾 Te faltan los tuyos: cargalos","🎾 ¿Falta alguno? Cargá o corregí los tuyos"))}
   </div>`;
 }
 function partidosPerfilHTML(name,yo){ // 🎾 bloque del perfil (nada si no tiene partidos terminados)
@@ -2574,19 +2601,35 @@ function ptFecha(param){ // la del link (#partidos=AAAA-MM-DD); sin link, la de 
 }
 function ptFechaPT(){ return PT?DATA.fechas.find(x=>x.f===PT.f&&JSON.stringify(x.parejas)===PT.fp)||null:null; } // la de ESTA carga en los datos de ahora
 function ptMia(f){ return MYPLAYER?f.parejas.findIndex(p=>p.includes(MYPLAYER)):-1; }
-const ptFila=n=>({n,riv:null,res:null,nt:false,sg:0,sr:0,ed:null});
+const ptFila=n=>({n,riv:null,res:null,nt:false,sg:0,sr:0,ed:null,edp:null}); // ed = el cargado que corrige (JSON) · edp = el ⏳ mandado que corrige (su clave)
 const ptRes=r=>r.nt?(r.sg+r.sr?{g:r.sg,r:r.sr,fin:false}:null):r.res; // {g,r,fin} o null si falta
 const ptLista=r=>r.riv!=null&&!!ptRes(r);
-function ptYa(f){ const P=f.parejas[PT.pi]; return [...ptDeLaPareja(f,P),...ptPendientes(f.f).map(x=>x.p).filter(x=>misma(x.a,P)||misma(x.b,P))]; } // lo cargado (y lo ya mandado) de tu pareja
+function ptPendDe(f,P){ // ⏳ lo mandado de tu pareja: corr = corrige o discute uno que se ve (va debajo de ese, en .sobre, y no suma otro partido) · pend = partidos nuevos
+  const ya=ptDeLaPareja(f,P), js=ya.map(x=>JSON.stringify(x)), corr=[], pend=[];
+  ptPendientes(f.f).filter(x=>misma(x.p.a,P)||misma(x.p.b,P)).forEach(x=>{ const y=x.de&&js.includes(x.de)?null:ya.find(y=>ptMismoN(y,x.p)), s=x.de&&js.includes(x.de)?x.de:y?JSON.stringify(y):null; // (o el mismo Nº de uno de ustedes ya confirmado)
+    if(s)corr.push({...x,sobre:s}); else pend.push(x); });
+  return {corr,pend};
+}
+function ptYa(f){ const P=f.parejas[PT.pi]; return [...ptDeLaPareja(f,P),...ptPendDe(f,P).pend.map(x=>x.p)]; } // lo cargado (y lo ya mandado) de tu pareja: los partidos de la mañana
 function ptSigN(f){ const P=f.parejas[PT.pi], ya=ptYa(f); return Math.min(10,Math.max(ya.length,...ya.filter(x=>misma(x.a,P)).map(x=>x.n),...(PT.filas||[]).map(r=>r.n),0)+1); }
 function ptEstado(f){ // arranca (o retoma) la carga de esa fecha
   const fp=JSON.stringify(f.parejas);
   if(!PT||PT.f!==f.f||PT.fp!==fp)PT={f:f.f,fp,pi:-1,elegida:false,filas:null,borrar:[],vis:[]};
+  if(!PT.rest&&!ptSucio()){ PT.rest=1; const d=ptBorradorLeer(f); if(d)ptRestaurar(f,d); } // 📝 lo que quedó sin mandar (se recargó la página o volvió del login)
   if(PT.pi<0&&!PT.elegida){ const i=ptMia(f); if(i>=0)PT.pi=i; } // ⭐ tu pareja (también si se vinculó recién)
   if(PT.pi>=0&&f.parejas[PT.pi].length===2&&!PT.filas){ const k=ptYa(f).length; PT.filas=[]; for(let i=0;i<Math.max(0,3-k);i++)PT.filas.push(ptFila(ptSigN(f))); } // arranca con 3 (menos lo que ya está)
   return PT;
 }
-function ptSucio(){ return !!PT&&(PT.borrar.length>0||(PT.filas||[]).some(r=>r.ed||r.riv!=null||r.res||r.nt)); }
+function ptRestaurar(f,d){ // 📝 del borrador, solo lo que sigue teniendo sentido con los datos de ahora
+  const n=f.parejas.length, js=new Set(partidosFecha(f).map(x=>JSON.stringify(x))), ks=new Set(ptPendientes(f.f).map(x=>x.k)), ent=(v,a,b)=>Number.isInteger(v)&&v>=a&&v<=b;
+  if(!ent(d.pi,0,n-1)||f.parejas[d.pi].length!==2)return;
+  const filas=d.filas.filter(r=>r&&ent(r.n,1,10)&&(r.riv==null||(ent(r.riv,0,n-1)&&r.riv!==d.pi&&f.parejas[r.riv].length===2))&&(!r.ed||js.has(r.ed))&&(!r.edp||ks.has(r.edp)))
+    .map(r=>({...ptFila(r.n),riv:r.riv==null?null:r.riv,res:r.res&&ent(r.res.g,0,6)&&ent(r.res.r,0,6)?{g:r.res.g,r:r.res.r,fin:true}:null,nt:!!r.nt,sg:ent(r.sg,0,5)?r.sg:0,sr:ent(r.sr,0,5)?r.sr:0,ed:r.ed||null,edp:r.edp||null,de:typeof r.de==="string"?r.de:null}));
+  const borrar=(Array.isArray(d.borrar)?d.borrar:[]).filter(s=>js.has(s));
+  if(!borrar.length&&!filas.some(r=>r.ed||r.edp||r.riv!=null||r.res||r.nt))return;
+  Object.assign(PT,{pi:d.pi,elegida:!!d.elegida,filas,borrar});
+}
+function ptSucio(){ return !!PT&&(PT.borrar.length>0||(PT.filas||[]).some(r=>r.ed||r.edp||r.riv!=null||r.res||r.nt)); }
 function ptAbrir(i){ (PT.filas||[]).forEach((r,j)=>{r.abierta=j===i;}); } // una fila abierta por vez (las demás, en una línea)
 function vPartidos(param){
   const back=`<button class="btn ghost sm" id="ptVolver" style="margin-bottom:12px">${history.state&&history.state.desde?"← Volver":"🏠 Inicio"}</button>`;
@@ -2603,7 +2646,7 @@ function vPartidos(param){
       ${f.parejas.map((p,i)=>`<button class="mopt" data-ptpar="${i}"${p.length!==2?" disabled":""}>${i+1}) ${nom(p)}${i===mi?" ⭐":""}${p.length!==2?"<small>pareja rotativa de 3: sus partidos los carga el organizador a mano</small>":""}</button>`).join("")}
     </div></section>`;
   }
-  const ya=ptDeLaPareja(f,P), pend=ptPendientes(f.f).filter(x=>misma(x.p.a,P)||misma(x.p.b,P)), rec=recordDia(f).find(o=>misma(o.t,P)), filas=st.filas||[];
+  const ya=ptDeLaPareja(f,P), {corr,pend}=ptPendDe(f,P), rec=recordDia(f).find(o=>misma(o.t,P)), filas=st.filas||[];
   if(P.length!==2)return h+`<div class="card pad"><div class="note">👥 ${nom(P)} fue una pareja rotativa de 3: sus partidos los carga el organizador a mano.</div>${puede||mi<0?`<button class="btn ghost sm block" id="ptCambiar" style="margin-top:8px">🔁 Elegir otra pareja</button>`:""}</div></section>`;
   st.vis=ya; // lo que se ve (los ✏️/🗑️ apuntan acá)
   h+=`<div class="card pad" id="ptPareja" style="border-color:var(--A)"><div style="display:flex;align-items:center;gap:8px">
@@ -2611,14 +2654,18 @@ function vPartidos(param){
         ${rec&&rec.g+rec.p?`<div class="note">📊 Hoy: <b style="color:var(--txt)">${rec.g}G-${rec.p}P</b> · <span style="white-space:nowrap">games ${rec.gf}-${rec.gc}</span>${rec.nt?` · <span style="white-space:nowrap">⏱️ ${rec.nt} sin terminar</span>`:""}</div>`:""}</div>
       ${puede||mi<0?`<button class="btn ghost sm" id="ptCambiar">🔁 Cambiar</button>`:""}
     </div></div>`;
-  if(ya.length||pend.length){ // ✅ lo que ya está de tu pareja (también lo que cargó el rival, dado vuelta) y ⏳ lo que mandaste
+  if(ya.length||pend.length){ // ✅ lo que ya está de tu pareja (también lo que cargó el rival, dado vuelta) y ⏳ lo que mandaste (una corrección va debajo de su partido)
+    const espera=(x,de)=>ptViejo(x)?`mandado ${(h=>h.includes("·")?"el "+h:"a las "+h)(ptHora(x.ts,f.f))} · ${de?"si no cambió, el organizador dejó lo de arriba":"si no aparece, el organizador dejó lo que estaba"}`:"mandado · a confirmar por el organizador";
+    const pendHTML=(x,de)=>{ const d=ptDesde(x.p,P), edp=filas.some(r=>r.edp===x.k);
+      return `<div class="ptya"><div class="tx">⏳ ${de?`<b>${de.propio?"Tu corrección":"Tu versión"}</b>${misma(de.el,d.el)?"":` · vs <b>${nom(d.el)}</b>`}`:`${x.p.n}º · vs <b>${nom(d.el)}</b>`} · ${ptResHTML(d.g,d.r,d.fin)}<div class="note" style="font-size:12px;color:var(--aT)">${edp?"✏️ lo estás corrigiendo abajo":espera(x,de)}</div></div>${edp?"":`<button data-ptedp="${esc(x.k)}" title="Corregir lo que mandaste">✏️</button>`}<button data-ptolv="${esc(x.k)}" title="Olvidarlo (si no lo va a confirmar)">✕</button></div>`; };
     h+=`<div class="card pad" id="ptYa" style="margin-top:10px"><div class="tag">✅ Ya cargado · ${ya.length+pend.length}</div>`+ya.map((x,i)=>{
       const d=ptDesde(x,P), js=JSON.stringify(x), del=st.borrar.includes(js), ed=filas.some(r=>r.ed===js);
       return `<div class="ptya"${del?' style="opacity:.6"':""}><div class="tx">${d.propio?`<b>${x.n}º</b> · `:""}vs <b>${nom(d.el)}</b> · ${ptResHTML(d.g,d.r,d.fin)}
           <div class="note" style="font-size:12px">${del?"🗑️ se borra al guardar":ed?"✏️ lo estás corrigiendo abajo":d.propio?"lo cargaron ustedes":`lo cargaron ${nom(d.el)}`}</div></div>
-        ${del?`<button data-ptun="${i}" title="No borrar">↩️</button>`:`${(puede||d.propio)&&!ed?`<button data-pted="${i}" title="Corregir">✏️</button>`:""}${puede?`<button data-ptdel="${i}" title="Borrar">🗑️</button>`:""}`}</div>`;}).join("")
-      +pend.map(x=>{const d=ptDesde(x.p,P);return `<div class="ptya"><div class="tx">⏳ vs <b>${nom(d.el)}</b> · ${ptResHTML(d.g,d.r,d.fin)}<div class="note" style="font-size:12px;color:var(--aT)">mandado · a confirmar por el organizador</div></div><button data-ptolv="${esc(x.k)}" title="Olvidarlo (si no lo va a confirmar)">✕</button></div>`;}).join("")
-      +(!puede&&ya.some(x=>!misma(x.a,P))?`<div class="note" style="font-size:12px;margin-top:6px">¿Lo que cargó tu rival no fue así? Cargalo vos y el organizador ve los dos y decide.</div>`:"")+`</div>`;
+        ${del?`<button data-ptun="${i}" title="No borrar">↩️</button>`:`${(puede||d.propio)&&!ed?`<button data-pted="${i}" title="Corregir">✏️</button>`:""}${puede?`<button data-ptdel="${i}" title="Borrar">🗑️</button>`:""}`}</div>`
+        +corr.filter(c=>c.sobre===js).map(c=>pendHTML(c,d)).join("");}).join("")
+      +pend.map(x=>pendHTML(x,null)).join("")
+      +(!puede&&ya.some(x=>!misma(x.a,P)&&!corr.some(c=>c.sobre===JSON.stringify(x)))?`<div class="note" style="font-size:12px;margin-top:6px">¿Lo que cargó tu rival no fue así? Cargalo vos y el organizador ve los dos y decide.</div>`:"")+`</div>`;
   }
   const primera=filas.findIndex(r=>!ptLista(r)), abierta=i=>filas[i].abierta!==undefined?filas[i].abierta:i===primera;
   const otras=f.parejas.map((p,j)=>({p,j})).filter(o=>o.j!==st.pi&&o.p.length===2);
@@ -2626,7 +2673,7 @@ function vPartidos(param){
     const res=ptRes(r), ok=ptLista(r);
     if(!abierta(i))return `<div class="ptrow cerrada${ok?" ok":""}" data-ptab="${i}" role="button" tabindex="0"><span>${ok?`✓ <b>${r.n}º</b> · vs <b>${nom(f.parejas[r.riv])}</b> · ${ptResHTML(res.g,res.r,res.fin)}`:`<b>${r.n}º partido</b> · <span class="muted">${r.riv!=null||r.nt||r.res?"le falta algo: tocá para completarlo":"tocá para cargarlo"}</span>`}</span><span>${ok?"✏️":"▸"}</span></div>`;
     return `<div class="ptrow${ok?" ok":""}" id="ptf${i}">
-      <div class="pthd"><span>${r.ed?"✏️ Corregís el ":""}${r.n}º partido</span><button class="mx" data-ptx="${i}" title="${r.ed?"No corregir":"Sacar este partido"}">✕</button></div>
+      <div class="pthd"><span>${r.ed||r.edp?"✏️ Corregís el ":""}${r.n}º partido</span><button class="mx" data-ptx="${i}" title="${r.ed||r.edp?"No corregir":"Sacar este partido"}">✕</button></div>
       <div class="ptlbl">🆚 Rival</div>
       <div class="ptchips">${otras.map(o=>`<button class="ptchip${r.riv===o.j?" on":""}" data-ptrv="${i}:${o.j}">${nom(o.p)}</button>`).join("")}</div>
       <div class="ptlbl">✅ Ganamos</div>
@@ -2636,64 +2683,102 @@ function vPartidos(param){
       <button class="ptnt${r.nt?" on":""}" data-ptnt="${i}">⏱️ No se terminó${r.nt?" · marcá cómo iba":""}</button>
       ${r.nt?`<div class="ptsteps">${[["g","Nosotros",r.sg],["r","Ellos",r.sr]].map(([k,t,v])=>`<div><div class="ptlbl" style="margin:0 0 4px;text-align:center">${t}</div><div class="ptstep"><button data-pts="${i}:${k}:-1" aria-label="${t}: uno menos">−</button><b>${v}</b><button data-pts="${i}:${k}:1" aria-label="${t}: uno más">+</button></div></div>`).join("")}</div>`:""}
     </div>`;}).join("")+`</div>`;
-  if(ya.length+pend.length+filas.filter(r=>!r.ed).length<PT_MAX&&ptSigN(f)<=10)h+=`<button class="btn ghost block" id="ptMas" style="margin-top:10px">➕ Otro partido</button>`;
+  if(ya.length+pend.length+filas.filter(r=>!r.ed&&!r.edp).length<PT_MAX&&ptSigN(f)<=10)h+=`<button class="btn ghost block" id="ptMas" style="margin-top:10px">➕ Otro partido</button>`;
   else if(!filas.length)h+=`<div class="note" style="margin-top:10px">Ya están los ${PT_MAX} partidos de la mañana. ¿Algo mal? ${puede?"Corregilo con ✏️ o borralo con 🗑️.":"Corregí con ✏️ lo que cargaron ustedes."}</div>`;
-  const n=filas.filter(ptLista).length, txt=n?` ${n===1?"1 partido":n+" partidos"}`:"";
-  h+=`<button class="btn block ptsave" id="ptSave">${puede?`💾 Guardar${txt||(st.borrar.length?" los cambios":"")}`:`📨 Mandar${txt} al organizador`}</button>
+  const n=filas.filter(ptLista).length, txt=n?` ${n===1?"1 partido":n+" partidos"}`:"", algo=ptSucio(); // sin nada para mandar: apagado y en su lugar (no tapa nada)
+  if(algo||filas.length)h+=`<button class="btn block${algo?" ptsave":" ghost"}" id="ptSave"${algo?"":` disabled style="margin-top:14px;opacity:.55"`}>${puede?`💾 Guardar${txt||(st.borrar.length?" los cambios":"")}`:`📨 Mandar${txt} al organizador`}</button>
     <div class="note" style="margin-top:10px">🎾 Un set a 6 games: 6-5 = se definió en tiebreak 🎯 (no existe 6-6 ni 7-5). ⏱️ Si no se terminó, marcá cómo iba: queda anotado pero no cuenta para ganados y perdidos.${puede?"":" Lo confirma el organizador con un toque."} No cambia el ranking oficial (Kias).</div>
   </section>`;
   return h;
 }
-function ptPintar(){ const app=document.getElementById("app"); app.innerHTML=vPartidos(PARAM); bind(); }
+function ptPintar(){ const app=document.getElementById("app"); app.innerHTML=vPartidos(PARAM); bind(); ptBorradorGuardar(); }
+function ptVer(i){ // 📱 una mano: lo que sigue de la fila abierta, a la vista (sin rival: desde el rival; con rival: los resultados) y sin que lo tapen el botón fijo ni la barra
+  const row=document.getElementById("ptf"+i), r=PT&&PT.filas&&PT.filas[i]; if(!row||!r)return;
+  const q=s=>row.querySelector(s), tp=document.querySelector(".top"), nav=document.getElementById("nav"), sv=document.getElementById("ptSave");
+  const techo=(tp?tp.getBoundingClientRect().bottom:0)+8, fijo=!!sv&&getComputedStyle(sv).position==="sticky";
+  const piso=fijo?innerHeight-(parseFloat(getComputedStyle(sv).bottom)||0)-sv.offsetHeight-10:(nav?nav.getBoundingClientRect().top:innerHeight)-10;
+  const gan=q(".ptres.gan"), ini=r.riv==null||!gan?row:(gan.previousElementSibling||gan), fin=(r.nt&&q(".ptsteps"))||q(".ptnt")||row;
+  const a=ini.getBoundingClientRect().top, b=fin.getBoundingClientRect().bottom;
+  let d=b>piso?b-piso:0; if(a-d<techo)d=a-techo; // que se vea hasta el ⏱️, sin esconder el principio
+  if(Math.abs(d)>2)window.scrollBy({top:d,behavior:suave()});
+}
 function ptBind(){
   const vb=document.getElementById("ptVolver"); if(vb)vb.onclick=()=>{ if(history.state&&history.state.desde)volver(); else go("inicio"); };
   const f=ptFechaPT(); if(!f||!PT)return;
-  const fx=()=>{ if(navigator.vibrate)navigator.vibrate(8); ptPintar(); }, $$=s=>document.querySelectorAll(s), R=i=>PT.filas[+i];
+  const fx=ver=>{ if(navigator.vibrate)navigator.vibrate(8); ptPintar(); if(ver!=null&&ver>=0)ptVer(ver); }, $$=s=>document.querySelectorAll(s), R=i=>PT.filas[+i];
+  const abierta=()=>{ const l=PT.filas||[]; return l.some(r=>r.abierta!==undefined)?l.findIndex(r=>r.abierta):l.findIndex(r=>!ptLista(r)); }; // la que queda abierta (como en vPartidos)
   const listo=i=>{ const r=R(i); if(ptLista(r)&&!r.nt)ptAbrir(PT.filas.findIndex(x=>!ptLista(x))); }; // completa (y terminada): se cierra y se abre la que sigue
   $$("[data-ptpar]").forEach(b=>b.onclick=()=>{PT.pi=+b.dataset.ptpar;PT.elegida=true;PT.filas=null;PT.borrar=[];fx();});
   const cb=document.getElementById("ptCambiar"); if(cb)cb.onclick=async()=>{
     if(ptSucio()&&!await uiConfirm("🔁 ¿Cambiás de pareja?","Tenés partidos sin guardar: si cambiás de pareja, se pierden.","🔁 Sí, cambiar","No"))return;
     PT.pi=-1;PT.elegida=true;PT.filas=null;PT.borrar=[];fx();};
-  $$("[data-ptrv]").forEach(b=>b.onclick=()=>{const [i,j]=b.dataset.ptrv.split(":").map(Number);R(i).riv=j;listo(i);fx();});
-  $$("[data-ptr]").forEach(b=>b.onclick=()=>{const [i,g,r]=b.dataset.ptr.split(":").map(Number);const x=R(i);x.res={g,r,fin:true};x.nt=false;listo(i);fx();});
-  $$("[data-ptnt]").forEach(b=>b.onclick=()=>{const x=R(b.dataset.ptnt);x.nt=!x.nt;if(x.nt)x.res=null;fx();});
+  $$("[data-ptrv]").forEach(b=>b.onclick=()=>{const [i,j]=b.dataset.ptrv.split(":").map(Number);R(i).riv=j;listo(i);fx(abierta());}); // con rival: a la vista los resultados
+  $$("[data-ptr]").forEach(b=>b.onclick=()=>{const [i,g,r]=b.dataset.ptr.split(":").map(Number);const x=R(i);x.res={g,r,fin:true};x.nt=false;listo(i);fx(abierta());}); // y se abre la que sigue
+  $$("[data-ptnt]").forEach(b=>b.onclick=()=>{const i=+b.dataset.ptnt,x=R(i);x.nt=!x.nt;if(x.nt)x.res=null;fx(i);});
   $$("[data-pts]").forEach(b=>b.onclick=()=>{const [i,k,d]=b.dataset.pts.split(":");const x=R(i),c="s"+k;x[c]=Math.max(0,Math.min(5,x[c]+(+d)));fx();}); // sin terminar: nadie llegó a 6
-  $$("[data-ptab]").forEach(b=>{b.onclick=()=>{ptAbrir(+b.dataset.ptab);fx();};b.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();b.click();}};});
+  $$("[data-ptab]").forEach(b=>{b.onclick=()=>{ptAbrir(+b.dataset.ptab);fx(+b.dataset.ptab);};b.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();b.click();}};});
   $$("[data-ptx]").forEach(b=>b.onclick=()=>{PT.filas.splice(+b.dataset.ptx,1);fx();});
-  const mas=document.getElementById("ptMas"); if(mas)mas.onclick=()=>{PT.filas.push(ptFila(ptSigN(f)));ptAbrir(PT.filas.length-1);fx();};
+  const mas=document.getElementById("ptMas"); if(mas)mas.onclick=()=>{PT.filas.push(ptFila(ptSigN(f)));ptAbrir(PT.filas.length-1);fx(PT.filas.length-1);};
+  const aFila=(o,P)=>{ const d=ptDesde(o,P); return {riv:f.parejas.findIndex(p=>misma(p,d.el)),res:d.fin?{g:d.g,r:d.r,fin:true}:null,nt:!d.fin,sg:d.fin?0:d.g,sr:d.fin?0:d.r}; }; // un partido, como fila para corregir
   $$("[data-pted]").forEach(b=>b.onclick=()=>{ // ✏️ corregir uno cargado: pasa a una fila con lo que tenía
     const y=PT.vis[+b.dataset.pted]; if(!y)return; const js=JSON.stringify(y), P=f.parejas[PT.pi];
     let i=PT.filas.findIndex(r=>r.ed===js);
-    if(i<0){ const d=ptDesde(y,P); PT.filas.push({...ptFila(d.propio?y.n:ptSigN(f)),riv:f.parejas.findIndex(p=>misma(p,d.el)),res:d.fin?{g:d.g,r:d.r,fin:true}:null,nt:!d.fin,sg:d.fin?0:d.g,sr:d.fin?0:d.r,ed:js}); i=PT.filas.length-1; }
-    ptAbrir(i);fx(); const el=document.getElementById("ptf"+i); if(el)el.scrollIntoView({behavior:suave(),block:"center"});});
+    if(i<0){ PT.filas.push({...ptFila(misma(y.a,P)?y.n:ptSigN(f)),...aFila(y,P),ed:js}); i=PT.filas.length-1; }
+    ptAbrir(i);fx(i);});
+  $$("[data-ptedp]").forEach(b=>b.onclick=()=>{ // ✏️ corregir lo que mandaste (⏳): se manda de nuevo con el mismo Nº y lo viejo se olvida
+    const x=ptPendientes(f.f).find(z=>z.k===b.dataset.ptedp); if(!x)return;
+    let i=PT.filas.findIndex(r=>r.edp===x.k);
+    if(i<0){ PT.filas.push({...ptFila(x.p.n),...aFila(x.p,f.parejas[PT.pi]),edp:x.k,de:x.de||null}); i=PT.filas.length-1; }
+    ptAbrir(i);fx(i);});
   $$("[data-ptdel]").forEach(b=>b.onclick=()=>{const y=PT.vis[+b.dataset.ptdel];if(y){PT.borrar.push(JSON.stringify(y));fx();}});
   $$("[data-ptun]").forEach(b=>b.onclick=()=>{const y=PT.vis[+b.dataset.ptun];if(y){const s=JSON.stringify(y);PT.borrar=PT.borrar.filter(x=>x!==s);fx();}});
-  $$("[data-ptolv]").forEach(b=>b.onclick=async()=>{ if(await uiConfirm("✕ ¿Lo olvido?","Lo saca de tu lista de ⏳ a confirmar (en este celu). Si el organizador ya lo tiene, igual lo puede confirmar.","✕ Sí, olvidalo"))ptOlvidar(b.dataset.ptolv); ptPintar(); });
+  $$("[data-ptolv]").forEach(b=>b.onclick=async()=>{ const k=b.dataset.ptolv;
+    if(await uiConfirm("✕ ¿Lo olvido?","Lo saca de tu lista de ⏳ a confirmar (en este celu). Si el organizador ya lo tiene, igual lo puede confirmar.","✕ Sí, olvidalo")){ ptOlvidar(k); if(PT.filas)PT.filas=PT.filas.filter(r=>r.edp!==k); }
+    ptPintar(); });
   const sv=document.getElementById("ptSave"); if(sv)sv.onclick=()=>ptGuardar();
+}
+function ptChoqueRival(ch,P,puede){ // ⚔️ lo que cargás choca con lo que cargó el rival (las mismas parejas, otro resultado) → "mio" | "dos" | undefined (cancela)
+  return new Promise(res=>{
+    const nom=t=>esc(t.join(" & ")), lin=({c,o})=>{ const d=ptDesde(o.y,P); return `<div class="ptya" style="display:block"><b>vs ${nom(d.el)}</b><br>📌 Lo cargaron ellos: ${ptResHTML(d.g,d.r,d.fin)}<br>✍️ Lo tuyo: ${ptResHTML(c.x.ga,c.x.gb,c.x.fin)}</div>`; };
+    const d=uiShow(`⚔️ ${ch.length===1?"Tu rival ya lo cargó":"Tus rivales ya los cargaron"} con otro resultado`,"¿Qué pasó?",`${ch.map(lin).join("")}<div style="height:10px"></div>
+      <button class="mopt" data-v="mio">${puede?"✏️ Vale lo mío<small>reemplaza lo que cargaron ellos (lo de antes queda en el historial 🕓)</small>":"⚔️ Fue como lo cargué yo<small>se manda y el organizador ve los dos y decide</small>"}</button>
+      <button class="mopt" data-v="dos">➕ Fueron 2 partidos distintos<small>contra ellos jugaron dos veces</small></button>
+      <button class="mcancel" data-x>Cancelar (lo reviso)</button>`);
+    d.querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>{uiClose();res(b.dataset.v);});
+    d.querySelector("[data-x]").onclick=()=>{uiClose();res(undefined);};
+  });
 }
 async function ptGuardar(){ // 💾 admin: directo a la fecha (con versión si corrige) · 📨 jugador: propuesta que confirma el organizador
   if(PT_GUARDANDO||!PT)return;
   let f=ptFechaPT(); if(!f){toast(CAMBIO_FECHA,5000);render();return;}
   const P=f.parejas[PT.pi], puede=!CLOUD||ISADMIN, filas=PT.filas||[];
-  const media=filas.find(r=>(r.riv!=null||r.res||r.nt||r.ed)&&!ptLista(r));
-  if(media){ const i=filas.indexOf(media); ptAbrir(i); ptPintar();
-    const el=document.getElementById("ptf"+i); if(el)el.scrollIntoView({behavior:suave(),block:"center"});
+  const media=filas.find(r=>(r.riv!=null||r.res||r.nt||r.ed||r.edp)&&!ptLista(r));
+  if(media){ const i=filas.indexOf(media); ptAbrir(i); ptPintar(); ptVer(i);
     toast(`⚠️ Al ${media.n}º partido le falta ${media.riv==null?"el rival":media.nt?"cómo iba (ej. 4-2)":"el resultado"}`,4000); return; }
-  const nuevos=filas.filter(ptLista).map(r=>{const s=ptRes(r);return {r,x:{n:r.n,a:P.slice(),b:f.parejas[r.riv].slice(),ga:s.g,gb:s.r,fin:s.fin}};});
+  const nuevos=filas.filter(ptLista).map(r=>{const s=ptRes(r);return {r,de:r.de||null,x:{n:r.n,a:P.slice(),b:f.parejas[r.riv].slice(),ga:s.g,gb:s.r,fin:s.fin}};});
   for(const {x} of nuevos){ const m=partidoMal(x,true); if(m){toast(`⚠️ ${x.n}º partido: ${m}`,4500);return;} } // lo mismo que exigen las reglas (6-6, 7-5, rival propio…)
-  const corrige=new Set(nuevos.filter(c=>c.r.ed).map(c=>c.r.ed));
-  const base=[...ptDeLaPareja(f,P).filter(y=>{const s=JSON.stringify(y);return !corrige.has(s)&&!PT.borrar.includes(s);}),...ptPendientes(f.f).map(x=>x.p).filter(x=>misma(x.a,P)||misma(x.b,P))];
-  const igual=c=>{ const o=JSON.parse(c.r.ed); return ptIgual(o,c.x)&&(o.n===c.x.n||!misma(o.a,c.x.a)); }; // la corrección que quedó igual (aunque lo haya cargado el rival) no es cambio
-  const cambios=nuevos.filter(c=>!(c.r.ed&&igual(c)));
-  const dup=cambios.filter(c=>base.some(y=>ptIgual(y,c.x))), van=cambios.filter(c=>!dup.includes(c)); // ya cargado (aunque lo haya cargado tu rival): no se duplica
-  const sacar=[...PT.borrar,...cambios.filter(c=>c.r.ed).map(c=>c.r.ed)];
+  const {corr,pend}=ptPendDe(f,P), mias=[...corr,...pend], corrige=new Set(nuevos.filter(c=>c.r.ed).map(c=>c.r.ed)), pendEd=new Set(nuevos.filter(c=>c.r.edp).map(c=>c.r.edp));
+  const base=[...ptDeLaPareja(f,P).filter(y=>{const s=JSON.stringify(y);return !corrige.has(s)&&!PT.borrar.includes(s);}).map(y=>({y})),
+    ...mias.filter(x=>!pendEd.has(x.k)&&!(x.sobre&&corrige.has(x.sobre))).map(x=>({y:x.p,k:x.k}))]; // contra esto se compara (lo que se está corrigiendo, no)
+  const sinCambio=c=>{ if(c.r.ed){const o=JSON.parse(c.r.ed);return ptIgual(o,c.x)&&(o.n===c.x.n||!misma(o.a,c.x.a));} const o=mias.find(x=>x.k===c.r.edp); return !!o&&ptIgual(o.p,c.x)&&o.p.n===c.x.n; };
+  const cambios=nuevos.filter(c=>!((c.r.ed||c.r.edp)&&sinCambio(c))); // la corrección que quedó igual (aunque lo haya cargado el rival) no es cambio
+  const usados=new Set(), dup=cambios.filter(c=>{ const o=base.find(o=>!usados.has(o)&&ptMismo(o.y,c.x)); if(o){usados.add(o);c.ya=o;} return !!o; }); // ya cargado o mandado (aunque sea del rival): no se duplica
+  const van=cambios.filter(c=>!c.ya), sacar=[...PT.borrar,...cambios.filter(c=>c.r.ed).map(c=>c.r.ed)];
+  const olvidar=()=>cambios.forEach(c=>{ if(c.r.edp)ptOlvidar(c.r.edp); if(c.r.ed){const e=c.r.ed;ptOlvidar(x=>mias.some(z=>z.k===x.k&&z.sobre===e));} }); // ⏳ lo viejo que se corrigió (en este celu)
   if(!van.length&&!(puede&&sacar.length)){
-    toast(dup.length?(dup.length===1?"✓ Ese partido ya estaba cargado (lo cargó tu rival): no se duplica":"✓ Ya estaban cargados: no se duplica nada"):"No cargaste ningún partido",4000);
-    if(nuevos.length){PT.filas=null;ptPintar();}
+    const o=dup.length===1?dup[0].ya:null;
+    toast(dup.length?(o?`✓ Ese partido ${o.k?"ya lo habías mandado (⏳ a confirmar)":`ya estaba cargado (${misma(o.y.a,P)?"lo cargaron ustedes":"lo cargó tu rival"})`}: no se duplica`:"✓ Ya estaban cargados: no se duplica nada"):"No cargaste ningún partido",4000);
+    if(nuevos.length){ olvidar(); PT.filas=null; ptPintar(); }
     return;
   }
-  const rep=van.filter((c,i)=>[...base,...van.slice(0,i).map(z=>z.x)].some(y=>ptCruce(y,c.x))); // 🔁 rival repetido: puede pasar, se confirma
-  if(rep.length&&!await uiConfirm("🔁 ¿Jugaron dos veces contra la misma pareja?",`Contra <b>${esc([...new Set(rep.map(c=>c.x.b.join(" & ")))].join(", "))}</b> ya hay otro partido de ustedes esta mañana${rep.some(c=>base.some(y=>ptCruce(y,c.x)))?" (cargado con otro resultado)":""}.<br><br>Si fueron dos partidos distintos, dale. Si no, corregí la fila${puede?" o el que ya estaba (✏️)":""}.`,"✓ Sí, fueron 2 partidos","✏️ No, corrijo"))return;
+  // ⚔️ choca con lo que cargó el RIVAL (las mismas parejas, otro resultado): ¿fue como lo cargaste vos, o jugaron dos veces?
+  const choque=van.filter(c=>!c.r.ed&&!c.r.edp).map(c=>{ const o=base.find(o=>!usados.has(o)&&!o.k&&!misma(o.y.a,P)&&ptCruce(o.y,c.x)); if(o)usados.add(o); return o?{c,o}:null; }).filter(Boolean);
+  if(choque.length){ const v=await ptChoqueRival(choque,P,puede); if(!v)return;
+    choque.forEach(({c,o})=>{ c.decidido=true; if(v==="mio"){ if(puede)sacar.push(JSON.stringify(o.y)); else c.de=JSON.stringify(o.y); } }); } // el admin lo corrige; el jugador lo discute (el organizador ve los dos)
+  const libres=base.filter(o=>!usados.has(o)).map(o=>o.y);
+  const rep=van.filter((c,i)=>!c.decidido&&[...libres,...van.slice(0,i).map(z=>z.x)].some(y=>ptCruce(y,c.x))); // 🔁 rival repetido: puede pasar, se confirma
+  if(rep.length){ const igual=rep.some(c=>libres.some(y=>ptIgual(y,c.x))), otro=rep.some(c=>libres.some(y=>ptCruce(y,c.x)&&!ptIgual(y,c.x)));
+    if(!await uiConfirm("🔁 ¿Jugaron dos veces contra la misma pareja?",`Contra <b>${esc([...new Set(rep.map(c=>c.x.b.join(" & ")))].join(", "))}</b> ya hay otro partido de ustedes esta mañana${igual?" (con el mismo resultado)":otro?" (cargado con otro resultado)":""}.<br><br>Si fueron dos partidos distintos, dale. Si no, corregí la fila${puede?" o el que ya estaba (✏️)":""}.`,"✓ Sí, fueron 2 partidos","✏️ No, corrijo"))return; }
   PT_GUARDANDO=true;
   try{
     if(puede){
@@ -2704,15 +2789,15 @@ async function ptGuardar(){ // 💾 admin: directo a la fecha (con versión si c
       if(sacar.length)(f.versiones||(f.versiones=[])).push({ts:Date.now(),por,antes:{partidos:antes}}); // 🕓 corrige o borra: lo de antes queda en el historial
       f.partidos=lista;
       if(!await save())return; // no entró en la nube: save() avisó y volvió a lo de la nube (las filas siguen en pantalla para reintentar)
-      PT.filas=null; PT.borrar=[];
+      olvidar(); PT.filas=null; PT.borrar=[]; ptBorradorGuardar();
       toast(sacar.length?"🕰️ Partidos corregidos — lo de antes quedó en el historial":`🎾 ¡Listo! ${van.length===1?"1 partido cargado":van.length+" partidos cargados"}${dup.length?` (${dup.length} ya estaba${dup.length===1?"":"n"})`:""}`,3500);
     }else{
-      if(!USER){toast("Primero ingresá con Google (🔑 arriba)");window.fbLogin();return;}
-      const partidos=van.map(c=>ptLimpio(c.x)); toast("📨 Mandando…");
-      try{ await addDoc(collection(db,"propuestas"),{f:f.f,por:USER.email,ts:Date.now(),partidos}); } // solo partidos (sin campeón/cuchara/MVP): así lo piden las reglas
+      if(!USER){toast("Primero ingresá con Google (🔑 arriba): lo cargado queda guardado en este celu",4000);window.fbLogin();return;}
+      const ts=Date.now(), partidos=van.map(c=>ptLimpio(c.x)); toast("📨 Mandando…");
+      try{ await addDoc(collection(db,"propuestas"),{f:f.f,por:USER.email,ts,partidos}); } // solo partidos (sin campeón/cuchara/MVP): así lo piden las reglas
       catch(e){ toast("⚠️ No se pudo mandar (¿sin señal?): probá de nuevo",4500); return; }
-      ptRecordar(f.f,partidos); PT.filas=null; PT.borrar=[];
-      toast("📨 ¡Mandado! Queda ⏳ a confirmar: el organizador lo confirma con un toque",4500);
+      olvidar(); ptRecordar(f.f,van.map(c=>({p:ptLimpio(c.x),de:c.de||c.r.ed||null})),ts); PT.filas=null; PT.borrar=[]; ptBorradorGuardar();
+      toast(`📨 ¡Mandado! Queda ⏳ a confirmar: el organizador lo confirma con un toque${dup.length?` (${dup.length} ya estaba${dup.length===1?"":"n"})`:""}`,4500);
     }
     render(); arriba();
   }finally{PT_GUARDANDO=false;}
@@ -2721,35 +2806,45 @@ function ptLadoHTML(x,P,titulo,quien){ // un partido visto desde P, para compara
   const d=ptDesde(x,P), fila=(t,v,w)=>`<div class="ptsb"><span>${w?"<b style=\"font-family:inherit;font-size:13.5px\">":""}${esc(t.join(" & "))}${w?"</b>":""}</span><b>${v}</b></div>`;
   return `<div><div class="tag">${titulo}</div><div class="note" style="font-size:12px">${esc(quien)}</div>${fila(P,d.g,d.fin&&d.g>d.r)}${fila(d.el,d.r,d.fin&&d.r>d.g)}<div class="note" style="font-size:12px;margin-top:4px">${!d.fin?"⏱️ sin terminar":d.g+d.r===11?"🎯 tiebreak":"terminado"}</div></div>`;
 }
-function ptConflicto(fe,p,y,x){ // ⚔️ lo cargado y lo propuesto no coinciden: lado a lado, decide el admin → "ya" | "prop" | "dos" | undefined (cancela)
+function ptConflicto(fe,p,ys,x){ // ⚔️ lo cargado (ys: los que chocan, el más parecido primero) y lo propuesto no coinciden: lado a lado, decide el admin → "ya" | "prop<i>" | "dos" | undefined (cancela)
   return new Promise(res=>{
-    const d=uiShow("⚔️ No coinciden",`${fmtFecha(fe.f)} · propuesta de ${esc(p.por||"?")}. Mismo partido (las mismas parejas${ptMismoN(y,x)?` o el ${x.n}º de ${esc(x.a.join(" & "))}`:""}) con otro resultado: elegí cuál vale.`,`
-      <div class="ptcf">${ptLadoHTML(y,x.a,"📌 Ya cargado",`lo cargó ${y.a.join(" & ")}`)}${ptLadoHTML(x,x.a,"📥 Propuesta",`la manda ${x.a.join(" & ")}`)}</div>
-      <button class="mopt" data-v="ya">📌 Queda lo cargado<small>la propuesta de este partido no se usa</small></button>
-      <button class="mopt" data-v="prop">📥 Va la propuesta<small>corrige lo cargado (lo de antes queda en el historial 🕓)</small></button>
+    const y=ys[0], igual=ptIgual(y,x), quien=z=>[z.a.join(" & "),z.n+"º",ptHora(z.ts,fe.f)].filter(Boolean).join(" · "); // quién, su Nº y a qué hora
+    const nuevo=typeof y.ts==="number"&&x.ts!==y.ts?(x.ts>y.ts?": lo más nuevo es la propuesta":": lo más nuevo es lo cargado"):"";
+    const intro=igual?`La misma pareja lo cargó dos veces con el <b>mismo resultado</b> y otro Nº (${y.n}º y ${x.n}º): ¿es el mismo partido, o jugaron dos veces?`
+      :ptCruce(y,x)?"Las mismas parejas, con otro resultado: elegí cuál vale.":`El ${x.n}º de ${esc(x.a.join(" & "))}, con otro rival: elegí cuál vale.`;
+    const nota=[misma(x.a,y.a)&&!igual?`✏️ Es la misma pareja corrigiendo${y.por&&y.por===x.por?" (la misma persona)":""}${nuevo}.`:"",ys.length>1?`🔁 Contra esa pareja hay ${ys.length} partidos cargados: elegí cuál corrige.`:""].filter(Boolean).map(t=>`<div class="note" style="margin:-2px 0 8px">${t}</div>`).join("");
+    const res1=z=>{ const d=ptDesde(z,x.a); return ptResTxt(d.g,d.r,d.fin); };
+    const d=uiShow(igual?"🔁 ¿Es el mismo partido?":"⚔️ No coinciden",`${fmtFecha(fe.f)} · propuesta de ${esc(porTxt(p))}. ${intro}`,`
+      <div class="ptcf">${ptLadoHTML(y,x.a,"📌 Ya cargado",`lo cargó ${quien(y)}`)}${ptLadoHTML(x,x.a,"📥 Propuesta",`la manda ${quien(x)}`)}</div>${nota}
+      ${igual?`<button class="mopt" data-v="ya">📌 Es el mismo partido<small>queda uno solo (lo de la propuesta no se suma)</small></button>`
+      :`<button class="mopt" data-v="ya">📌 Queda lo cargado<small>la propuesta de este partido no se usa</small></button>
+      ${ys.map((z,i)=>`<button class="mopt" data-v="prop${i}">📥 Va la propuesta${ys.length>1?`, en lugar del ${z.n}º (${esc(res1(z))})`:""}<small>corrige lo cargado (lo de antes queda en el historial 🕓)</small></button>`).join("")}`}
       <button class="mopt" data-v="dos">➕ Fueron 2 partidos distintos<small>quedan los dos</small></button>
       <button class="mcancel" data-x>Cancelar (no se confirma nada)</button>`);
     d.querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>{uiClose();res(b.dataset.v);});
     d.querySelector("[data-x]").onclick=()=>{uiClose();res(undefined);};
   });
 }
-async function confirmarPropPartidos(ids){ // ✔️ una o varias propuestas de partidos: se suman sin duplicar; lo que no coincide se muestra lado a lado
+async function confirmarPropPartidos(ids){ // ✔️ una o varias propuestas de partidos (de la más vieja a la más nueva): se suman sin duplicar; lo que no coincide se muestra lado a lado
   if(!ISADMIN&&CLOUD)return;
-  const g0=NUBE_GEN, props=ids.map(id=>PROPUESTAS.find(x=>x.id===id)).filter(p=>p&&Array.isArray(p.partidos));
+  const g0=NUBE_GEN, props=ids.map(id=>PROPUESTAS.find(x=>x.id===id)).filter(p=>p&&Array.isArray(p.partidos)).sort((a,b)=>(+a.ts||0)-(+b.ts||0));
   const work=new Map(), cambiada=new Set(), hechas=[], c={n:0,dup:0,reemp:0,queda:0}, na=nombreActualFn();
   for(const p of props){
-    const mal=propMal(p); if(mal){toast(`⚠️ La de ${p.por||"?"} es inválida (${mal}): descartala con 🗑️`,4500);continue;}
+    const mal=propMal(p); if(mal){toast(`⚠️ La de ${porTxt(p)} es inválida (${mal}): descartala con 🗑️`,4500);continue;}
     const fe=fechaDeProp(p); if(!fe){toast(`⚠️ La fecha del ${fmtFecha(p.f)} ya no existe: no se aplicó (descartala con 🗑️)`,4500);continue;}
-    const nc=propNoCoincide(p,fe); if(nc){toast(`⚠️ No se confirmó la de ${p.por||"?"}: ${nc}`,5000);continue;}
+    const nc=propNoCoincide(p,fe); if(nc){toast(`⚠️ No se confirmó la de ${porTxt(p)}: ${nc}`,5000);continue;}
     if(!work.has(fe))work.set(fe,(fe.partidos||[]).slice());
-    const l=work.get(fe);
+    const l=work.get(fe), antes=l.slice(), usados=new Set(); // contra lo de ANTES de esta propuesta (lo suyo son partidos distintos: "fueron 2" ya lo dijo el jugador) y cada cargado responde por uno solo
     for(const x0 of p.partidos){
-      const x={...ptLimpio(x0),a:x0.a.map(na),b:x0.b.map(na),por:p.por||"?",ts:+p.ts||Date.now()}; // 🔁 renombrados/unidos: con el nombre de hoy
-      if(l.some(y=>!partidoMal(y)&&ptIgual(y,x))){c.dup++;continue;} // lo cargó la otra pareja igual (o ya estaba): no se duplica
-      const y=l.find(y=>!partidoMal(y)&&(ptMismoN(y,x)||ptCruce(y,x)));
-      if(y){ const v=await ptConflicto(fe,p,y,x); if(v===undefined){toast("No se confirmó nada");return;}
-        if(v==="ya"){c.queda++;continue;}
-        if(v==="prop"){l[l.indexOf(y)]=x;c.reemp++;cambiada.add(fe);continue;} }
+      const x={...ptLimpio(x0),a:x0.a.map(na),b:x0.b.map(na),por:porTxt(p),ts:+p.ts||Date.now()}; // 🔁 renombrados/unidos: con el nombre de hoy
+      const pool=antes.filter(y=>!usados.has(y)&&l.includes(y)&&!partidoMal(y));
+      const ya=pool.find(y=>ptMismo(y,x)); if(ya){usados.add(ya);c.dup++;continue;} // lo cargó la otra pareja igual (o ya estaba): no se duplica
+      const cr=pool.filter(y=>ptCruce(y,x)).sort((a,b)=>ptMismoN(b,x)-ptMismoN(a,x)), ys=cr.length?cr:pool.filter(y=>ptMismoN(y,x)); // primero las mismas parejas; si no hay, el mismo Nº
+      if(ys.length){ const v=await ptConflicto(fe,p,ys,x); if(v===undefined){toast("No se confirmó nada");return;}
+        if(v==="ya"){usados.add(ys[0]);c.queda++;continue;}
+        if(v.startsWith("prop")){ const y=ys[+v.slice(4)]||ys[0]; l[l.indexOf(y)]={...x,n:misma(x.a,y.a)?y.n:x.n}; usados.add(y); c.reemp++; cambiada.add(fe); continue; } // la misma pareja: queda con el Nº del que corrige
+        usados.add(ys[0]); }
+      const mn=l.filter(y=>misma(y.a,x.a)).map(y=>y.n); if(mn.includes(x.n))x.n=Math.min(10,Math.max(...mn)+1); // "fueron 2" con el Nº de otro de la misma pareja: va al final (un Nº, un partido)
       l.push(x); c.n++; cambiada.add(fe);
     }
     hechas.push(p);
@@ -2769,8 +2864,8 @@ async function confirmarPropPartidos(ids){ // ✔️ una o varias propuestas de 
 }
 function propPtHTML(p){ // 📥 qué trae una propuesta de partidos y cómo queda contra lo cargado
   const fe=fechaDeProp(p), na=nombreActualFn(), ya=fe?partidosFecha(fe):[];
-  const items=p.partidos.map(x0=>{ const x={...x0,a:x0.a.map(na),b:x0.b.map(na)};
-    return esc(ptTxt(x))+(ya.some(y=>ptIgual(y,x))?` <small style="color:var(--okT)">✓ ya estaba</small>`:ya.some(y=>ptMismoN(y,x)||ptCruce(y,x))?` <b class="warn">⚠️ no coincide con lo cargado</b>`:""); });
+  const items=p.partidos.map(x0=>{ const x={...x0,a:x0.a.map(na),b:x0.b.map(na)}, y=ya.find(y=>ptCruce(y,x))||ya.find(y=>ptMismoN(y,x));
+    return esc(ptTxt(x))+(ya.some(y=>ptMismo(y,x))?` <small style="color:var(--okT)">✓ ya estaba</small>`:!y?"":ptIgual(y,x)?` <b class="warn">🔁 ¿repetido? (igual, con otro Nº)</b>`:misma(y.a,x.a)?` <b class="warn">✏️ corrige lo que cargaron</b>`:` <b class="warn">⚠️ no coincide con lo cargado</b>`); });
   return `🎾 ${fmtFecha(p.f)} · <b>${esc(p.partidos[0].a.join(" & "))}</b>: ${items.length===1?"1 partido":items.length+" partidos"}<br><small style="font-weight:600">${items.join("<br>")}</small>`;
 }
 function propsPartidos(){ return PROPUESTAS.filter(p=>Array.isArray(p.partidos)&&!propMal(p)); }
@@ -3116,6 +3211,7 @@ function bigShow(orden,sup,manual,accion){ // 📺 sorteo a pantalla completa, p
 /* ---------- ADMIN ---------- */
 const RXFECHA=/^\d{4}-\d{2}-\d{2}$/;
 const listaTxt=(x,min,max)=>Array.isArray(x)&&x.length>=(min||0)&&x.length<=(max||99)&&x.every(n=>typeof n==="string");
+function porTxt(p){ return typeof p.por==="string"&&p.por?p.por:"?"; } // quién la mandó (con las reglas viejas puede venir cualquier cosa)
 function propMal(p){ // 📥 una propuesta la puede escribir cualquiera: si trae algo raro, no se muestra ni se confirma
   if(typeof p.f!=="string"||!RXFECHA.test(p.f))return "fecha rara";
   if(p.campeon!=null&&!listaTxt(p.campeon,2,3))return "campeón raro";
@@ -3125,6 +3221,7 @@ function propMal(p){ // 📥 una propuesta la puede escribir cualquiera: si trae
   if(p.partidos!=null){ // 🎾 una propuesta de partidos viene sola (sin campeón/cuchara/MVP/café) y con cada partido válido: lo mismo que piden las reglas
     if(["campeon","pala","mvp","sinCafe"].some(k=>p[k]!=null))return "partidos mezclados con resultado";
     if(!Array.isArray(p.partidos)||!p.partidos.length||p.partidos.length>10)return "partidos raros";
+    if(typeof p.por!=="string"||!p.por||p.por.length>200||!Number.isInteger(p.ts))return "quién la mandó o cuándo, raro"; // lo que piden las reglas nuevas (las publicadas hoy aceptan cualquier cosa)
     const m=p.partidos.map(x=>partidoMal(x,true)).find(Boolean); if(m)return "partido raro: "+m;
   }
   return "";
@@ -3155,9 +3252,10 @@ function fechaMal(f){
   if(f.pala!=null&&f.pala!==false&&!listaTxt(f.pala))return `la cuchara del ${f.f} es rara`;
   if(f.mvp!=null&&f.mvp!==false&&typeof f.mvp!=="string")return `el MVP del ${f.f} es raro`;
   if(f.sinCafe!=null&&f.sinCafe!==false&&!listaTxt(f.sinCafe))return `el café del ${f.f} es raro`; // false = "no se sabe"
-  if(f.partidos!=null&&(!Array.isArray(f.partidos)||f.partidos.some(x=>partidoMal(x))))return `los partidos del ${f.f} son raros (un set a 6: 6-5 es tiebreak, no hay 6-6 ni 7-5)`;
+  if(f.partidos!=null&&!Array.isArray(f.partidos))return `los partidos del ${f.f} no son una lista`; // uno raro suelto no tira el archivo: no se ve ni suma (se avisa al importar)
   return "";
 }
+function ptRarosEn(d){ return eachFechaArr(d).flat().reduce((n,f)=>n+(f&&Array.isArray(f.partidos)?f.partidos.filter(x=>partidoMal(x)).length:0),0); } // 🎾 partidos que no se ven ni suman (ej. un nombre raro)
 function datosMal(d){ // "" si son datos de la app bien armados; si no, qué tienen de raro
   if(!d||typeof d!=="object"||!Array.isArray(d.jugadores)||!Array.isArray(d.fechas))return "no tiene jugadores y fechas";
   if(d.jugadores.some(j=>!j||typeof j.n!=="string"||!j.n.trim()))return "hay un jugador sin nombre";
@@ -3217,6 +3315,7 @@ async function importarDatos(txt){ // ⬆️ Importar un JSON (ej. un backup de 
   const pp=PARCHE_PENDIENTE, nuevo=normalizeData(d); PARCHE_PENDIENTE=pp; // la vista previa muestra lo que realmente va a quedar (con los parches)
   const g0=NUBE_GEN, ahora=CLOUD?(CLOUDSTATE==="vacia"?null:DATA):DATA;
   if(!await uiConfirm("⚠️ ¿Reemplazar TODO con este archivo?",resumenCambio(ahora,nuevo,CLOUD?"La nube ahora":"Ahora","Queda (el archivo)")+
+    (()=>{const n=ptRarosEn(nuevo);return n?`<div class="note warn" style="margin-top:6px">⚠️ ${n===1?"Trae 1 partido raro":`Trae ${n} partidos raros`} (un nombre o un resultado que no cierra): queda${n===1?"":"n"} guardado${n===1?"":"s"} pero no se ve${n===1?"":"n"} ni suma${n===1?"":"n"}.</div>`:"";})()+
     `<div class="note" style="margin-top:6px"><b>Se reemplaza TODO${CLOUD?", para todos":""}.</b> ${ahora?`Antes se descarga una copia de lo actual a este dispositivo (copones-respaldo-antes-de-importar-${hoyISO()}.json).`:""}</div>`,"♻️ Sí, reemplazar todo","Mejor no"))return;
   if(g0!==NUBE_GEN){toast(AVISO_PISADA,4500);render();return;}
   if(ahora)bajarRespaldo("antes-de-importar");
@@ -3254,18 +3353,18 @@ function vAdmin(){
         ${PROPUESTAS.map(p=>{
           const mal=propMal(p);
           if(mal)return `<div class="adline" style="flex-wrap:wrap">
-          <span class="an">⚠️ Propuesta inválida (${esc(mal)}) · no se puede confirmar<br><small style="color:var(--muted)">propuso ${esc(p.por||"?")}</small></span>
+          <span class="an">⚠️ Propuesta inválida (${esc(mal)}) · no se puede confirmar<br><small style="color:var(--muted)">propuso ${esc(porTxt(p))}</small></span>
           <button data-propno="${esc(p.id)}" title="Descartar">🗑️ Descartar</button>
         </div>`;
           if(Array.isArray(p.partidos))return `<div class="adline" style="flex-wrap:wrap">
-          <span class="an">${propPtHTML(p)}<br><small style="color:var(--muted)">propuso ${esc(p.por||"?")}</small></span>
+          <span class="an">${propPtHTML(p)}<br><small style="color:var(--muted)">propuso ${esc(porTxt(p))}</small></span>
           <button data-ptok="${esc(p.id)}" title="Confirmar" style="color:var(--okT);font-weight:800;font-size:14px">✔️ Confirmar</button>
           <button data-propno="${esc(p.id)}" title="Rechazar">🗑️</button>
         </div>`;
           const fe=fechaDeProp(p), {pisa}=fe?difProp(p,fe):{pisa:[]}; // ⚠️ lo que ya está cargado distinto, a la vista
           const bits=["campeon","pala","mvp","sinCafe"].filter(k=>p[k]!=null).map(k=>`${NOMDATO[k].split(" ")[0]} ${esc(valorTxt(k,p[k]))}${pisa.includes(k)?` <b class="warn">⚠️ ya cargado: ${esc(valorTxt(k,fe[k]))}</b>`:""}`);
           return `<div class="adline" style="flex-wrap:wrap">
-          <span class="an">${fmtFecha(p.f)} · ${bits.join(" · ")||"sin datos"}<br><small style="color:var(--muted)">propuso ${esc(p.por||"?")}</small></span>
+          <span class="an">${fmtFecha(p.f)} · ${bits.join(" · ")||"sin datos"}<br><small style="color:var(--muted)">propuso ${esc(porTxt(p))}</small></span>
           <button data-propok="${esc(p.id)}" title="Confirmar" style="color:var(--okT);font-weight:800;font-size:14px">✔️ Confirmar</button>
           <button data-propno="${esc(p.id)}" title="Rechazar">🗑️</button>
         </div>`;}).join("")}
@@ -3541,7 +3640,7 @@ function bind(){
   }
 
   if(VIEW==="ranking"){
-    document.querySelectorAll("#rkseg button").forEach(b=>b.onclick=()=>{RKTAB=b.dataset.t;document.getElementById("rktable").innerHTML=tablaRK();document.querySelectorAll("#rkseg button").forEach(x=>x.classList.toggle("on",x.dataset.t===RKTAB));bind();});
+    document.querySelectorAll("#rkseg button").forEach(b=>b.onclick=()=>{RKTAB=b.dataset.t;document.getElementById("rktable").innerHTML=tablaRK();const nt=document.getElementById("rknota");if(nt)nt.hidden=RKTAB!=="jug"; /* la leyenda es de Jugadores (PJ = fechas) */document.querySelectorAll("#rkseg button").forEach(x=>x.classList.toggle("on",x.dataset.t===RKTAB));bind();});
     const rs=document.getElementById("rkseason");
     if(rs)rs.onchange=()=>{RKSEASON=rs.value;render();};
   }
@@ -3614,6 +3713,7 @@ function bind(){
     const addSorp=async()=>{
       const inp=document.getElementById("newsorp");const v=inp.value.trim();if(!v)return;
       if(allKnownNames().includes(v)||SORP_LOCAL[v]){toast("Ese nombre ya existe");return;}
+      if(nombreMal(v)){toast(nombreMal(v),4000);return;}
       const c=await pedirCopon(v);
       if(CLOUD&&!ISADMIN){ // 🎁 sin ser admin no se guarda nada: juega en TU sorteo y al plantel lo suma el organizador
         SORP_LOCAL[v]=c;SEL.add(v);route("sorteo");
@@ -3683,12 +3783,12 @@ function bind(){
       const {cambia,pisa}=difProp(p,fe);
       if(!cambia.length){deleteDoc(doc(db,"propuestas",p.id)).catch(()=>{});toast("✓ Eso ya estaba cargado: propuesta archivada");return;}
       if(pisa.length){ // la fecha ya tiene ESOS datos con otro valor: se muestra lo que hay vs lo propuesto y decidís vos
-        if(!await uiConfirm("⚠️ Esa fecha ya tiene resultado",`${fmtFecha(fe.f)} · propuesta de ${esc(p.por||"?")}:<br><br>${cambia.map(k=>`${NOMDATO[k]}: ${fe[k]!=null?`hoy <b>${esc(valorTxt(k,fe[k]))}</b> → `:""}propuesta <b>${esc(valorTxt(k,p[k]))}</b>`).join("<br>")}<br><br>¿Reemplazo lo cargado? Lo de ahora queda en el historial de cambios 🕓.`,"✍️ Sí, reemplazar","No, dejar lo cargado"))return;
+        if(!await uiConfirm("⚠️ Esa fecha ya tiene resultado",`${fmtFecha(fe.f)} · propuesta de ${esc(porTxt(p))}:<br><br>${cambia.map(k=>`${NOMDATO[k]}: ${fe[k]!=null?`hoy <b>${esc(valorTxt(k,fe[k]))}</b> → `:""}propuesta <b>${esc(valorTxt(k,p[k]))}</b>`).join("<br>")}<br><br>¿Reemplazo lo cargado? Lo de ahora queda en el historial de cambios 🕓.`,"✍️ Sí, reemplazar","No, dejar lo cargado"))return;
         fe=fechaActual(fe); if(!fe){toast(CAMBIO_FECHA,5000);render();return;}
       }
       const antes=estadoDe(fe);
       cambia.forEach(k=>{fe[k]=p[k];}); fe.confirmada=true;
-      if(pisa.length)(fe.versiones||(fe.versiones=[])).push({ts:Date.now(),por:`${(USER&&USER.email)||"admin"} (propuesta de ${p.por||"?"})`,antes});
+      if(pisa.length)(fe.versiones||(fe.versiones=[])).push({ts:Date.now(),por:`${(USER&&USER.email)||"admin"} (propuesta de ${porTxt(p)})`,antes});
       if(!await save(g0))return; // si no entró en la nube, la propuesta queda para reintentar
       deleteDoc(doc(db,"propuestas",p.id)).catch(()=>{});
       toast(pisa.length?"✔️ Confirmado — lo anterior quedó en el historial":"✔️ Resultado confirmado");
@@ -3731,6 +3831,7 @@ function bind(){
       const g0=NUBE_GEN, old=document.getElementById("renSel").value, neu=document.getElementById("renNew").value.trim();
       if(!old||!neu){toast("Completá jugador y nuevo nombre");return;}
       if(allKnownNames().includes(neu)){toast("Ese nombre ya existe — usá Unir");return;}
+      if(nombreMal(neu)){toast(nombreMal(neu),4000);return;}
       if(!confirm(`¿Renombrar "${old}" a "${neu}" en todo el historial?\n\n"${old}" queda como apodo, y la foto de perfil y los vinculados ⭐ pasan al nombre nuevo.`))return;
       const so=slugName(old), sn=slugName(neu), j0=DATA.jugadores.find(x=>x.n===old);
       // 📸 la foto del repo va por apodo (fotos/perfil/<slug>.jpg): si el slug cambia, se queda fija con la ruta vieja
@@ -3746,6 +3847,8 @@ function bind(){
       const g0=NUBE_GEN, keep=document.getElementById("mergeKeep").value, dup=document.getElementById("mergeDup").value;
       if(!keep||!dup){toast("Elegí los dos nombres");return;}
       if(keep===dup){toast("Son el mismo nombre");return;}
+      const juntos=eachFechaArr(DATA).flat().find(f=>partidosFecha(f).some(x=>[...x.a,...x.b].includes(keep)&&[...x.a,...x.b].includes(dup)));
+      if(juntos){toast(`⚠️ No se pueden unir: el ${fechaCorta(juntos.f)} jugaron el mismo partido (son dos personas)`,5000);return;} // 🎾 el partido quedaría "contra su propia pareja"
       if(!confirm(`¿Unir "${dup}" dentro de "${keep}"?\n\nTodas las fechas, Kias, cucharas y MVP de "${dup}" pasan a "${keep}" y "${dup}" desaparece (queda como apodo de "${keep}"; si "${keep}" no tiene foto, se queda con la de "${dup}").\n\nEsto no se puede deshacer.`))return;
       const sk=slugName(keep), sd=slugName(dup), kj=DATA.jugadores.find(x=>x.n===keep), dj=DATA.jugadores.find(x=>x.n===dup);
       // 📸 si el que queda no tiene foto (nube, datos ni repo), hereda la del duplicado
@@ -3869,7 +3972,7 @@ function bind(){
       const i=DATA.jugadores.findIndex(x=>x.n===n); if(i<0){toast("Ese jugador ya no estaba en el plantel");render();return;}
       DATA.jugadores.splice(i,1);save();render();
     };});
-    document.getElementById("addj").onclick=()=>{const v=document.getElementById("newj").value.trim();if(!v)return;DATA.jugadores.push({n:v,c:""});save();render();};
+    document.getElementById("addj").onclick=()=>{const v=document.getElementById("newj").value.trim();if(!v)return;if(nombreMal(v)){toast(nombreMal(v),4000);return;}DATA.jugadores.push({n:v,c:""});save();render();};
     document.getElementById("expData").onclick=()=>{descargarJSON(JSON.stringify(DATA,null,2),"copones-datos.json");toast("Datos exportados ✓");};
     document.getElementById("copyData").onclick=async()=>{try{await navigator.clipboard.writeText(JSON.stringify(DATA,null,2));toast("Datos copiados");}catch(e){toast("No se pudo copiar");}};
     document.getElementById("impData").onclick=()=>document.getElementById("impFile").click();

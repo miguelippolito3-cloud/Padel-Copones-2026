@@ -18,7 +18,8 @@ La app se publica sola con GitHub Pages desde la rama `main` (tarda 1-2 minutos)
 ## 🎾 Partidos a un set
 
 - Después de jugar, cada pareja carga sus partidos en **"🎾 Cargá tus partidos"** (link directo: `#partidos=AAAA-MM-DD`): rival y resultado con botones (6-0 … 6-5🎯 / 0-6 … 5-6🎯, o "⏱️ No se terminó" con cómo iba).
-- El admin guarda directo (si corrige o borra algo, lo de antes queda en el historial 🕓 de la fecha); un jugador manda una propuesta que el admin confirma con un toque desde el Inicio o Admin ("✅ Confirmar todas" si hay varias). Si las dos parejas cargan el mismo partido no se duplica; si no coinciden, se muestran lado a lado y elige el admin.
+- El admin guarda directo (si corrige o borra algo, lo de antes queda en el historial 🕓 de la fecha); un jugador manda una propuesta que el admin confirma con un toque desde el Inicio o Admin ("✅ Confirmar todas" si hay varias, de la más vieja a la más nueva). Si las dos parejas cargan el mismo partido no se duplica; si no coinciden, se muestran lado a lado (con el Nº y la hora de cada uno) y elige el admin. Dos partidos iguales de la misma pareja con distinto Nº no se juntan solos: se pregunta "¿Es el mismo partido?".
+- El jugador corrige lo que mandó con ✏️ (se reenvía con el mismo Nº) y, si el rival cargó otro resultado, elige "⚔️ Fue como lo cargué yo" o "➕ Fueron 2 partidos". Lo cargado sin mandar queda guardado en el celu (sobrevive a una recarga). Una pareja "cargó" cuando cargó lo suyo: figurar de rival en lo que cargó otro no alcanza, así que se le siguen pidiendo los suyos.
 - Se ven en "🎾 Partidos del domingo" (debajo del resultado), en el perfil, en la pestaña "🎾 Partidos" del Ranking y en "⚔️ Comparar con…". **No cambian el ranking oficial** (Kias y fechas). El fixture que sortea la app es tentativo: lo que vale es lo que se carga.
 
 **Volver atrás** si algo sale mal:

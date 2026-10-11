@@ -72,7 +72,8 @@ toque. Por eso la colección `propuestas` ahora acepta **dos tipos que no se mez
 | `ga`, `gb` | games de cada una | enteros de 0 a 6, **sin 6-6** (un set a 6: 6-5 = tiebreak; no existe 7-x) |
 | `fin` | ¿se terminó? | booleano: `true` si alguna llegó a 6, `false` si no (ej. 4-2 por la hora) |
 
-Quién lo cargó (`por`) y cuándo (`ts`) los pone el admin al confirmar: un jugador no los puede inventar.
+Quién lo cargó (`por`) y cuándo (`ts`) salen de la propuesta (que las reglas exigen firmada con el mail de quien la
+manda y con `ts` entero) y el admin los copia a cada partido al confirmar: un jugador no los puede inventar.
 
 **Ojo con el límite de las reglas:** Firestore corta a las **1000 expresiones por pedido**, y las reglas no
 recorren listas (se revisa cada uno de los 10 lugares). Una validación "campo por campo" se pasaba de 1000 con
@@ -83,9 +84,14 @@ se valida con **una** expresión regular (`x * 1` da error si no es número, `!f
 
 La app valida lo mismo antes de mandar (y el Admin, antes de mostrar o confirmar una propuesta, y el
 importador de respaldos): un partido raro (6-6, 7-5, contra su propia pareja, terminado sin llegar a 6…) se ve
-como "⚠️ Propuesta inválida" y no se puede confirmar. Con las reglas **publicadas hoy** (las viejas),
-`propuestas` acepta cualquier cosa de un logueado: la carga funciona igual y esa validación de la app es la
-que protege hasta que se publiquen las nuevas.
+como "⚠️ Propuesta inválida" y no se puede confirmar; lo mismo si `por` no es texto o `ts` no es un entero. Con las
+reglas **publicadas hoy** (las viejas), `propuestas` acepta cualquier cosa de un logueado: la carga funciona igual y
+esa validación de la app es la que protege hasta que se publiquen las nuevas.
+
+Los nombres de los jugadores siguen la misma regla (de 1 a 60 letras, sin `|`): **✏️ Renombrar**, agregar al plantel
+y sumar un sorpresa lo controlan, y **🔗 Unir** no deja juntar a dos que jugaron el mismo partido (son dos personas).
+Si igual llega un partido raro en un respaldo, **Importar** ya no rechaza el archivo entero: lo avisa en la vista
+previa y ese partido queda guardado pero no se ve ni suma (como en la app).
 
 Probado en el emulador (`t-P-rules.js` del scratchpad de pruebas): la propuesta **exacta** que escribe la app,
 los 4 partidos reales del 11/10, 10 partidos, y más de 40 casos raros rechazados (11 partidos, 6-6, 7-5, decimales,
