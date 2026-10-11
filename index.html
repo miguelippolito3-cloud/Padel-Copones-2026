@@ -216,6 +216,8 @@
   .hidden{display:none}
   .toast{position:fixed;left:50%;bottom:86px;transform:translateX(-50%);background:#000;border:1px solid var(--line);color:#fff;padding:10px 16px;border-radius:10px;font-weight:700;font-size:14px;z-index:80;opacity:0;transition:.25s;pointer-events:none}
   .toast.show{opacity:1}
+  /* 🔄 pastilla de novedades: llegó algo de la nube y no se redibujó para no borrarte lo que estabas haciendo */
+  .novedades{position:fixed;left:50%;bottom:calc(132px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:85;background:var(--A);color:#000;border:0;border-radius:999px;padding:10px 16px;font-weight:800;font-size:14px;font-family:inherit;white-space:nowrap;box-shadow:0 6px 24px rgba(0,0,0,.55);cursor:pointer;animation:fadein .25s}
 
   /* ===== MODALES PROPIOS (chau prompts del navegador) ===== */
   @keyframes fadein{from{opacity:0}to{opacity:1}}
@@ -310,6 +312,7 @@
 </div></div>
 
 <div class="toast" id="toast"></div>
+<button class="novedades hidden" id="novedades">🔄 Hay novedades · tocá para ver</button>
 
 <script type="module">
 "use strict";
@@ -514,10 +517,11 @@ if(CLOUD){
   });
   getRedirectResult(auth).catch(()=>{}); // cierra el ciclo del login por redirección (celulares)
   onSnapshot(dbRef,snap=>{
+    let eco=false;
     if(snap.exists()){
       CLOUDSTATE="ok";
       const sd=snap.data(), ver=sd.updated||0;
-      const eco=(ver===CLOUD_VER&&sd.json===CLOUD_JSON)||(ENVIANDO&&ver===ENVIANDO.ver&&sd.json===ENVIANDO.json);
+      eco=(ver===CLOUD_VER&&sd.json===CLOUD_JSON)||(ENVIANDO&&ver===ENVIANDO.ver&&sd.json===ENVIANDO.json);
       if(eco){CLOUD_VER=ver;CLOUD_JSON=sd.json;} // es lo que guardamos nosotros: DATA ya lo tiene (no se reemplaza)
       else if(aplicarNube(sd.json,ver))guardarParches();
       else{CLOUD_VER=ver;CLOUD_JSON=sd.json;} // ilegible: no se toca DATA, pero se puede guardar encima
@@ -526,7 +530,7 @@ if(CLOUD){
     }else{
       CLOUDSTATE="vacia";CLOUD_VER=null;CLOUD_JSON=null;
     }
-    render();
+    if(!eco)renderVivo(); else if(!ocupado())render(); // el eco de lo mío no es "novedad"
     setTimeout(maybeQuienSoy,800); // primer ingreso: recién acá hay plantel para elegir
   },err=>{ CLOUDSTATE="error"; toast("⚠️ Sin conexión a la nube"); });
 }
@@ -548,15 +552,15 @@ async function maybeQuienSoy(){
 }
 function subSocial(){ // suscripciones para todos los logueados
   if(socialSub||!db)return; socialSub=true;
-  onSnapshot(collection(db,"prode"),qs=>{PRODE=qs.docs.map(x=>({id:x.id,...x.data()}));if(VIEW==="inicio"||VIEW==="ranking")render();},()=>{});
-  onSnapshot(collection(db,"asistencia"),qs=>{ASIS=qs.docs.map(x=>({id:x.id,...x.data()}));if(VIEW==="inicio"||VIEW==="sorteo")render();},()=>{});
-  onSnapshot(collection(db,"fotos"),qs=>{FOTOS={};qs.docs.forEach(x=>FOTOS[x.id]=x.data());render();},()=>{});
+  onSnapshot(collection(db,"prode"),qs=>{PRODE=qs.docs.map(x=>({id:x.id,...x.data()}));if(VIEW==="inicio"||VIEW==="ranking")renderVivo();},()=>{});
+  onSnapshot(collection(db,"asistencia"),qs=>{ASIS=qs.docs.map(x=>({id:x.id,...x.data()}));if(VIEW==="inicio"||VIEW==="sorteo")renderVivo();},()=>{});
+  onSnapshot(collection(db,"fotos"),qs=>{FOTOS={};qs.docs.forEach(x=>FOTOS[x.id]=x.data());renderVivo();},()=>{});
 }
 function subAdmin(){ // suscripciones en vivo que solo necesita el admin
   if(propSub)return; propSub=true;
-  onSnapshot(collection(db,"propuestas"),qs=>{PROPUESTAS=qs.docs.map(x=>({id:x.id,...x.data()}));if(VIEW==="admin"||VIEW==="inicio")render();});
-  onSnapshot(collection(db,"usuarios"),qs=>{USUARIOS=qs.docs.map(x=>({id:x.id,...x.data()}));if(VIEW==="admin")render();});
-  onSnapshot(collection(db,"admins"),qs=>{COADMINS=qs.docs.map(x=>({id:x.id,...x.data()}));if(VIEW==="admin")render();});
+  onSnapshot(collection(db,"propuestas"),qs=>{PROPUESTAS=qs.docs.map(x=>({id:x.id,...x.data()}));if(VIEW==="admin"||VIEW==="inicio")renderVivo();});
+  onSnapshot(collection(db,"usuarios"),qs=>{USUARIOS=qs.docs.map(x=>({id:x.id,...x.data()}));if(VIEW==="admin")renderVivo();});
+  onSnapshot(collection(db,"admins"),qs=>{COADMINS=qs.docs.map(x=>({id:x.id,...x.data()}));if(VIEW==="admin")renderVivo();});
 }
 window.fbLogin=async()=>{
   try{ await signInWithPopup(auth,new GoogleAuthProvider()); }
@@ -676,8 +680,56 @@ function fmtFecha(s){const x=/^(\d{4})-(\d{2})-(\d{2})$/.exec(s);if(!x)return es
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function toast(t,ms){const el=document.getElementById("toast");el.textContent=t;el.classList.add("show");clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove("show"),ms||1800);}
 
+/* ---------- 🔄 NOVEDADES EN VIVO: no te borran lo que estás haciendo ---------- */
+let PEND_RENDER=false; // llegó algo de la nube y no se redibujó (estabas en medio de algo)
+function ocupado(){ // ¿hay algo que un redibujo te borraría?
+  if(document.querySelector("#uimodal,#fotoview,.bigshow"))return true; // modal, foto o pantalla gigante
+  const app=document.getElementById("app"), a=document.activeElement;
+  if(a&&a!==app&&app.contains(a)&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))return true; // escribiendo
+  if([...app.querySelectorAll("[data-tipeo]")].some(el=>el.value!==el.defaultValue))return true; // texto tipeado sin guardar
+  const po=document.getElementById("pairsOut");
+  return VIEW==="sorteo"&&!!po&&po.childElementCount>0; // sorteo en pantalla sin guardar
+}
+function renderVivo(){ // lo usan las suscripciones en vivo en vez de render()
+  if(!ocupado()){render();return;}
+  PEND_RENDER=true; document.getElementById("novedades").classList.remove("hidden");
+  try{renderTicker();updateNavDot();}catch(e){console.error(e);} // lo de afuera de la pantalla sí se actualiza
+}
+function refrescar(){ // 🔄 tocó la pastilla: redibuja con lo nuevo sin perder lo tipeado
+  const app=document.getElementById("app"), vals={};
+  app.querySelectorAll("input[id][data-tipeo],textarea[id][data-tipeo]").forEach(el=>{vals[el.id]=el.value;});
+  render();
+  for(const id in vals){const el=document.getElementById(id);if(el&&app.contains(el)){el.value=vals[id];el.dataset.tipeo="1";}}
+}
+document.getElementById("novedades").onclick=refrescar;
+document.getElementById("app").addEventListener("input",e=>{const t=e.target;if(t&&t.matches&&t.matches("input:not([type=range]):not([type=file]),textarea"))t.dataset.tipeo="1";});
+let APRETANDO=false; // dedo/mouse apretado: nunca redibujar abajo de un toque a medio hacer
+addEventListener("pointerdown",()=>{APRETANDO=true;},true); addEventListener("pointerup",()=>{APRETANDO=false;},true); addEventListener("pointercancel",()=>{APRETANDO=false;},true);
+document.getElementById("app").addEventListener("focusout",()=>setTimeout(()=>{if(PEND_RENDER&&!APRETANDO&&!ocupado())render();},250)); // salió del campo (sin texto pendiente): ahora sí
+
+/* ---------- ◀️ ATRÁS con un modal, una foto o la pantalla gigante: solo cierra eso ---------- */
+// Al abrir se agrega una entrada al historial (misma URL): "atrás" la consume y cierra lo de arriba,
+// sin cambiar de pantalla (ni salir de la app instalada). Si se cierra tocando, la entrada se consume sola.
+let POP_PROPIO=false;
+function overlayArriba(){return document.querySelector(".bigshow")||document.getElementById("uimodal")||document.getElementById("fotoview");}
+function abrirOverlay(){if(!(history.state&&history.state.ov)){try{history.pushState({ov:1},"");}catch(e){}}}
+function alCerrarOverlay(){ // después de cerrar (si no se abrió otro paso del mismo flujo)
+  setTimeout(()=>{
+    if(!overlayArriba()&&history.state&&history.state.ov){POP_PROPIO=true;history.back();}
+    if(PEND_RENDER&&!ocupado())render(); // terminó la acción: ahora sí, las novedades
+  },80);
+}
+window.addEventListener("popstate",()=>{
+  if(POP_PROPIO){POP_PROPIO=false;if(overlayArriba())abrirOverlay();return;}
+  const o=overlayArriba();
+  if(!o){if(history.state&&history.state.ov){POP_PROPIO=true;history.back();}return;} // entrada vieja: se saltea
+  if(o.id==="uimodal"){const x=o.querySelector("[data-mx]");if(x)x.click();else uiClose();} // = tocar la ✕ (el flujo cancela bien)
+  else o.click(); // la foto y la pantalla gigante se cierran tocándolas
+  if(overlayArriba())abrirOverlay();
+});
+
 /* ---------- MODALES PROPIOS (reemplazan a prompt/confirm) ---------- */
-function uiClose(){const m=document.getElementById("uimodal");if(m)m.remove();}
+function uiClose(){const m=document.getElementById("uimodal");if(m){m.remove();alCerrarOverlay();}}
 function quienEnFoto(f,tipo,src){ // "👈 Mike Rafa · Track 👉": solo para la foto del repo, que es la identificada
   const q=f&&f.fotoQuien&&f.fotoQuien[tipo];
   if(!Array.isArray(q)||!q.length||src!==`fotos/${tipo}/${f.f}.jpg`)return "";
@@ -692,8 +744,9 @@ function verFoto(url,titulo,quien){ // 📸 visor interno: la foto se abre EN la
     ${titulo?`<div class="tag" style="margin-top:10px;justify-content:center;display:flex">${esc(titulo)}</div>`:""}
     ${quien?`<div style="margin-top:6px;font-weight:800;font-size:15px">${esc(quien)}</div>`:""}
     <div class="note" style="margin-top:6px;text-align:center">Tocá en cualquier lado para volver</div></div>`;
-  d.onclick=()=>d.remove();
+  d.onclick=()=>{d.remove();alCerrarOverlay();};
   document.body.appendChild(d);
+  abrirOverlay();
 }
 function uiShow(title,sub,inner){
   uiClose();
@@ -706,6 +759,7 @@ function uiShow(title,sub,inner){
     </div>
     ${sub?`<div class="modal-s">${sub}</div>`:""}<div>${inner}</div></div>`;
   document.body.appendChild(d);
+  abrirOverlay();
   // la ✕ equivale al botón de cancelar del modal (así cada flujo resuelve bien su promesa)
   d.querySelector("[data-mx]").onclick=()=>{const c=d.querySelector("[data-x]");if(c)c.click();else uiClose();};
   return d;
@@ -836,7 +890,7 @@ function route(v,p){
   const m=document.getElementById("uimodal");
   if(m){ const mx=m.querySelector("[data-mx]"); if(mx)mx.click(); else m.remove(); }
   const bs=document.querySelector(".bigshow"); if(bs)bs.click();
-  VIEW=v||"inicio";PARAM=p||null; document.querySelectorAll("#nav a").forEach(a=>a.classList.toggle("on",a.dataset.go===VIEW)); render(); window.scrollTo(0,0);
+  VIEW=v||"inicio";PARAM=p||null; document.querySelectorAll("#nav a").forEach(a=>a.classList.toggle("on",a.dataset.go===VIEW)); render(true); window.scrollTo(0,0);
 }
 function go(v,p){ const nh="#"+v+(p?("="+encodeURIComponent(p)):""); if(location.hash===nh){route(v,p);} else {location.hash=nh;} }
 document.getElementById("nav").addEventListener("click",e=>{const a=e.target.closest("a");if(a)go(a.dataset.go);});
@@ -856,17 +910,27 @@ function vBloqueo(){ // 🔒 sin sesión no se ve NADA: bienvenida + login oblig
     </div>
   </section>`;
 }
-function render(){
+function render(nav){ // nav = viene de route() (cambio de pantalla): arranca de cero
   const app=document.getElementById("app");
+  // 🎾 en Sorteo, si no es navegación, el resultado en pantalla (con sus botones), el Nº y las canchas sobreviven al redibujo
+  const sv=!nav&&VIEW==="sorteo"&&document.getElementById("seed")?{po:document.getElementById("pairsOut"),dm:document.getElementById("drawMsg"),seed:document.getElementById("seed").value,courts:document.getElementById("courts").value}:null;
+  PEND_RENDER=false; document.getElementById("novedades").classList.add("hidden");
   try{
-    if(CLOUD&&!USER){app.innerHTML=vBloqueo();bind();renderTicker();return;}
-    if(VIEW==="inicio")app.innerHTML=vInicio();
-    else if(VIEW==="ranking")app.innerHTML=vRanking();
-    else if(VIEW==="sorteo")app.innerHTML=vSorteo();
-    else if(VIEW==="jugadores")app.innerHTML=vJugadores();
-    else if(VIEW==="perfil")app.innerHTML=vPerfil(PARAM);
-    else if(VIEW==="admin")app.innerHTML=vAdmin();
-    bind();
+    if(CLOUD&&!USER)app.innerHTML=vBloqueo(); // sin bind(): el bloqueo no tiene nada que atar (en #sorteo tiraba TypeError)
+    else{
+      if(VIEW==="inicio")app.innerHTML=vInicio();
+      else if(VIEW==="ranking")app.innerHTML=vRanking();
+      else if(VIEW==="sorteo")app.innerHTML=vSorteo();
+      else if(VIEW==="jugadores")app.innerHTML=vJugadores();
+      else if(VIEW==="perfil")app.innerHTML=vPerfil(PARAM);
+      else if(VIEW==="admin")app.innerHTML=vAdmin();
+      if(sv&&VIEW==="sorteo"&&document.getElementById("seed")){
+        document.getElementById("seed").value=sv.seed; document.getElementById("courts").value=sv.courts;
+        if(sv.po)document.getElementById("pairsOut").replaceWith(sv.po);
+        if(sv.dm)document.getElementById("drawMsg").replaceWith(sv.dm);
+      }
+      bind();
+    }
   }catch(e){ // 🛟 red de seguridad: un dato raro no deja la pantalla vieja ni la app colgada
     console.error(e);
     app.innerHTML=`<section><div class="card pad" id="renderErr" style="margin-top:12px;border-color:var(--red)">
@@ -1357,14 +1421,26 @@ function fechasPendientes(){ // fechas jugadas con datos sin cargar (la de HOY c
   return DATA.fechas.filter(x=>x.f>=desde&&(x.f<hoyS||(x.f===hoyS&&h.getHours()>=11))&&faltantesDe(x).length);
 }
 function fechaPendiente(){ return fechasPendientes()[0]||null; }
+/* ☁️ La nube puede reemplazar DATA con un modal abierto: al guardar se vuelve a buscar la fecha
+   en los datos de AHORA, por identidad o por día + parejas (nunca por índice ni referencia vieja). */
+function fechaActual(f){
+  if(!f)return null;
+  if(DATA.fechas.includes(f))return f;
+  const k=JSON.stringify(f.parejas);
+  return DATA.fechas.find(x=>x.f===f.f&&JSON.stringify(x.parejas)===k)||null;
+}
+const CAMBIO_FECHA="⚠️ Esa fecha cambió en la nube mientras tanto (otro admin le tocó las parejas o la borró): NO se guardó. Abrila de nuevo";
+const estadoDe=f=>({campeon:f.campeon||null,pala:(f.pala===undefined?null:f.pala),mvp:(f.mvp===undefined?null:f.mvp),sinCafe:Array.isArray(f.sinCafe)?f.sinCafe.slice():null});
 async function cargarResultado(f){
   // 📝 TODO EN UNA SOLA PANTALLA: campeón, cuchara, MVP y café juntos.
   // Se ve lo ya cargado, se toca solo lo que cambia y se guarda una única vez.
+  f=fechaActual(f)||f;
   const completa=!faltantesDe(f).length;
-  const antes={campeon:f.campeon||null,pala:(f.pala===undefined?null:f.pala),mvp:(f.mvp===undefined?null:f.mvp),sinCafe:Array.isArray(f.sinCafe)?f.sinCafe.slice():null};
   if(completa){ // ya está todo: corregir = reescribir la historia, con respaldo
     if(!await uiConfirm("🕰️ ¡Momento!",`La fecha del <b>${fmtFecha(f.f)}</b> ya está completa y estás por <b>reescribir la historia</b>.<br><br>Tranqui: la versión actual queda guardada en el historial de cambios, con fecha y autor. Acá nada se pierde… pero todo se sabe 😏`,"✍️ Le entramos"))return;
+    f=fechaActual(f); if(!f){toast(CAMBIO_FECHA,5000);render();return;}
   }
+  const antes=estadoDe(f);
   const jugadores=[...new Set(f.parejas.flat())];
   const est={ // estado editable (arranca con lo que ya hay; null = sin cargar, false = nadie)
     campeon:f.campeon||null,
@@ -1386,6 +1462,7 @@ async function cargarResultado(f){
     <button class="mok" data-ok style="margin-top:14px">💾 Guardar todo</button>
     <button class="mcancel" data-x>Cancelar (no guarda nada)</button>`);
   const igual=(a,b)=>JSON.stringify(a===undefined?null:a)===JSON.stringify(b===undefined?null:b);
+  const mismo=(k,a,b)=>k==="sinCafe"?igual(a&&[...a].sort(),b&&[...b].sort()):igual(a,b); // el café, sin importar el orden
   const paint=()=>{
     d.querySelectorAll('[data-g="campeon"]').forEach(b=>b.classList.toggle("on",!!est.campeon&&igual(f.parejas[+b.dataset.v],est.campeon)));
     d.querySelectorAll('[data-g="pala"]').forEach(b=>b.classList.toggle("on",b.dataset.v==="nadie"?est.pala===false:(Array.isArray(est.pala)&&igual(f.parejas[+b.dataset.v],est.pala))));
@@ -1410,24 +1487,24 @@ async function cargarResultado(f){
   });
   paint();
   const guardo=await new Promise(res=>{
-    d.querySelector("[data-ok]").onclick=()=>{
-      const cafeNew=est.cafeReg?[...est.sinCafe].sort():null;
-      const cafeOld=antes.sinCafe?[...antes.sinCafe].sort():null;
-      let cambios=0;
-      if(!igual(est.campeon,antes.campeon))cambios++;
-      if(!igual(est.pala,antes.pala))cambios++;
-      if(!igual(est.mvp,antes.mvp))cambios++;
-      if(JSON.stringify(cafeNew)!==JSON.stringify(cafeOld))cambios++;
+    d.querySelector("[data-ok]").onclick=async()=>{
+      const nuevo={campeon:est.campeon,pala:est.pala,mvp:est.mvp,sinCafe:est.cafeReg?[...est.sinCafe]:null};
+      const camb=Object.keys(nuevo).filter(k=>!mismo(k,nuevo[k],antes[k])); // solo lo que tocaste
       uiClose();
-      if(!cambios){toast("No cambiaste nada — quedó todo como estaba");res(false);return;}
-      if(!DATA.fechas.includes(f)){toast(AVISO_PISADA,4500);render();res(false);return;} // la nube cambió mientras cargabas
-      f.campeon=est.campeon;
-      f.pala=est.pala;
-      f.mvp=est.mvp;
-      if(est.cafeReg)f.sinCafe=[...est.sinCafe]; else delete f.sinCafe;
-      if(completa)(f.versiones||(f.versiones=[])).push({ts:Date.now(),por:(USER&&USER.email)||"admin (este dispositivo)",antes});
-      f.confirmada=true; // la carga directa siempre la hace un admin
-      const sv=save();toast(completa?"🕰️ Corregido — la versión anterior quedó en el historial":"Resultado cargado ✓");render();
+      if(!camb.length){toast("No cambiaste nada — quedó todo como estaba");res(false);return;}
+      let cur=fechaActual(f); // la nube pudo cambiar con el modal abierto: se escribe en ESTA fecha de los datos de ahora
+      if(!cur){toast(CAMBIO_FECHA,5000);render();res(false);return;}
+      const ahora=estadoDe(cur), choques=camb.filter(k=>!mismo(k,ahora[k],antes[k])&&!mismo(k,ahora[k],nuevo[k]));
+      if(choques.length){ // otro admin cargó ESO MISMO mientras tanto: decidís vos
+        const nom={campeon:"🚗 campeón",pala:"🥄 cuchara",mvp:"🎖️ MVP",sinCafe:"☕ café"};
+        if(!await uiConfirm("⚠️ Otro admin cargó esta fecha recién",`Mientras tenías esto abierto, en la nube cambió <b>${choques.map(k=>nom[k]).join(" · ")}</b> del ${fmtFecha(cur.f)}.<br><br>¿Guardás lo tuyo encima? Lo que había queda en el historial de cambios.`,"✍️ Sí, guardar lo mío","No, dejar lo de la nube")){toast("No se guardó: quedó lo de la nube");render();res(false);return;}
+        cur=fechaActual(cur); if(!cur){toast(CAMBIO_FECHA,5000);render();res(false);return;}
+      }
+      const previo=estadoDe(cur), corrige=!faltantesDe(cur).length||choques.length>0; // reescribe la historia → con respaldo
+      camb.forEach(k=>{ if(k!=="sinCafe")cur[k]=nuevo[k]; else if(nuevo.sinCafe)cur.sinCafe=nuevo.sinCafe; else delete cur.sinCafe; }); // lo que no tocaste queda como está en la nube
+      if(corrige)(cur.versiones||(cur.versiones=[])).push({ts:Date.now(),por:(USER&&USER.email)||"admin (este dispositivo)",antes:previo});
+      cur.confirmada=true; // la carga directa siempre la hace un admin
+      const sv=save();toast(corrige?"🕰️ Corregido — la versión anterior quedó en el historial":"Resultado cargado ✓");render();
       sv.then(res); // las fotos se ofrecen solo si el resultado quedó guardado
     };
     d.querySelector("[data-x]").onclick=()=>{uiClose();res(false);};
@@ -1971,6 +2048,7 @@ function revelar(orden,{sup,problemas,seedRaw,manual}){
 
   setTimeout(()=>{
     clearInterval(iv);
+    if(!out.isConnected)return; // se fue de Sorteo durante el bolillero
     if(navigator.vibrate)navigator.vibrate([15,40,15,40,80]);
     let baseMsg=manual
       ?`Fixture sorteado con Nº <b>${esc(seedRaw)}</b> · ${orden.length} parejas (armadas a mano) · ${courts} canchas.`
@@ -2037,7 +2115,7 @@ function revelar(orden,{sup,problemas,seedRaw,manual}){
   },manual?1100:1900);
 }
 function bigShow(orden,sup,manual){ // 📺 sorteo a pantalla completa, para proyectar o pasar en ronda
-  const ov=document.createElement("div");ov.className="bigshow";document.body.appendChild(ov);
+  const ov=document.createElement("div");ov.className="bigshow";document.body.appendChild(ov);abrirOverlay();
   const nombres=orden.flat().map(x=>x.n).concat(sup?[sup.n]:[]);
   ov.innerHTML=`<div class="bs-brand">🎾 Copones Buena Vista · Sorteo transparente</div>
     <div class="bs-drum">🥁</div><div class="bs-name">…</div>
@@ -2063,7 +2141,7 @@ function bigShow(orden,sup,manual){ // 📺 sorteo a pantalla completa, para pro
       list.appendChild(row);row.scrollIntoView({block:"nearest"});
     },600+orden.length*1400));
   },manual?1100:1900));
-  ov.onclick=()=>{clearInterval(iv);timers.forEach(clearTimeout);ov.remove();};
+  ov.onclick=()=>{clearInterval(iv);timers.forEach(clearTimeout);ov.remove();alCerrarOverlay();};
 }
 
 /* ---------- ADMIN ---------- */
@@ -2492,7 +2570,7 @@ function bind(){
     };
   }
 
-  if(VIEW==="sorteo"){
+  if(VIEW==="sorteo"&&document.getElementById("seed")){ // (sin #seed no está dibujada: nada que atar)
     if(!document.getElementById("seed").value)document.getElementById("seed").value=String(1000+Math.floor(Math.random()*8999));
     document.getElementById("btnSeed").onclick=()=>{document.getElementById("seed").value=String(1000+Math.floor(Math.random()*8999));};
     document.getElementById("btnDraw").onclick=draw;
@@ -2541,9 +2619,8 @@ function bind(){
         else noRec.push(l);
       });
       if(noRec.length&&await uiConfirm(`✨ Reconocí ${ok} jugador${ok===1?"":"es"}`,`No reconocí a: <b>${esc(noRec.join(", "))}</b>.<br><br>¿Los agrego como jugadores sorpresa? Te pregunto el copón de cada uno.`,"🎁 Sí, agregalos","No, dejalos afuera")){
-        DATA.bolsa=DATA.bolsa||[];DATA.bolsaCop=DATA.bolsaCop||{};
-        for(const n of noRec){
-          if(!allKnownNames().includes(n)){DATA.bolsa.push(n);DATA.bolsaCop[n]=await pedirCopon(n);}
+        for(const n of noRec){ // (DATA se vuelve a leer después de cada modal: la nube pudo reemplazarlo)
+          if(!allKnownNames().includes(n)){const c=await pedirCopon(n);(DATA.bolsa||(DATA.bolsa=[])).push(n);(DATA.bolsaCop||(DATA.bolsaCop={}))[n]=c;}
           SEL.add(n);
         }
         save();
@@ -2572,7 +2649,7 @@ function bind(){
     document.querySelectorAll("[data-propok]").forEach(b=>b.onclick=()=>{
       const p=PROPUESTAS.find(x=>x.id===b.dataset.propok); if(!p)return;
       if(propMal(p)){toast("⚠️ Propuesta inválida: descartala con 🗑️",4500);return;}
-      const fe=DATA.fechas.find(x=>x.f===p.f);
+      const fs=DATA.fechas.filter(x=>x.f===p.f), fe=fs.find(x=>!propNoCoincide(p,x))||fs[0]; // si hay dos el mismo día, la de esas parejas
       if(!fe){toast("Esa fecha ya no existe");deleteDoc(doc(db,"propuestas",p.id)).catch(()=>{});return;}
       const nc=propNoCoincide(p,fe); if(nc){toast(`⚠️ No se confirmó: ${nc}. Revisala y cargala a mano`,5000);return;}
       fe.campeon=p.campeon||fe.campeon; fe.pala=p.pala||fe.pala; fe.mvp=p.mvp||fe.mvp; if(Array.isArray(p.sinCafe))fe.sinCafe=p.sinCafe; fe.confirmada=true;
@@ -2590,7 +2667,7 @@ function bind(){
       if(ADMINS.includes(em)||COADMINS.some(a=>a.id===em)){toast("Ya es admin");return;}
       if(!confirm(`👑 ¿Dar permisos de admin a ${em}?\nVa a poder cargar resultados, sortear y editar el plantel.`))return;
       setDoc(doc(db,"admins",em),{email:em,por:USER.email,ts:Date.now()})
-        .then(()=>toast("👑 Co-admin agregado"))
+        .then(()=>{toast("👑 Co-admin agregado");const ni=document.getElementById("newAdmin");if(ni)ni.value="";if(PEND_RENDER&&!ocupado())render();})
         .catch(()=>toast("⚠️ No se pudo (¿reglas actualizadas?)"));
     };
     document.querySelectorAll("[data-deladmin]").forEach(b=>b.onclick=()=>{
@@ -2610,9 +2687,7 @@ function bind(){
       save();toast("🏁 Temporada cerrada");render();
       mostrarGala(cerrada.nombre,cerrada.fechas); // 🎉 la gala de despedida
     };
-    document.querySelectorAll("[data-gala]").forEach(b=>b.onclick=()=>{
-      const t=(DATA.historial||[])[+b.dataset.gala]; if(t)mostrarGala(t.nombre,t.fechas);
-    });
+    document.querySelectorAll("[data-gala]").forEach(b=>{const t=(DATA.historial||[])[+b.dataset.gala]; b.onclick=()=>{if(t)mostrarGala(t.nombre,t.fechas);};});
     const gn=document.getElementById("galaNow");
     if(gn)gn.onclick=()=>mostrarGala("Temporada en curso",DATA.fechas);
     const br=document.getElementById("btnRen");
@@ -2636,6 +2711,7 @@ function bind(){
       const sel=document.querySelector(`select[data-altacop="${CSS.escape(n)}"]`);
       const c=sel&&sel.value?sel.value:"";
       if(!c&&!confirm(`No elegiste copón para ${n}. ¿Darlo de alta igual como invitado sin copón?`))return;
+      if(DATA.jugadores.some(j=>j.n===n)){toast(n+" ya está en el plantel");render();return;} // (otro admin lo dio de alta recién)
       DATA.jugadores.push({n,c,real:"ex invitado sorpresa"});
       if(DATA.bolsa)DATA.bolsa=DATA.bolsa.filter(x=>x!==n);
       if(DATA.bolsaCop)delete DATA.bolsaCop[n];
@@ -2688,15 +2764,17 @@ function bind(){
         try{for(const id of ids){await deleteDoc(doc(db,"fotos",id));delete FOTOS[id];}toast("Fotos borradas");upd();render();}catch(e){toast("⚠️ No se pudo borrar");}
       };
     }
-    document.querySelectorAll("[data-delf]").forEach(b=>b.onclick=async()=>{
-      const f=DATA.fechas[+b.dataset.delf]; if(!f)return;
+    // los botones de cada fila se atan a SU fecha/jugador (el de esta pantalla): si la nube cambia antes del toque, se busca por clave
+    document.querySelectorAll("[data-delf]").forEach(b=>{const f=DATA.fechas[+b.dataset.delf]; b.onclick=async()=>{
+      if(!f)return;
       if(!await uiConfirm("🗑️ ¿Borrar esta fecha?",`La del <b>${fmtFecha(f.f)}</b> (${f.parejas.length} parejas). Esto no se puede deshacer.`,"🗑️ Sí, borrala"))return;
-      const i=DATA.fechas.indexOf(f); if(i<0){toast(AVISO_PISADA,4500);render();return;} // la nube cambió mientras preguntaba
+      const k=JSON.stringify(f), i=DATA.fechas.findIndex(x=>x===f||JSON.stringify(x)===k); // exactamente la que viste
+      if(i<0){toast("⚠️ Esa fecha cambió en la nube mientras preguntaba: no se borró nada. Revisala",4500);render();return;}
       DATA.fechas.splice(i,1);save();render();
-    });
-    document.querySelectorAll("[data-editcamp]").forEach(b=>b.onclick=()=>cargarResultado(DATA.fechas[+b.dataset.editcamp]));
-    document.querySelectorAll("[data-hist]").forEach(b=>b.onclick=()=>{
-      const f=DATA.fechas[+b.dataset.hist]; if(!f||!f.versiones)return;
+    };});
+    document.querySelectorAll("[data-editcamp]").forEach(b=>{const f=DATA.fechas[+b.dataset.editcamp]; b.onclick=()=>cargarResultado(fechaActual(f)||f);});
+    document.querySelectorAll("[data-hist]").forEach(b=>{const f0=DATA.fechas[+b.dataset.hist]; b.onclick=()=>{
+      const f=fechaActual(f0)||f0; if(!f||!f.versiones)return;
       const lineas=[...f.versiones].reverse().map(v=>{
         const d=new Date(v.ts), t=`${d.getDate()}/${d.getMonth()+1} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
         const a=v.antes||{};
@@ -2705,14 +2783,17 @@ function bind(){
       const d=uiShow(`🕰️ Historial de cambios`,`Fecha del ${fmtFecha(f.f)} · la versión vigente es la que se ve en la app`,lineas.join("")+`<button class="mcancel" data-x>Cerrar</button>`);
       d.querySelector("[data-x]").onclick=uiClose;
       d.onclick=e=>{if(e.target===d)uiClose();};
-    });
-    document.querySelectorAll("[data-cop]").forEach(s=>s.onchange=()=>{DATA.jugadores[+s.dataset.cop].c=s.value;save();});
-    document.querySelectorAll("[data-delj]").forEach(b=>b.onclick=async()=>{
-      const j=DATA.jugadores[+b.dataset.delj]; if(!j)return;
-      if(!await uiConfirm(`🗑️ ¿Sacar a ${esc(j.n)} del plantel?`,"Su historial de fechas no se borra: va a aparecer como jugador sorpresa.","🗑️ Sí, sacalo"))return;
-      const i=DATA.jugadores.indexOf(j); if(i<0){toast(AVISO_PISADA,4500);render();return;} // la nube cambió mientras preguntaba
+    };});
+    document.querySelectorAll("[data-cop]").forEach(s=>{const n=(DATA.jugadores[+s.dataset.cop]||{}).n; s.onchange=()=>{
+      const j=DATA.jugadores.find(x=>x.n===n); if(!j){toast("Ese jugador ya no está en el plantel");render();return;}
+      j.c=s.value;save();
+    };});
+    document.querySelectorAll("[data-delj]").forEach(b=>{const n=(DATA.jugadores[+b.dataset.delj]||{}).n; b.onclick=async()=>{
+      if(!n)return;
+      if(!await uiConfirm(`🗑️ ¿Sacar a ${esc(n)} del plantel?`,"Su historial de fechas no se borra: va a aparecer como jugador sorpresa.","🗑️ Sí, sacalo"))return;
+      const i=DATA.jugadores.findIndex(x=>x.n===n); if(i<0){toast("Ese jugador ya no estaba en el plantel");render();return;}
       DATA.jugadores.splice(i,1);save();render();
-    });
+    };});
     document.getElementById("addj").onclick=()=>{const v=document.getElementById("newj").value.trim();if(!v)return;DATA.jugadores.push({n:v,c:""});save();render();};
     document.getElementById("expData").onclick=()=>{descargarJSON(JSON.stringify(DATA,null,2),"copones-datos.json");toast("Datos exportados ✓");};
     document.getElementById("copyData").onclick=async()=>{try{await navigator.clipboard.writeText(JSON.stringify(DATA,null,2));toast("Datos copiados");}catch(e){toast("No se pudo copiar");}};
@@ -2725,6 +2806,7 @@ function bind(){
 (function init(){
   const h=location.hash.slice(1);
   if(h){const [v,p]=h.split("=");VIEW=v||"inicio";PARAM=p?decodeURIComponent(p):null;}
+  if(history.state&&history.state.ov)try{history.replaceState(null,"");}catch(e){} // recargó con un modal abierto: esa entrada ya no tiene modal
   document.querySelectorAll("#nav a").forEach(a=>a.classList.toggle("on",a.dataset.go===VIEW));
   // tema claro/oscuro
   const applyTheme=t=>{document.body.classList.toggle("light",t==="light");document.getElementById("themeBtn").textContent=t==="light"?"☀️":"🌙";};
