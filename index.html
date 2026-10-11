@@ -179,7 +179,7 @@
   .field label{font-family:"Barlow Condensed";font-weight:700;font-size:12px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase}
   input,select,textarea{background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:11px 12px;font-family:inherit;font-size:16px;font-weight:600}
   input:focus,select:focus{outline:none;border-color:var(--red)}
-  #drawMsg,.hero,#prodeCard{scroll-margin-top:calc(64px + env(safe-area-inset-top))} /* que no lo tape la barra de arriba */
+  #drawMsg,.hero,#prodeCard,#ptDia{scroll-margin-top:calc(64px + env(safe-area-inset-top))} /* que no lo tape la barra de arriba */
   .savebar{margin-top:10px;padding:10px 12px;border:1px solid var(--red);border-radius:12px;background:rgba(226,16,42,.07);color:var(--txt)}
   .savebar .warn{color:var(--red2)} .savebar.ok{border-color:#22c55e;background:rgba(34,197,94,.08)} .savebar.info{border-color:var(--line);background:var(--card2)}
   .pairwrap{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-top:12px}
@@ -318,6 +318,48 @@
     html{scroll-behavior:auto}
     *,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
   }
+
+  /* 🎾 PARTIDOS A UN SET: la carga (botones grandes, para una mano) y cómo se muestran */
+  .ptrow{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:10px}
+  .ptrow.ok{border-color:rgba(34,197,94,.55)}
+  .ptrow.cerrada{cursor:pointer;min-height:50px;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:14px}
+  .pthd{display:flex;align-items:center;justify-content:space-between;gap:8px;font-weight:800}
+  .ptlbl{font-family:"Barlow Condensed";font-weight:700;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:10px 0 5px}
+  .ptchips{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  .ptchip{min-height:44px;background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:5px 8px;font-family:inherit;font-weight:700;font-size:13px;line-height:1.2;cursor:pointer;overflow-wrap:anywhere}
+  .ptchip.on{background:var(--A);border-color:var(--A);color:#0a0b0d}
+  .ptres{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px}
+  .ptres button{min-height:46px;padding:0 1px;border-radius:9px;border:1px solid;font-family:"Anton",Impact,sans-serif;font-size:16px;cursor:pointer;white-space:nowrap}
+  .ptres.gan button{background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.5);color:var(--okT)}
+  .ptres.per button{background:rgba(226,16,42,.08);border-color:rgba(226,16,42,.45);color:var(--red2)}
+  .ptres.gan button.on{background:#22c55e;border-color:#22c55e;color:#0a0b0d}
+  .ptres.per button.on{background:var(--red);border-color:var(--red);color:#fff}
+  .ptres button:active,.ptchip:active,.ptstep button:active{transform:scale(.95)}
+  .ptnt{display:block;width:100%;margin-top:8px;min-height:44px;background:var(--card2);border:1px dashed var(--line);color:var(--txt);border-radius:10px;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer}
+  .ptnt.on{border-style:solid;border-color:var(--A)}
+  .ptsteps{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+  .ptstep{display:flex;align-items:center;justify-content:space-between;gap:4px;background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:4px}
+  .ptstep button{width:44px;height:44px;flex:none;border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--txt);font-size:22px;font-weight:800;cursor:pointer;font-family:inherit}
+  .ptstep b{font-family:"Anton",Impact,sans-serif;font-weight:400;font-size:26px;min-width:24px;text-align:center}
+  .ptsave{position:sticky;bottom:calc(66px + env(safe-area-inset-bottom));z-index:5;margin-top:14px;box-shadow:0 6px 22px rgba(0,0,0,.45)}
+  .ptya{display:flex;align-items:center;gap:4px;padding:7px 0;border-bottom:1px solid var(--line);font-size:14px}
+  .ptya:last-child{border-bottom:0}
+  .ptya .tx{flex:1;min-width:0}
+  .ptya button{flex:none;min-width:44px;min-height:44px;background:transparent;border:0;color:var(--muted);font-size:17px;cursor:pointer}
+  .ptl{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:2px 10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line);font-size:13.5px;line-height:1.25}
+  .ptl>:first-child{text-align:right}
+  .ptl .sc{font-family:"Anton",Impact,sans-serif;font-weight:400;font-size:17px;white-space:nowrap}
+  .ptl.nt{color:var(--muted)}
+  .ptl .ntx{grid-column:1/-1;text-align:center;font-size:12px}
+  .ptrec{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:0 10px;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+  .ptrec:last-of-type{border-bottom:0}
+  .ptrec b{white-space:nowrap} .ptrec small{color:var(--muted);font-size:12px;text-align:right;line-height:1.3}
+  .ptrec.yo{background:rgba(245,197,24,.1);border-radius:8px;padding-left:6px;padding-right:6px}
+  .ptcf{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+  .ptcf>div{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:10px}
+  .ptsb{display:flex;justify-content:space-between;gap:6px;align-items:baseline;font-size:13.5px;margin-top:4px}
+  .ptsb b{font-family:"Anton",Impact,sans-serif;font-weight:400;font-size:20px}
+  @media(max-width:480px){#rkseg{flex-wrap:wrap}#rkseg button{flex:1 1 40%}} /* 4 pestañas: en el celu van de a 2 (nada cortado) */
 
   /* ===== MODO CLARO ===== */
   body.light{
@@ -462,6 +504,7 @@ function textoResultados(f,st,flyer){ // el mensaje de resultados para WhatsApp 
   if(Array.isArray(f.sinCafe))txt+=f.sinCafe.length
     ?`🏃 *Se rajaron sin café:* ${f.sinCafe.join(", ")} 👀\n`
     :`☕ *Café:* se quedaron todos 👏\n`;
+  if(Array.isArray(f.parejas)&&f.parejas.length>=2)txt+=`\n📝 ¿Jugaste? Cargá tus partidos en 1 minuto 👉 ${linkApp("partidos",f.f)}\n`; // 🎾 lo real de la mañana lo carga cada pareja
   // 🪝 lo que no está en el flyer: un link por sección (los de la misma van juntos); el del ranking va al final, pegado al cierre que ya lo trae
   const g=ganchosFecha(f), rk=linkApp("ranking"), secs=[...new Set(g.lista.map(x=>x.url).filter(u=>u!==rk))];
   const conLink=secs.map(u=>g.lista.filter(x=>x.url===u).map(x=>x.txt+"\n").join("")+u+"\n").join("");
@@ -889,6 +932,7 @@ function ocupado(){ // ¿hay algo que un redibujo te borraría?
   const app=document.getElementById("app"), a=document.activeElement;
   if(a&&a!==app&&app.contains(a)&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))return true; // escribiendo
   if([...app.querySelectorAll("[data-tipeo]")].some(el=>el.value!==el.defaultValue))return true; // texto tipeado sin guardar
+  if(VIEW==="partidos"&&ptSucio())return true; // 🎾 partidos cargados en pantalla sin guardar (no se pierden, pero no se mueve nada abajo del dedo)
   const po=document.getElementById("pairsOut");
   return VIEW==="sorteo"&&!!po&&po.childElementCount>0; // sorteo en pantalla sin guardar
 }
@@ -1086,7 +1130,7 @@ function uiConfirm(title,msg,okLabel,cancelLabel){ // → Promise<bool>
 /* ================= ROUTER ================= */
 let VIEW="inicio", PARAM=null;
 let NAV_PROPIA=false, VOLVIENDO=false, POS={}, HASH_VISTO=location.hash||"#inicio"; // ◀️ para "Volver" a donde estabas
-function marcarNav(){ document.querySelectorAll("#nav a").forEach(a=>a.classList.toggle("on",a.dataset.go===(VIEW==="perfil"?"jugadores":VIEW))); } // un perfil queda dentro de 👤 Perfiles
+function marcarNav(){ document.querySelectorAll("#nav a").forEach(a=>a.classList.toggle("on",a.dataset.go===(VIEW==="perfil"?"jugadores":VIEW==="partidos"?"inicio":VIEW))); } // un perfil queda dentro de 👤 Perfiles; la carga de partidos, en 🏠 Inicio
 function suave(){ return matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"; } // 🧘 sin scroll animado si el teléfono pide menos movimiento
 function arriba(y){ const de=document.documentElement; de.style.scrollBehavior="auto"; void getComputedStyle(de).scrollBehavior; window.scrollTo(0,y||0); de.style.scrollBehavior=""; } // salto instantáneo (sin el smooth del html; leer el estilo lo aplica ya)
 function volver(){ // ← del perfil: si llegaste desde la app, vuelve a esa pantalla (y a la misma altura); si entraste por un link, a Perfiles
@@ -1122,7 +1166,7 @@ function vBloqueo(){ // 🔒 sin sesión no se ve NADA: bienvenida + login oblig
       ${AUTHREADY
         ?`<div class="note" style="margin-bottom:14px">La app del grupo: <b>ranking histórico</b>, <b>perfiles con fotos</b>, el <b>prode del Kia</b> 🎲, el sorteo transparente 🥁 y la lista de anotados del domingo 🙋.<br><br><b>Es solo para los del grupo:</b> registrate una única vez con tu cuenta de Google y entrás directo para siempre.</div>
       <button class="btn block" onclick="fbLogin()">🔑 Ingresar / Registrarme con Google</button>
-      ${(()=>{const d={ranking:"📊 el ranking",jugadores:"👤 los perfiles",sorteo:"🎾 el sorteo"}[VIEW]||(VIEW==="perfil"&&PARAM?`👤 el perfil de <b>${esc(PARAM)}</b>`:"");
+      ${(()=>{const d={ranking:"📊 el ranking",jugadores:"👤 los perfiles",sorteo:"🎾 el sorteo"}[VIEW]||(VIEW==="perfil"&&PARAM?`👤 el perfil de <b>${esc(PARAM)}</b>`:"")||(VIEW==="partidos"?`🎾 cargar tus partidos${PARAM?` del <b>${fechaCorta(PARAM)}</b>`:""}`:"");
         return d?`<div class="note" id="lockDest" style="margin-top:10px;color:var(--txt)">👉 Después de ingresar vas directo a ${d}</div>`:"";})()}
       <div class="note" style="margin-top:10px;font-size:12px">Domingos 8:30 · Gracias Kia 🚗</div>`
         :`<div class="note">Verificando tu sesión…</div>`}
@@ -1145,6 +1189,7 @@ function render(nav){ // nav = viene de route() (cambio de pantalla): arranca de
       else if(VIEW==="jugadores")app.innerHTML=vJugadores();
       else if(VIEW==="perfil")app.innerHTML=vPerfil(PARAM);
       else if(VIEW==="admin")app.innerHTML=vAdmin();
+      else if(VIEW==="partidos")app.innerHTML=vPartidos(PARAM);
       if(sv&&VIEW==="sorteo"&&document.getElementById("seed")){
         document.getElementById("seed").value=sv.seed; document.getElementById("courts").value=sv.courts;
         if(sv.po)document.getElementById("pairsOut").replaceWith(sv.po);
@@ -1248,10 +1293,12 @@ function domingoHTML(prox){
     h+=`<details id="parejasDet" style="margin-top:6px"${PAR_ABIERTO?" open":""}><summary class="tag" style="cursor:pointer;min-height:44px;display:flex;align-items:center">👥 Las ${prox.parejas.length} parejas${otra} · 🎯 chances de Kia</summary>
       ${prox.parejas.map((p,i)=>`<div class="row" style="padding:7px ${i===mia?"8px;background:rgba(245,197,24,.1);border-radius:8px":"0"}"><span><b>${i+1})</b> ${esc(p.join(" & "))}${i===mia?" ⭐":""}</span><span class="tag" title="Probabilidad de Kia según la historia">🎯 ${pr[i]}%</span></div>`).join("")}
     </details>`;
-    if(prox.parejas.length>=2)h+=`<button class="btn ghost block" id="fixtureBtn" style="margin-top:8px">🆚 Sortear cruces y canchas</button>`;
-    if(prodeCerrado(prox.f)) // ya arrancó (8:30 del día): el resultado de HOY se carga ahí mismo, en el café
+    if(prox.parejas.length>=2)h+=`<button class="btn ghost block" id="fixtureBtn" style="margin-top:8px">🆚 Fixture tentativo: cruces y canchas</button>`;
+    if(prodeCerrado(prox.f)){ // ya arrancó (8:30 del día): el resultado de HOY se carga ahí mismo, en el café; y cada pareja, sus partidos reales
+      if(prox.parejas.length>=2)h+=`<button class="btn block" data-ptgo="${esc(prox.f)}" id="ptHoyBtn" style="margin-top:10px;background:#22c55e;color:#0a0b0d">🎾 Cargá tus partidos de hoy</button>`;
       h+=ISADMIN?`<button class="btn block" id="loadHoyBtn" style="margin-top:10px">👑 Cargar el resultado de hoy</button>`
         :CLOUD?`<button class="btn block" id="propBtn2" style="margin-top:10px;background:var(--card2);border:1px solid var(--line);color:var(--txt)">📝 Proponer resultado (lo aprueba el organizador)</button>`:"";
+    }
   }
   return `<div class="card pad" id="domingo" style="border-color:rgba(245,197,24,.45)">
     <div class="tag" style="color:var(--aT)">🎾 PRÓXIMA FECHA · ${fmtFecha(pj.f)} · 8:30</div>
@@ -1297,6 +1344,16 @@ function visitaDe(){
     it.push(fila(`<b>${t}</b> desde tu última visita 🔥`,a)); mio.push(`🔥 Desde el ${d0}: ${t}`); }
   if(palas.length===1){ const d=fechaCorta(palas[0].f); it.push(fila(`🥄 Te tocó la cuchara de madera el ${d} 🙈`,a)); mio.push(`🥄 Me tocó la cuchara de madera el ${d} 🙈`); }
   else if(palas.length){ it.push(fila(`🥄 Te tocaron ${palas.length} cucharas de madera 🙈`,a)); mio.push(`🥄 Me tocaron ${palas.length} cucharas de madera desde el ${d0} 🙈`); }
+  // 🎾 tus partidos del último domingo que jugaste: si no están, te los pide; si están, tu récord del día
+  const fpt=mis.find(f=>f.f>=PARTIDOS_DESDE);
+  if(fpt){ const d=fechaCorta(fpt.f), r=ptDiaDe(fpt,yo), riv=x=>esc(x.el.join(" & "));
+    if(!r.hay&&!ptPendientes(fpt.f).length)it.push(fila(`🎾 <b>Te faltan tus partidos del ${d}</b> — cargalos en 1 minuto`,` data-ptgo="${esc(fpt.f)}" role="link" tabindex="0"`));
+    else if(r.pj){
+      const m=r.mejor, pe=r.peleado, sc=x=>`${x.g}-${x.r}${ptTb(x.g,x.r,true)}`;
+      it.push(fila(r.g?`🎾 Ganaste <b>${r.g} de ${r.pj}</b> — ${sc(m)} a ${riv(m)}`:`🎾 Esta vez <b>0 de ${r.pj}</b> — el más peleado: ${sc(pe)} con ${riv(pe)}`,' data-dvpt role="link" tabindex="0"'));
+      if(r.g)mio.push(`🎾 Gané ${r.g} de ${r.pj} partidos el ${d} — ${sc(m)} a ${m.el.join(" & ")}`);
+    }
+  }
   // 📈 tu puesto: contra tu última visita (misma temporada) o, la 1ª vez, contra antes del último domingo
   const pb=yo?hoy.pos[yo]:0, pa=!pb?0:primera?posRanking(DATA.fechas.filter(x=>x.f<ult.f))[yo]||0:v.ini===hoy.ini?v.pos[yo]||0:0, el=primera?`El ${fechaCorta(ult.f)} `:"";
   if(pb&&(primera||pa&&(pa!==pb||nuevas.length))){
@@ -1373,6 +1430,7 @@ function vInicio(){
     ${ISADMIN
       ?`<button class="btn block" id="loadResBtn">👑 Cargar lo que falta</button>`
       :(CLOUD?`<button class="btn block" id="propBtn">📝 Cargar lo que falta (lo confirma el organizador)</button>`:"")}
+    ${pend.f>=PARTIDOS_DESDE&&pend.parejas.length>=2?`<button class="btn ghost block" data-ptgo="${esc(pend.f)}" style="margin-top:8px">🎾 ${partidosFecha(pend).length?"¿Falta alguno? Cargá tus partidos":"Cargá tus partidos del "+fechaCorta(pend.f)}</button>`:""}
   </div>`:"";
   const pendArriba=pend&&(!ult||pend.f>ult.f);
   const prodeHTML=CLOUD&&USER&&fProde?(()=>{ // 🎲 PRODE: abierto hasta las 8:30 del domingo; desde ahí, cerrado hasta que se carga el Kia
@@ -1390,16 +1448,21 @@ function vInicio(){
   <section class="dash">
     ${CLOUD&&CLOUDSTATE==="conectando"&&!DATA.fechas.length?`<div class="card pad" style="text-align:center;margin-bottom:12px"><div style="font-size:30px">☁️</div><div class="note">Cargando datos de la nube…</div></div>`:""}
     ${visitaHTML()}
-    ${ISADMIN&&CLOUD&&PROPUESTAS.length?`<div class="card pad" style="border-color:#7c3aed;box-shadow:0 0 14px rgba(124,58,237,.25)">
+    ${ISADMIN&&CLOUD&&PROPUESTAS.length?(()=>{ const pp=propsPartidos(), resto=PROPUESTAS.length-pp.length; // 🎾 las de partidos se confirman acá mismo, con un toque
+      return `<div class="card pad" id="propInicio" style="border-color:#7c3aed;box-shadow:0 0 14px rgba(124,58,237,.25)">
       <div class="tag" style="margin-bottom:8px;color:var(--lilaT)">📥 ${PROPUESTAS.length===1?"HAY 1 PROPUESTA":"HAY "+PROPUESTAS.length+" PROPUESTAS"} ESPERANDO TU CONFIRMACIÓN</div>
-      <div class="note" style="margin-bottom:10px">Alguien del grupo cargó datos de una fecha. Revisalos y confirmalos con un toque.</div>
-      <button class="btn block" data-go2="admin" style="background:#7c3aed">👑 Revisar y confirmar</button>
-    </div>`:""}
+      ${pp.map(p=>`<div class="adline" style="flex-wrap:wrap;background:var(--card2)"><span class="an">${propPtHTML(p)}<br><small style="color:var(--muted)">propuso ${esc(p.por||"?")}</small></span>
+        <button data-ptok="${esc(p.id)}" title="Confirmar" style="color:var(--okT);font-weight:800;font-size:14px">✔️ Confirmar</button></div>`).join("")}
+      ${pp.length>=2?`<button class="btn block" data-ptokall style="margin:4px 0 8px;background:#22c55e;color:#0a0b0d">✅ Confirmar todas (🎾 ${pp.length})</button>`:""}
+      ${resto||!pp.length?`<div class="note" style="margin-bottom:10px">${pp.length?`Y ${resto===1?"otra":resto+" más"} con datos de una fecha (Kia, cuchara, MVP o café).`:"Alguien del grupo cargó datos de una fecha."} Revisalos y confirmalos con un toque.</div>`:""}
+      <button class="btn ${pp.length&&!resto?"ghost ":""}block" data-go2="admin" style="${pp.length&&!resto?"":"background:#7c3aed"}">👑 ${pp.length&&!resto?"Ver en Admin":"Revisar y confirmar"}</button>
+    </div>`;})():""}
     ${domingoHTML(prox)}
     ${fProde&&fProde===prox?prodeHTML:""}
     ${pendArriba?pendHTML:""}
     ${fProde&&fProde!==prox?prodeHTML:""}
     ${heroHTML}
+    ${ult&&ult.campeon?partidosDiaHTML(ult):""}
     ${pendArriba?"":pendHTML}
     ${ult&&ult.mvp?(()=>{ // 👑 Rey de la semana
       const dias=Math.max(0,Math.floor((Date.now()-new Date(ult.f+"T12:00:00").getTime())/86400000));
@@ -1487,12 +1550,14 @@ function vRanking(){
     <div class="seg" id="rkseg">
       <button data-t="jug" class="${RKTAB==='jug'?'on':''}">Jugadores</button>
       <button data-t="par" class="${RKTAB==='par'?'on':''}">Parejas</button>
+      <button data-t="partidos" class="${RKTAB==='partidos'?'on':''}">🎾 Partidos</button>
       <button data-t="prode" class="${RKTAB==='prode'?'on':''}">🎲 Adivinos</button>
     </div>
-    <div class="card" id="rktable">${RKTAB==='jug'?tablaJug():RKTAB==='par'?tablaPar():tablaProde()}</div>
+    <div class="card" id="rktable">${tablaRK()}</div>
     <div class="note" style="margin-top:10px">PJ = fechas jugadas · 🚗 = Kias (campeonatos) · 🎖️ = MVP del día · 🥄 = cucharas de madera · ☕ = se quedó al café · 🏃 = se rajó sin café. Orden: más 🚗; a igualdad, más PJ; si siguen iguales, comparten puesto. «Invitado» no se rankea (la fecha le cuenta al compañero). Tocá un nombre para ver su perfil.</div>
   </section>`;
 }
+function tablaRK(){ return RKTAB==='jug'?tablaJug():RKTAB==='par'?tablaPar():RKTAB==='partidos'?tablaPartidos():tablaProde(); } // 🎾 Partidos va aparte: no toca la de Jugadores
 // 🏅 puesto compartido: los empates exactos llevan el mismo número (1, 2, 2, 4…) sin tocar el orden
 function puestos(arr,cmp){ const r=[]; arr.forEach((x,i)=>r.push(i&&!cmp(arr[i-1],x)?r[i-1]:i+1)); return r; }
 function tablaJug(){
@@ -1615,6 +1680,7 @@ function vPerfil(name){
           ${d.verdugo?`<div class="row" data-perfil="${esc(d.verdugo.n)}" style="padding:7px 0"><span class="muted">😈 ${yo?"Te":"Lo"} tiene de hijo</span><span><span class="pname"><b>${esc(d.verdugo.n)}</b></span> <b style="color:var(--red2)">${d.verdugo.w}-${d.verdugo.l}</b></span></div>`:""}
         </div>`:"";})()}
       ${!gen&&ind.pj?`<button class="btn ghost block" id="cmpBtn" style="margin-top:12px">⚔️ Comparar con…</button>`:""}
+      ${gen?"":partidosPerfilHTML(name,yo)}
       ${badgesHTML(ind,name)}
       ${comps.length?`<div class="row" style="display:block;border-bottom:0">
         <div class="tag" style="margin-bottom:8px">Compañeros más frecuentes</div>
@@ -1656,9 +1722,10 @@ function vPerfil(name){
         const fueCamp=f.campeon&&f.campeon.includes(name);
         const fuePala=f.pala&&f.pala.includes(name);
         const seRajo=Array.isArray(f.sinCafe)&&f.sinCafe.includes(name);
+        const pt=gen?null:ptDiaDe(f,name); // 🎾 su récord de partidos ese día
         return `<div class="card pad" style="display:flex;align-items:center;gap:12px">
           <div style="font-size:22px">${fueCamp?"🏆":fuePala?"🥄":"🎾"}</div>
-          <div style="flex:1"><b>con ${esc(comp)}</b><div class="tag" style="margin-top:2px">${fmtFecha(f.f)}${fueCamp?' · Campeón':fuePala?' · Cuchara de madera':''}${f.mvp===name?' · 🎖️ MVP':''}${seRajo?' · 🏃 sin café':''}</div></div>
+          <div style="flex:1"><b>con ${esc(comp)}</b><div class="tag" style="margin-top:2px">${fmtFecha(f.f)}${fueCamp?' · Campeón':fuePala?' · Cuchara de madera':''}${f.mvp===name?' · 🎖️ MVP':''}${seRajo?' · 🏃 sin café':''}${pt&&pt.pj?` · 🎾 ${pt.g}G-${pt.pj-pt.g}P`:""}</div></div>
         </div>`;
       }).join(""):(proximas.length?"":`<div class="empty">Sin fechas registradas</div>`)}
     </section>
@@ -1950,6 +2017,7 @@ function resumenConvocados(scrollTop){
   const dn=document.getElementById("drawNow"); if(dn)dn.onclick=()=>draw();
   if(scrollTop)window.scrollTo({top:0,behavior:suave()});
 }
+function mapPartidos(f,fn){ if(Array.isArray(f.partidos))f.partidos.forEach(x=>{if(x&&Array.isArray(x.a))x.a=x.a.map(fn);if(x&&Array.isArray(x.b))x.b=x.b.map(fn);}); } // 🎾 los partidos también pasan al nombre nuevo
 function mapQuien(f,fn){ if(f.fotoQuien)Object.keys(f.fotoQuien).forEach(t=>{if(Array.isArray(f.fotoQuien[t]))f.fotoQuien[t]=f.fotoQuien[t].map(fn);}); } // 📸 quién es quién en las fotos
 function sumarApodo(j,a){ // el nombre viejo queda de apodo: las listas de WhatsApp y lo guardado afuera (⭐, prode, asistencia) lo siguen reconociendo
   a=String(a||"").trim(); if(!j||!a||a===j.n||esGenerico(a)||PALABRA_GENERICA.test(normName(a)))return;
@@ -1964,6 +2032,7 @@ function mergePlayers(keep,dup){ // solo cambia DATA: guarda el que llama
     if(f.mvp===dup)f.mvp=keep;
     if(f.sinCafe){f.sinCafe=f.sinCafe.map(n=>n===dup?keep:n).filter((n,i,a)=>a.indexOf(n)===i);}
     mapQuien(f,n=>n===dup?keep:n);
+    mapPartidos(f,n=>n===dup?keep:n);
   }));
   const kI=DATA.jugadores.findIndex(j=>j.n===keep), dI=DATA.jugadores.findIndex(j=>j.n===dup);
   if(dI>=0&&kI>=0){ const k=DATA.jugadores[kI], d=DATA.jugadores[dI]; // los apodos y el año del duplicado no se pierden
@@ -1983,6 +2052,7 @@ function renameInData(d,old,neu){
     if(f.mvp===old)f.mvp=neu;
     if(f.sinCafe)f.sinCafe=f.sinCafe.map(n=>n===old?neu:n);
     mapQuien(f,n=>n===old?neu:n);
+    mapPartidos(f,n=>n===old?neu:n);
   }));
   if(d.bolsa)d.bolsa=d.bolsa.map(n=>n===old?neu:n);
   if(d.bolsaCop&&d.bolsaCop[old]!==undefined){d.bolsaCop[neu]=d.bolsaCop[old];delete d.bolsaCop[old];}
@@ -2218,7 +2288,7 @@ function duelosDe(name){ // ⚔️ por títulos del día: gano si salí campeón
   const verdugo=[...arr].filter(x=>x.l>=2&&x.l>x.w).sort((a,b)=>(b.l-b.w)-(a.l-a.w)||b.l-a.l)[0];  // solo con récord en contra
   return {victima:victima||null,verdugo:verdugo||null};
 }
-/* ---------- ⚔️ CARA A CARA: solo con lo que hay (fechas jugadas y premios del día; no hay resultados partido a partido) ---------- */
+/* ---------- ⚔️ CARA A CARA: solo con lo que hay (fechas jugadas, premios del día y, desde el 11/10, los partidos a un set cargados) ---------- */
 const NIVEL_ICO=["🥄","🎾","🎖️","🚗"]; // quién terminó mejor esa fecha: cuchara < sin premio < MVP < Kia
 function caraACara(a,b){
   const ind=statsInd(allFechas()), vacio=n=>({n,pj:0,camp:0,pala:0,mvp:0,cafe:0,cafeReg:0}); // los mismos números del perfil
@@ -2234,6 +2304,11 @@ function caraACara(a,b){
     if(x>y)r.ga++; else if(y>x)r.gb++; else r.iguales++;
   });
   r.prox=allFechas().filter(f=>!fechaJugada(f)).map(f=>{const ta=f.parejas.find(p=>p.includes(a)),tb=f.parejas.find(p=>p.includes(b));return ta&&tb?{f:f.f,juntos:ta===tb}:null;}).filter(Boolean); // 📅 ya sorteada
+  // 🎾 partidos a un set (terminados): frente a frente (desde a) y juntos
+  r.ptv={n:0,g:0,p:0,gf:0,gc:0}; r.ptj={n:0,g:0,p:0,gf:0,gc:0};
+  allFechas().forEach(f=>partidosDe(f).forEach(x=>{ if(!x.fin)return;
+    const ladoA=x.a.includes(a)?1:x.b.includes(a)?2:0, ladoB=x.a.includes(b)?1:x.b.includes(b)?2:0; if(!ladoA||!ladoB)return;
+    const g=ladoA===1?x.ga:x.gb, c=ladoA===1?x.gb:x.ga, o=ladoA===ladoB?r.ptj:r.ptv; o.n++; g>c?o.g++:o.p++; o.gf+=g; o.gc+=c; }));
   return r;
 }
 function vsAvatar(n){
@@ -2262,15 +2337,17 @@ function vsHTML(r){
       <div class="tag">🤝 Juntos como pareja</div>
       ${r.juntos?`<div style="margin-top:4px"><b>${pl(r.juntos,"fecha","fechas")}</b> · 🚗 ${pl(r.kiasJ,"Kia","Kias")} juntos${r.palasJ?` · 🥄 ${pl(r.palasJ,"cuchara","cucharas")}`:""}</div>`
         :`<div class="note" style="margin-top:4px">Nunca jugaron juntos.</div>`}
+      ${r.ptj.n?`<div style="margin-top:4px" id="cmpPtJ">🎾 En partidos: <b>${r.ptj.g}G-${r.ptj.p}P</b> juntos · games ${r.ptj.gf}-${r.ptj.gc}</div>`:""}
     </div>
     <div class="cmpbox">
       <div class="tag">⚔️ En la misma fecha, en distinta pareja</div>
       ${!tot?`<div class="note" style="margin-top:4px">Nunca coincidieron en una fecha en parejas distintas.</div>`:`
       <div style="margin-top:4px"><b>${pl(tot,"fecha","fechas")}</b>${r.sinPremios?` <span class="note">(${r.sinPremios} sin premios cargados: no cuentan)</span>`:""}</div>
+      ${r.ptv.n?`<div class="cmpr" id="cmpPtV" style="margin-top:4px"><b${r.ptv.g>r.ptv.p?' class="w"':""} style="font-size:30px">${r.ptv.g}</b><span>🎾 ${pl(r.ptv.n,"partido","partidos")} frente a frente<br>games ${r.ptv.gf}-${r.ptv.gc}</span><b${r.ptv.p>r.ptv.g?' class="w"':""} style="font-size:30px">${r.ptv.p}</b></div>`:""}
       ${r.cruces.length?`<div class="cmpr" style="border-bottom:0;margin-top:4px"><b${r.ga>r.gb?' class="w"':""} style="font-size:30px">${r.ga}</b><span>terminó mejor${r.iguales?`<br>${pl(r.iguales,"igualada","igualadas")}`:""}</span><b${r.gb>r.ga?' class="w"':""} style="font-size:30px">${r.gb}</b></div>
       ${(()=>{const ka=r.cruces.filter(c=>c.x===3).length, kb=r.cruces.filter(c=>c.y===3).length; // = el récord de ⚔️ Duelos del perfil
         return `<div class="cmpr" style="border-bottom:0"><b${ka>kb?' class="w"':""} style="font-size:18px">${ka}</b><span>🚗 Kias en esas fechas</span><b${kb>ka?' class="w"':""} style="font-size:18px">${kb}</b></div>`;})()}
-      <div class="note">Según los premios del día: 🚗 Kia › 🎖️ MVP › 🎾 sin premio › 🥄 cuchara. No hay resultados partido a partido.</div>
+      <div class="note">Según los premios del día: 🚗 Kia › 🎖️ MVP › 🎾 sin premio › 🥄 cuchara.${r.ptv.n?" Los 🎾 partidos frente a frente son los cargados a un set (desde el "+fechaCorta(ptPrimera())+").":" Partidos a un set entre ellos: ninguno cargado todavía."}</div>
       <details><summary class="tag">Fecha por fecha</summary>
         ${r.cruces.map(c=>`<div class="cmpr sm"><b>${NIVEL_ICO[c.x]}</b><span>${fmtFecha(c.f)}</span><b>${NIVEL_ICO[c.y]}</b></div>`).join("")}
       </details>`:""}`}
@@ -2281,6 +2358,8 @@ function vsTexto(r){ // 📲 para el grupo
   return `⚔️ *${r.a} vs ${r.b}* · Copones Buena Vista\n📅 Fechas: ${A.pj} - ${B.pj}\n🚗 Kias: ${A.camp} - ${B.camp} (${pct(A)}% - ${pct(B)}%)\n🎖️ MVP: ${A.mvp} - ${B.mvp}\n🥄 Cucharas: ${A.pala} - ${B.pala}\n`
     +`🤝 Juntos: ${r.juntos?pl(r.juntos,"fecha","fechas")+" · 🚗 "+pl(r.kiasJ,"Kia","Kias"):"nunca"}\n`
     +(r.cruces.length?`⚔️ En distinta pareja terminó mejor: ${r.a} ${r.ga} · ${r.b} ${r.gb}${r.iguales?` · igualadas ${r.iguales}`:""} (por premios del día)\n`:"")
+    +(r.ptv.n?`🎾 Partidos frente a frente: ${r.a} ${r.ptv.g} · ${r.b} ${r.ptv.p} (games ${r.ptv.gf}-${r.ptv.gc})\n`:"")
+    +(r.ptj.n?`🎾 Partidos juntos: ${r.ptj.g}G-${r.ptj.p}P (games ${r.ptj.gf}-${r.ptj.gc})\n`:"")
     +`👉 ${location.href.split("#")[0]}#perfil=${encodeURIComponent(r.a)}`;
 }
 async function abrirComparar(a){ // ⚔️ elegir con quién (los que más coincidieron con él, primero) y mostrar el cara a cara
@@ -2350,6 +2429,352 @@ function recuerdoSemanal(){ // 📸 un día como hoy (rota por semana entre fech
   return {f,meses};
 }
 
+/* ---------- 🎾 PARTIDOS A UN SET: lo que se jugó de verdad (el fixture del sorteo es tentativo) ----------
+   fecha.partidos=[{n,a,b,ga,gb,fin,por,ts}]: a = la pareja que lo cargó (n = su 1º, 2º… de la mañana), b = el rival, ga/gb = los games de cada una.
+   Un set a 6: 6-0…6-4 y 6-5 = se definió en tiebreak 🎯; no existe 6-6 ni 7-x. fin:false = no se terminó (ej. 4-2 por la hora): no cuenta.
+   Va aparte del ranking oficial (Kias y fechas): acá solo se suman partidos. */
+const PARTIDOS_DESDE="2026-10-11"; // el primer domingo con partidos: a las fechas de antes no se les piden
+const PT_CAMPOS=["n","a","b","ga","gb","fin"]; // lo que trae cada partido de una propuesta (las reglas no aceptan más)
+const PT_MAX=5; // partidos por pareja en una mañana (de 8:30 a 10 entran 3, a veces un 4º)
+function partidoMal(x,deProp){ // "" si es un partido a un set válido; si no, qué tiene de raro (deProp: como viaja en una propuesta, con sus 6 campos justos)
+  if(!x||typeof x!=="object"||Array.isArray(x))return "no es un partido";
+  if(deProp&&Object.keys(x).some(k=>!PT_CAMPOS.includes(k)))return "trae campos de más";
+  const ent=v=>Number.isInteger(v), dos=t=>listaTxt(t,2,2)&&t.every(n=>n.length>0&&n.length<=60&&!n.includes("|")); // como en las reglas: 1 a 60 letras, sin "|"
+  if(!ent(x.n)||x.n<1||x.n>10)return "número de partido raro";
+  if(!dos(x.a)||!dos(x.b))return "pareja rara";
+  if(x.a.some(n=>x.b.includes(n)))return "juega contra su propia pareja";
+  if(!ent(x.ga)||!ent(x.gb)||x.ga<0||x.gb<0||x.ga>6||x.gb>6)return "games raros (un set va de 0 a 6)";
+  if(typeof x.fin!=="boolean")return "no dice si se terminó";
+  if(x.ga===6&&x.gb===6)return "6-6 no existe (6-5 es el tiebreak)";
+  if(x.fin!==(x.ga===6||x.gb===6))return x.fin?"dice terminado y nadie llegó a 6":"llegó a 6 y dice que no se terminó";
+  if(!deProp&&((x.por!=null&&typeof x.por!=="string")||(x.ts!=null&&typeof x.ts!=="number")))return "quién lo cargó, raro";
+  return "";
+}
+const ptCruce=(x,y)=>(misma(x.a,y.a)&&misma(x.b,y.b))||(misma(x.a,y.b)&&misma(x.b,y.a)); // las mismas dos parejas
+const ptIgual=(x,y)=>ptCruce(x,y)&&x.fin===y.fin&&(misma(x.a,y.a)?x.ga===y.ga&&x.gb===y.gb:x.ga===y.gb&&x.gb===y.ga); // el mismo partido aunque lo cargue la otra pareja (resultado espejado)
+const ptMismoN=(x,y)=>misma(x.a,y.a)&&x.n===y.n; // el mismo Nº de la misma pareja que lo cargó (su 2º partido es uno solo)
+function ptDesde(x,P){ const yo=misma(x.a,P); return {el:yo?x.b:x.a,g:yo?x.ga:x.gb,r:yo?x.gb:x.ga,fin:x.fin,propio:yo}; } // visto desde la pareja P (g = sus games)
+const ptLimpio=x=>({n:x.n,a:x.a.slice(),b:x.b.slice(),ga:x.ga,gb:x.gb,fin:x.fin}); // los 6 campos (lo que viaja en una propuesta)
+const ptTb=(g,r,fin)=>fin&&g+r===11?"🎯":""; // 6-5: se definió en tiebreak
+function ptResTxt(g,r,fin){ return fin?`${g>r?"Ganamos":"Perdimos"} ${g}-${r}${ptTb(g,r,fin)}`:`⏱️ ${g}-${r} sin terminar`; }
+function ptResHTML(g,r,fin){ return `<b style="white-space:nowrap;color:${!fin?"var(--muted)":g>r?"var(--okT)":"var(--red2)"}">${ptResTxt(g,r,fin)}</b>`; } // verde si ganaron, rojo si perdieron (en un solo renglón)
+function ptTxt(x){ return `${x.a.join(" & ")} ${x.ga}-${x.gb}${ptTb(x.ga,x.gb,x.fin)} ${x.b.join(" & ")}${x.fin?"":" (⏱️ sin terminar)"}`; } // texto plano: escapar al usarlo
+function partidosFecha(f){ return Array.isArray(f&&f.partidos)?f.partidos.filter(x=>!partidoMal(x)):[]; } // lo raro no se muestra ni suma
+function partidosDe(f){ return fechaJugada(f)?partidosFecha(f):[]; } // para las estadísticas: solo fechas ya jugadas (como todo lo demás)
+function ptDeLaPareja(f,P){ return P?partidosFecha(f).filter(x=>misma(x.a,P)||misma(x.b,P)):[]; }
+function ptPrimera(){ const l=allFechas().filter(f=>partidosFecha(f).length); return l.length?l[l.length-1].f:PARTIDOS_DESDE; } // desde cuándo hay partidos cargados
+function statsPartidos(list){ // por jugador: pj = partidos TERMINADOS, g/p, games a favor/en contra, tiebreaks, sin terminar, compañeros y rivales
+  const m={}, get=n=>m[n]||(m[n]={n,pj:0,g:0,p:0,gf:0,gc:0,tbg:0,tbp:0,nt:0,comp:{},riv:{}});
+  const suma=(s,k,n,gano,g,r)=>{const o=s[k][n]||(s[k][n]={g:0,p:0,gf:0,gc:0});gano?o.g++:o.p++;o.gf+=g;o.gc+=r;};
+  (list||DATA.fechas).forEach(f=>partidosDe(f).forEach(x=>[[x.a,x.b,x.ga,x.gb],[x.b,x.a,x.gb,x.ga]].forEach(([yo,el,g,r])=>yo.forEach(n=>{
+    if(esGenerico(n))return; const s=get(n); // "Invitado" no se rankea (como en el ranking oficial)
+    if(!x.fin){s.nt++;return;}
+    const gano=g>r; s.pj++; gano?s.g++:s.p++; s.gf+=g; s.gc+=r; if(g+r===11)gano?s.tbg++:s.tbp++;
+    yo.forEach(c=>{if(c!==n&&!esGenerico(c))suma(s,"comp",c,gano,g,r);});
+    el.forEach(c=>{if(!esGenerico(c))suma(s,"riv",c,gano,g,r);});
+  }))));
+  return m;
+}
+function recordDia(f){ // récord del día por pareja: ganados/perdidos y games de los terminados; los sin terminar, aparte
+  const r=[], de=t=>{ let o=r.find(x=>misma(x.t,t)); if(!o)r.push(o={t:f.parejas.find(p=>misma(p,t))||t,g:0,p:0,gf:0,gc:0,nt:0}); return o; };
+  partidosFecha(f).forEach(x=>[[x.a,x.ga,x.gb],[x.b,x.gb,x.ga]].forEach(([t,g,c])=>{ const o=de(t); if(!x.fin){o.nt++;return;} g>c?o.g++:o.p++; o.gf+=g; o.gc+=c; }));
+  return r.sort((a,b)=>b.g-a.g||a.p-b.p||(b.gf-b.gc)-(a.gf-a.gc)||(b.g+b.p)-(a.g+a.p));
+}
+function ptDiaDe(f,n){ // 🎾 cómo le fue a un jugador en una fecha: {pj,g,nt,mejor (el triunfo más holgado), peleado (la derrota más ajustada)}
+  const t=f.parejas.find(p=>p.includes(n)), l=t?partidosDe(f).filter(x=>misma(x.a,t)||misma(x.b,t)).map(x=>ptDesde(x,t)):[];
+  const fin=l.filter(d=>d.fin), g=fin.filter(d=>d.g>d.r);
+  return {hay:l.length,pj:fin.length,g:g.length,nt:l.length-fin.length,mejor:g.sort((a,b)=>(b.g-b.r)-(a.g-a.r))[0]||null,peleado:fin.filter(d=>d.g<d.r).sort((a,b)=>(a.r-a.g)-(b.r-b.g))[0]||null};
+}
+/* ⏳ lo que mandó este celu y el organizador todavía no confirmó (un jugador no puede leer las propuestas): vive en localStorage cb_ptprop.
+   Se va solo cuando aparece en la fecha (confirmado) o a la semana (si no lo confirmó, no queda colgado) */
+function ptPendientes(f){
+  let l=[]; try{l=JSON.parse(localStorage.getItem("cb_ptprop")||"[]");}catch(e){}
+  if(!Array.isArray(l))l=[];
+  const ahora=Date.now(), vivas=l.filter(x=>x&&typeof x.f==="string"&&!partidoMal(x.p,true)&&ahora-(+x.ts||0)<7*864e5&&!partidosFecha(DATA.fechas.find(y=>y.f===x.f)).some(y=>ptIgual(y,x.p)));
+  if(vivas.length!==l.length)try{localStorage.setItem("cb_ptprop",JSON.stringify(vivas));}catch(e){}
+  const uid=USER?USER.uid:"";
+  return vivas.filter(x=>x.uid===uid&&(!f||x.f===f));
+}
+function ptRecordar(f,partidos){ try{ const l=JSON.parse(localStorage.getItem("cb_ptprop")||"[]"), ts=Date.now(); partidos.forEach((p,i)=>l.push({k:ts+"_"+i,uid:USER?USER.uid:"",f,p,ts})); localStorage.setItem("cb_ptprop",JSON.stringify(l)); }catch(e){} }
+function ptOlvidar(k){ try{ const l=JSON.parse(localStorage.getItem("cb_ptprop")||"[]"); localStorage.setItem("cb_ptprop",JSON.stringify(l.filter(x=>x&&x.k!==k))); }catch(e){} }
+/* 🎾 Partidos del domingo (va pegado al resultado): la lista (ganador en negrita), el récord del día por pareja y quién falta cargar */
+function partidosDiaHTML(f){
+  if(!f||!Array.isArray(f.parejas)||f.parejas.length<2)return "";
+  const ps=partidosFecha(f);
+  if(!ps.length&&f.f<PARTIDOS_DESDE)return ""; // a las fechas de antes de que se cargaran partidos no se les piden
+  const nom=t=>esc(t.join(" & ")), mia=t=>!!MYPLAYER&&t.includes(MYPLAYER), pend=ptPendientes(f.f).length;
+  const boton=t=>`<button class="btn ghost block" data-ptgo="${esc(f.f)}" style="margin-top:10px">${t}</button>`;
+  const enEspera=pend?`<div class="note" style="margin-top:6px;color:var(--aT)">⏳ Mandaste ${pend===1?"1 partido":pend+" partidos"}: a confirmar por el organizador</div>`:"";
+  if(!ps.length)return `<div class="card pad" id="ptDia">
+    <div class="tag" style="margin-bottom:6px">🎾 Partidos del domingo · ${fechaCorta(f.f)}</div>
+    <div style="font-weight:700">Nadie cargó sus partidos todavía — ¿jugaste?</div>
+    <div class="note">Un set por partido: ganados, perdidos y games. No cambia el ranking oficial (Kias).</div>${enEspera}
+    ${boton("🎾 Cargalos en 1 minuto")}
+  </div>`;
+  const idx=t=>{const i=f.parejas.findIndex(p=>misma(p,t));return i<0?99:i;};
+  const filas=[...ps].sort((x,y)=>idx(x.a)-idx(y.a)||x.n-y.n).map(x=>{
+    if(!x.fin)return `<div class="ptl nt"><span>${nom(x.a)}</span><span class="sc">${x.ga}-${x.gb}</span><span>${nom(x.b)}</span><span class="ntx">⏱️ no terminado (no cuenta)</span></div>`;
+    const ga=x.ga>x.gb, w=ga?x.a:x.b, l=ga?x.b:x.a, g=Math.max(x.ga,x.gb), r=Math.min(x.ga,x.gb);
+    return `<div class="ptl"><b>${nom(w)}</b><span class="sc">${g}-${r}${ptTb(g,r,true)}</span><span>${nom(l)}</span></div>`;
+  }).join("");
+  const rec=recordDia(f), faltan=f.parejas.filter(t=>t.length===2&&!rec.some(o=>misma(o.t,t)));
+  return `<div class="card pad" id="ptDia">
+    <div class="tag" style="margin-bottom:2px">🎾 Partidos del domingo · ${fechaCorta(f.f)}</div>
+    ${filas}
+    <div class="note" style="font-size:12px;margin-top:4px">En negrita, el que ganó · <span style="white-space:nowrap">🎯 = tiebreak (6-5)</span></div>
+    <div class="tag" style="margin:12px 0 2px">📊 Récord del día por pareja</div>
+    ${rec.map(o=>`<div class="ptrec${mia(o.t)?" yo":""}"><span>${nom(o.t)}${mia(o.t)?" ⭐":""}</span><b>${o.g+o.p?`${o.g}G-${o.p}P`:"—"}</b><small>${o.g+o.p?`games ${o.gf}-${o.gc}`:""}${o.nt?`${o.g+o.p?"<br>":""}⏱️ ${o.nt} sin terminar`:""}</small></div>`).join("")}
+    ${faltan.length?`<div class="note" style="margin-top:8px">🕐 Todavía sin cargar: ${faltan.map(nom).join(" · ")}</div>`:""}${enEspera}
+    ${boton(faltan.some(mia)?"🎾 Te faltan los tuyos: cargalos":"🎾 ¿Falta alguno? Cargá o corregí los tuyos")}
+  </div>`;
+}
+function partidosPerfilHTML(name,yo){ // 🎾 bloque del perfil (nada si no tiene partidos terminados)
+  const s=statsPartidos(allFechas())[name]; if(!s||!s.pj)return "";
+  const pl=(n,a,b)=>n+" "+(n===1?a:b), pct=Math.round(s.g/s.pj*100);
+  const lista=ns=>ns.length<=2?ns.map(esc).join(" y "):`${esc(ns[0])}, ${esc(ns[1])} y ${ns.length-2} más`, link=ns=>ns.length===1?` data-perfil="${esc(ns[0])}"`:"";
+  const comp=Object.entries(s.comp).filter(([,o])=>o.g>0).sort((a,b)=>b[1].g-a[1].g||(b[1].gf-b[1].gc)-(a[1].gf-a[1].gc)||a[0].localeCompare(b[0]))[0];
+  const tope=(k,dif)=>{ // los que comparten el primer lugar (más triunfos/derrotas; a igualdad, más diferencia de games)
+    const l=Object.entries(s.riv).filter(([,o])=>o[k]>0).sort((a,b)=>b[1][k]-a[1][k]||dif(b[1])-dif(a[1])); if(!l.length)return null;
+    const m=l[0][1]; return {ns:l.filter(([,o])=>o[k]===m[k]&&dif(o)===dif(m)).map(x=>x[0]),o:m}; };
+  const vic=tope("g",o=>o.gf-o.gc), ver=tope("p",o=>o.gc-o.gf);
+  return `<div class="row" style="display:block" id="ptPerfil">
+    <div class="tag">🎾 Partidos a un set</div>
+    <div class="note" style="font-size:12px">Desde que se cargan partidos (${fechaCorta(ptPrimera())}) · van aparte: no cambian el ranking oficial (Kias)</div>
+    <div class="pills" style="margin-top:8px">
+      <div class="pill"><div class="n">${s.pj}</div><div class="k">Partidos</div></div>
+      <div class="pill"><div class="n">${s.g}-${s.p}</div><div class="k">G - P</div></div>
+      <div class="pill"><div class="n">${pct}%</div><div class="k">Ganados</div></div>
+    </div>
+    <div class="row"><span class="muted">🎾 Games a favor / en contra</span><b class="big">${s.gf}-${s.gc}</b></div>
+    <div class="row"><span class="muted">🎯 Tiebreaks ganados / perdidos</span><b class="big">${s.tbg}-${s.tbp}</b></div>
+    ${s.nt?`<div class="row"><span class="muted">⏱️ Sin terminar (no cuentan)</span><b class="big">${s.nt}</b></div>`:""}
+    ${comp?`<div class="row" data-perfil="${esc(comp[0])}"><span class="muted">🤝 ${yo?"Tu":"Su"} mejor compañero</span><span style="text-align:right"><span class="pname"><b>${esc(comp[0])}</b></span> <b style="color:var(--okT)">${comp[1].g}-${comp[1].p}</b></span></div>`:""}
+    ${vic?`<div class="row"${link(vic.ns)}><span class="muted">😎 Al que más le ${yo?"ganaste":"ganó"}</span><span style="text-align:right"><b>${lista(vic.ns)}</b> <b style="color:var(--okT);white-space:nowrap">${vic.o.g}-${vic.o.p}</b></span></div>`:""}
+    ${ver?`<div class="row"${link(ver.ns)}><span class="muted">😈 El que más ${yo?"te":"le"} ganó</span><span style="text-align:right"><b>${lista(ver.ns)}</b> <b style="color:var(--red2);white-space:nowrap">${ver.o.g}-${ver.o.p}</b></span></div>`:""}
+  </div>`;
+}
+function tablaPartidos(){ // 🎾 pestaña del Ranking: por % de partidos ganados (con un mínimo); el ranking oficial no se toca
+  const MIN=3, st=Object.values(statsPartidos(seasonFechas())).filter(s=>s.pj>0);
+  if(!st.length)return `<div class="empty">Todavía no hay partidos cargados 🎾<br><small>Cada pareja los carga después de jugar, desde el Inicio</small></div>`;
+  const pct=s=>Math.round(s.g/s.pj*100), dif=s=>s.gf-s.gc, orden=(a,b)=>b.g/b.pj-a.g/a.pj||b.g-a.g||dif(b)-dif(a)||b.pj-a.pj;
+  const con=st.filter(s=>s.pj>=MIN).sort(orden), sin=st.filter(s=>s.pj<MIN).sort(orden), pu=puestos(con,(a,b)=>orden(a,b)!==0);
+  const fila=(s,rk)=>`<tr data-perfil="${esc(s.n)}"><td><span class="rk ${rk&&rk<=3?"g"+rk:""}">${rk||"·"}</span><span class="pname">${chip(s.n)} <span class="nm">${esc(s.n)}</span></span></td>
+    <td style="text-align:right"><span class="big">${s.pj}</span></td><td style="text-align:right;color:var(--okT);font-weight:800">${s.g}</td><td style="text-align:right;color:var(--red2);font-weight:800">${s.p}</td>
+    <td style="text-align:right;font-weight:800">${pct(s)}%</td><td style="text-align:right;color:var(--muted);font-weight:700">${dif(s)>0?"+":""}${dif(s)}</td></tr>`;
+  return `<table class="stand" id="ptRank"><thead><tr><th>Jugador</th><th>PJ</th><th>G</th><th>P</th><th>%</th><th>±</th></tr></thead><tbody>
+    ${con.map((s,i)=>fila(s,pu[i])).join("")}
+    ${sin.length?`<tr class="ptmenos"><td colspan="6" style="font-family:'Barlow Condensed';font-weight:700;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);white-space:normal">Con menos de ${MIN} partidos (todavía no entran al orden)</td></tr>${sin.map(s=>fila(s,0)).join("")}`:""}
+  </tbody></table>
+  <div class="note pad" style="border-top:1px solid var(--line)">🎾 Partidos a un set desde el ${fechaCorta(ptPrimera())}. PJ = partidos terminados (los que no se terminaron no cuentan) · G/P = ganados/perdidos · ± = diferencia de games. Orden: % de ganados, con ${MIN} partidos o más. <b>No cambia el ranking oficial (Kias).</b></div>`;
+}
+let PT=null, PT_GUARDANDO=false; // 🎾 la carga en pantalla (sobrevive a los redibujos en vivo): {f, fp, pi = tu pareja, elegida, filas:[{n,riv,res,nt,sg,sr,ed,abierta}], borrar:[json], vis}
+function ptFecha(param){ // la del link (#partidos=AAAA-MM-DD); sin link, la de hoy (si ya arrancó) o la última jugada
+  if(param)return DATA.fechas.find(x=>x.f===param)||null;
+  return DATA.fechas.find(x=>x.f===hoyISO()&&x.parejas.length>=2&&prodeCerrado(x.f))||fechasJugadas().find(x=>x.parejas.length>=2)||null;
+}
+function ptFechaPT(){ return PT?DATA.fechas.find(x=>x.f===PT.f&&JSON.stringify(x.parejas)===PT.fp)||null:null; } // la de ESTA carga en los datos de ahora
+function ptMia(f){ return MYPLAYER?f.parejas.findIndex(p=>p.includes(MYPLAYER)):-1; }
+const ptFila=n=>({n,riv:null,res:null,nt:false,sg:0,sr:0,ed:null});
+const ptRes=r=>r.nt?(r.sg+r.sr?{g:r.sg,r:r.sr,fin:false}:null):r.res; // {g,r,fin} o null si falta
+const ptLista=r=>r.riv!=null&&!!ptRes(r);
+function ptYa(f){ const P=f.parejas[PT.pi]; return [...ptDeLaPareja(f,P),...ptPendientes(f.f).map(x=>x.p).filter(x=>misma(x.a,P)||misma(x.b,P))]; } // lo cargado (y lo ya mandado) de tu pareja
+function ptSigN(f){ const P=f.parejas[PT.pi], ya=ptYa(f); return Math.min(10,Math.max(ya.length,...ya.filter(x=>misma(x.a,P)).map(x=>x.n),...(PT.filas||[]).map(r=>r.n),0)+1); }
+function ptEstado(f){ // arranca (o retoma) la carga de esa fecha
+  const fp=JSON.stringify(f.parejas);
+  if(!PT||PT.f!==f.f||PT.fp!==fp)PT={f:f.f,fp,pi:-1,elegida:false,filas:null,borrar:[],vis:[]};
+  if(PT.pi<0&&!PT.elegida){ const i=ptMia(f); if(i>=0)PT.pi=i; } // ⭐ tu pareja (también si se vinculó recién)
+  if(PT.pi>=0&&f.parejas[PT.pi].length===2&&!PT.filas){ const k=ptYa(f).length; PT.filas=[]; for(let i=0;i<Math.max(0,3-k);i++)PT.filas.push(ptFila(ptSigN(f))); } // arranca con 3 (menos lo que ya está)
+  return PT;
+}
+function ptSucio(){ return !!PT&&(PT.borrar.length>0||(PT.filas||[]).some(r=>r.ed||r.riv!=null||r.res||r.nt)); }
+function ptAbrir(i){ (PT.filas||[]).forEach((r,j)=>{r.abierta=j===i;}); } // una fila abierta por vez (las demás, en una línea)
+function vPartidos(param){
+  const back=`<button class="btn ghost sm" id="ptVolver" style="margin-bottom:12px">${history.state&&history.state.desde?"← Volver":"🏠 Inicio"}</button>`;
+  const head=f=>`<div class="sechead"><span class="bar"></span><h2>Cargá tus partidos</h2><span class="sub">${f?`${diaSem(f.f)} ${fechaCorta(f.f)}`:""}</span></div>`;
+  if(CLOUD&&CLOUDSTATE==="conectando"&&!DATA.fechas.length)return `<section>${back}<div class="card pad" style="text-align:center"><div style="font-size:30px">☁️</div><div class="note">Cargando datos de la nube…</div></div></section>`;
+  const f=ptFecha(param);
+  if(!f)return `<section>${back}${head(null)}<div class="card pad"><div class="empty">${param?`No hay una fecha cargada el ${fmtFecha(param)} 🤷`:"Todavía no hay una fecha jugada para cargar partidos 🤷"}</div></div></section>`;
+  if(!fechaJugada(f)&&!prodeCerrado(f.f))return `<section>${back}${head(f)}<div class="card pad"><div class="empty">📅 La fecha del ${fmtFecha(f.f)} todavía no se jugó.<br><small>Los partidos se cargan después de jugar (desde las 8:30 de ese domingo).</small></div></div></section>`;
+  const st=ptEstado(f), puede=!CLOUD||ISADMIN, P=st.pi>=0?f.parejas[st.pi]:null, nom=t=>esc(t.join(" & ")), mi=ptMia(f);
+  let h=`<section>${back}${head(f)}`;
+  if(!P){ // 👥 elegir la pareja (admin: cualquiera; sin vínculo: la tuya de la lista)
+    return h+`<div class="card pad" id="ptElegir"><div class="tag" style="margin-bottom:6px">👥 ¿${puede?"Por qué pareja cargás":"Cuál es tu pareja"}?</div>
+      <div class="note" style="margin-bottom:8px">${MYPLAYER&&mi<0?`⭐ ${esc(MYPLAYER)}: no estás en las parejas del ${fechaCorta(f.f)}. `:""}${puede?"Como organizador cargás por cualquier pareja (ej. lo que pasaron por el chat).":"Tocá tu pareja y cargás sus partidos: lo confirma el organizador."}</div>
+      ${f.parejas.map((p,i)=>`<button class="mopt" data-ptpar="${i}"${p.length!==2?" disabled":""}>${i+1}) ${nom(p)}${i===mi?" ⭐":""}${p.length!==2?"<small>pareja rotativa de 3: sus partidos los carga el organizador a mano</small>":""}</button>`).join("")}
+    </div></section>`;
+  }
+  const ya=ptDeLaPareja(f,P), pend=ptPendientes(f.f).filter(x=>misma(x.p.a,P)||misma(x.p.b,P)), rec=recordDia(f).find(o=>misma(o.t,P)), filas=st.filas||[];
+  if(P.length!==2)return h+`<div class="card pad"><div class="note">👥 ${nom(P)} fue una pareja rotativa de 3: sus partidos los carga el organizador a mano.</div>${puede||mi<0?`<button class="btn ghost sm block" id="ptCambiar" style="margin-top:8px">🔁 Elegir otra pareja</button>`:""}</div></section>`;
+  st.vis=ya; // lo que se ve (los ✏️/🗑️ apuntan acá)
+  h+=`<div class="card pad" id="ptPareja" style="border-color:var(--A)"><div style="display:flex;align-items:center;gap:8px">
+      <div style="flex:1;min-width:0"><div class="tag" style="color:var(--aT)">${mi===st.pi?"⭐ Tu pareja":"👥 Cargás por"}</div><div style="font-weight:800;font-size:17px">${nom(P)}</div>
+        ${rec&&rec.g+rec.p?`<div class="note">📊 Hoy: <b style="color:var(--txt)">${rec.g}G-${rec.p}P</b> · <span style="white-space:nowrap">games ${rec.gf}-${rec.gc}</span>${rec.nt?` · <span style="white-space:nowrap">⏱️ ${rec.nt} sin terminar</span>`:""}</div>`:""}</div>
+      ${puede||mi<0?`<button class="btn ghost sm" id="ptCambiar">🔁 Cambiar</button>`:""}
+    </div></div>`;
+  if(ya.length||pend.length){ // ✅ lo que ya está de tu pareja (también lo que cargó el rival, dado vuelta) y ⏳ lo que mandaste
+    h+=`<div class="card pad" id="ptYa" style="margin-top:10px"><div class="tag">✅ Ya cargado · ${ya.length+pend.length}</div>`+ya.map((x,i)=>{
+      const d=ptDesde(x,P), js=JSON.stringify(x), del=st.borrar.includes(js), ed=filas.some(r=>r.ed===js);
+      return `<div class="ptya"${del?' style="opacity:.6"':""}><div class="tx">${d.propio?`<b>${x.n}º</b> · `:""}vs <b>${nom(d.el)}</b> · ${ptResHTML(d.g,d.r,d.fin)}
+          <div class="note" style="font-size:12px">${del?"🗑️ se borra al guardar":ed?"✏️ lo estás corrigiendo abajo":d.propio?"lo cargaron ustedes":`lo cargaron ${nom(d.el)}`}</div></div>
+        ${del?`<button data-ptun="${i}" title="No borrar">↩️</button>`:`${(puede||d.propio)&&!ed?`<button data-pted="${i}" title="Corregir">✏️</button>`:""}${puede?`<button data-ptdel="${i}" title="Borrar">🗑️</button>`:""}`}</div>`;}).join("")
+      +pend.map(x=>{const d=ptDesde(x.p,P);return `<div class="ptya"><div class="tx">⏳ vs <b>${nom(d.el)}</b> · ${ptResHTML(d.g,d.r,d.fin)}<div class="note" style="font-size:12px;color:var(--aT)">mandado · a confirmar por el organizador</div></div><button data-ptolv="${esc(x.k)}" title="Olvidarlo (si no lo va a confirmar)">✕</button></div>`;}).join("")
+      +(!puede&&ya.some(x=>!misma(x.a,P))?`<div class="note" style="font-size:12px;margin-top:6px">¿Lo que cargó tu rival no fue así? Cargalo vos y el organizador ve los dos y decide.</div>`:"")+`</div>`;
+  }
+  const primera=filas.findIndex(r=>!ptLista(r)), abierta=i=>filas[i].abierta!==undefined?filas[i].abierta:i===primera;
+  const otras=f.parejas.map((p,j)=>({p,j})).filter(o=>o.j!==st.pi&&o.p.length===2);
+  h+=`<div id="ptFilas">`+filas.map((r,i)=>{
+    const res=ptRes(r), ok=ptLista(r);
+    if(!abierta(i))return `<div class="ptrow cerrada${ok?" ok":""}" data-ptab="${i}" role="button" tabindex="0"><span>${ok?`✓ <b>${r.n}º</b> · vs <b>${nom(f.parejas[r.riv])}</b> · ${ptResHTML(res.g,res.r,res.fin)}`:`<b>${r.n}º partido</b> · <span class="muted">${r.riv!=null||r.nt||r.res?"le falta algo: tocá para completarlo":"tocá para cargarlo"}</span>`}</span><span>${ok?"✏️":"▸"}</span></div>`;
+    return `<div class="ptrow${ok?" ok":""}" id="ptf${i}">
+      <div class="pthd"><span>${r.ed?"✏️ Corregís el ":""}${r.n}º partido</span><button class="mx" data-ptx="${i}" title="${r.ed?"No corregir":"Sacar este partido"}">✕</button></div>
+      <div class="ptlbl">🆚 Rival</div>
+      <div class="ptchips">${otras.map(o=>`<button class="ptchip${r.riv===o.j?" on":""}" data-ptrv="${i}:${o.j}">${nom(o.p)}</button>`).join("")}</div>
+      <div class="ptlbl">✅ Ganamos</div>
+      <div class="ptres gan">${[0,1,2,3,4,5].map(x=>`<button class="${res&&res.fin&&res.g===6&&res.r===x?"on":""}" data-ptr="${i}:6:${x}">6-${x}${x===5?"🎯":""}</button>`).join("")}</div>
+      <div class="ptlbl">❌ Perdimos</div>
+      <div class="ptres per">${[0,1,2,3,4,5].map(x=>`<button class="${res&&res.fin&&res.r===6&&res.g===x?"on":""}" data-ptr="${i}:${x}:6">${x}-6${x===5?"🎯":""}</button>`).join("")}</div>
+      <button class="ptnt${r.nt?" on":""}" data-ptnt="${i}">⏱️ No se terminó${r.nt?" · marcá cómo iba":""}</button>
+      ${r.nt?`<div class="ptsteps">${[["g","Nosotros",r.sg],["r","Ellos",r.sr]].map(([k,t,v])=>`<div><div class="ptlbl" style="margin:0 0 4px;text-align:center">${t}</div><div class="ptstep"><button data-pts="${i}:${k}:-1" aria-label="${t}: uno menos">−</button><b>${v}</b><button data-pts="${i}:${k}:1" aria-label="${t}: uno más">+</button></div></div>`).join("")}</div>`:""}
+    </div>`;}).join("")+`</div>`;
+  if(ya.length+pend.length+filas.filter(r=>!r.ed).length<PT_MAX&&ptSigN(f)<=10)h+=`<button class="btn ghost block" id="ptMas" style="margin-top:10px">➕ Otro partido</button>`;
+  else if(!filas.length)h+=`<div class="note" style="margin-top:10px">Ya están los ${PT_MAX} partidos de la mañana. ¿Algo mal? ${puede?"Corregilo con ✏️ o borralo con 🗑️.":"Corregí con ✏️ lo que cargaron ustedes."}</div>`;
+  const n=filas.filter(ptLista).length, txt=n?` ${n===1?"1 partido":n+" partidos"}`:"";
+  h+=`<button class="btn block ptsave" id="ptSave">${puede?`💾 Guardar${txt||(st.borrar.length?" los cambios":"")}`:`📨 Mandar${txt} al organizador`}</button>
+    <div class="note" style="margin-top:10px">🎾 Un set a 6 games: 6-5 = se definió en tiebreak 🎯 (no existe 6-6 ni 7-5). ⏱️ Si no se terminó, marcá cómo iba: queda anotado pero no cuenta para ganados y perdidos.${puede?"":" Lo confirma el organizador con un toque."} No cambia el ranking oficial (Kias).</div>
+  </section>`;
+  return h;
+}
+function ptPintar(){ const app=document.getElementById("app"); app.innerHTML=vPartidos(PARAM); bind(); }
+function ptBind(){
+  const vb=document.getElementById("ptVolver"); if(vb)vb.onclick=()=>{ if(history.state&&history.state.desde)volver(); else go("inicio"); };
+  const f=ptFechaPT(); if(!f||!PT)return;
+  const fx=()=>{ if(navigator.vibrate)navigator.vibrate(8); ptPintar(); }, $$=s=>document.querySelectorAll(s), R=i=>PT.filas[+i];
+  const listo=i=>{ const r=R(i); if(ptLista(r)&&!r.nt)ptAbrir(PT.filas.findIndex(x=>!ptLista(x))); }; // completa (y terminada): se cierra y se abre la que sigue
+  $$("[data-ptpar]").forEach(b=>b.onclick=()=>{PT.pi=+b.dataset.ptpar;PT.elegida=true;PT.filas=null;PT.borrar=[];fx();});
+  const cb=document.getElementById("ptCambiar"); if(cb)cb.onclick=async()=>{
+    if(ptSucio()&&!await uiConfirm("🔁 ¿Cambiás de pareja?","Tenés partidos sin guardar: si cambiás de pareja, se pierden.","🔁 Sí, cambiar","No"))return;
+    PT.pi=-1;PT.elegida=true;PT.filas=null;PT.borrar=[];fx();};
+  $$("[data-ptrv]").forEach(b=>b.onclick=()=>{const [i,j]=b.dataset.ptrv.split(":").map(Number);R(i).riv=j;listo(i);fx();});
+  $$("[data-ptr]").forEach(b=>b.onclick=()=>{const [i,g,r]=b.dataset.ptr.split(":").map(Number);const x=R(i);x.res={g,r,fin:true};x.nt=false;listo(i);fx();});
+  $$("[data-ptnt]").forEach(b=>b.onclick=()=>{const x=R(b.dataset.ptnt);x.nt=!x.nt;if(x.nt)x.res=null;fx();});
+  $$("[data-pts]").forEach(b=>b.onclick=()=>{const [i,k,d]=b.dataset.pts.split(":");const x=R(i),c="s"+k;x[c]=Math.max(0,Math.min(5,x[c]+(+d)));fx();}); // sin terminar: nadie llegó a 6
+  $$("[data-ptab]").forEach(b=>{b.onclick=()=>{ptAbrir(+b.dataset.ptab);fx();};b.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();b.click();}};});
+  $$("[data-ptx]").forEach(b=>b.onclick=()=>{PT.filas.splice(+b.dataset.ptx,1);fx();});
+  const mas=document.getElementById("ptMas"); if(mas)mas.onclick=()=>{PT.filas.push(ptFila(ptSigN(f)));ptAbrir(PT.filas.length-1);fx();};
+  $$("[data-pted]").forEach(b=>b.onclick=()=>{ // ✏️ corregir uno cargado: pasa a una fila con lo que tenía
+    const y=PT.vis[+b.dataset.pted]; if(!y)return; const js=JSON.stringify(y), P=f.parejas[PT.pi];
+    let i=PT.filas.findIndex(r=>r.ed===js);
+    if(i<0){ const d=ptDesde(y,P); PT.filas.push({...ptFila(d.propio?y.n:ptSigN(f)),riv:f.parejas.findIndex(p=>misma(p,d.el)),res:d.fin?{g:d.g,r:d.r,fin:true}:null,nt:!d.fin,sg:d.fin?0:d.g,sr:d.fin?0:d.r,ed:js}); i=PT.filas.length-1; }
+    ptAbrir(i);fx(); const el=document.getElementById("ptf"+i); if(el)el.scrollIntoView({behavior:suave(),block:"center"});});
+  $$("[data-ptdel]").forEach(b=>b.onclick=()=>{const y=PT.vis[+b.dataset.ptdel];if(y){PT.borrar.push(JSON.stringify(y));fx();}});
+  $$("[data-ptun]").forEach(b=>b.onclick=()=>{const y=PT.vis[+b.dataset.ptun];if(y){const s=JSON.stringify(y);PT.borrar=PT.borrar.filter(x=>x!==s);fx();}});
+  $$("[data-ptolv]").forEach(b=>b.onclick=async()=>{ if(await uiConfirm("✕ ¿Lo olvido?","Lo saca de tu lista de ⏳ a confirmar (en este celu). Si el organizador ya lo tiene, igual lo puede confirmar.","✕ Sí, olvidalo"))ptOlvidar(b.dataset.ptolv); ptPintar(); });
+  const sv=document.getElementById("ptSave"); if(sv)sv.onclick=()=>ptGuardar();
+}
+async function ptGuardar(){ // 💾 admin: directo a la fecha (con versión si corrige) · 📨 jugador: propuesta que confirma el organizador
+  if(PT_GUARDANDO||!PT)return;
+  let f=ptFechaPT(); if(!f){toast(CAMBIO_FECHA,5000);render();return;}
+  const P=f.parejas[PT.pi], puede=!CLOUD||ISADMIN, filas=PT.filas||[];
+  const media=filas.find(r=>(r.riv!=null||r.res||r.nt||r.ed)&&!ptLista(r));
+  if(media){ const i=filas.indexOf(media); ptAbrir(i); ptPintar();
+    const el=document.getElementById("ptf"+i); if(el)el.scrollIntoView({behavior:suave(),block:"center"});
+    toast(`⚠️ Al ${media.n}º partido le falta ${media.riv==null?"el rival":media.nt?"cómo iba (ej. 4-2)":"el resultado"}`,4000); return; }
+  const nuevos=filas.filter(ptLista).map(r=>{const s=ptRes(r);return {r,x:{n:r.n,a:P.slice(),b:f.parejas[r.riv].slice(),ga:s.g,gb:s.r,fin:s.fin}};});
+  for(const {x} of nuevos){ const m=partidoMal(x,true); if(m){toast(`⚠️ ${x.n}º partido: ${m}`,4500);return;} } // lo mismo que exigen las reglas (6-6, 7-5, rival propio…)
+  const corrige=new Set(nuevos.filter(c=>c.r.ed).map(c=>c.r.ed));
+  const base=[...ptDeLaPareja(f,P).filter(y=>{const s=JSON.stringify(y);return !corrige.has(s)&&!PT.borrar.includes(s);}),...ptPendientes(f.f).map(x=>x.p).filter(x=>misma(x.a,P)||misma(x.b,P))];
+  const igual=c=>{ const o=JSON.parse(c.r.ed); return ptIgual(o,c.x)&&(o.n===c.x.n||!misma(o.a,c.x.a)); }; // la corrección que quedó igual (aunque lo haya cargado el rival) no es cambio
+  const cambios=nuevos.filter(c=>!(c.r.ed&&igual(c)));
+  const dup=cambios.filter(c=>base.some(y=>ptIgual(y,c.x))), van=cambios.filter(c=>!dup.includes(c)); // ya cargado (aunque lo haya cargado tu rival): no se duplica
+  const sacar=[...PT.borrar,...cambios.filter(c=>c.r.ed).map(c=>c.r.ed)];
+  if(!van.length&&!(puede&&sacar.length)){
+    toast(dup.length?(dup.length===1?"✓ Ese partido ya estaba cargado (lo cargó tu rival): no se duplica":"✓ Ya estaban cargados: no se duplica nada"):"No cargaste ningún partido",4000);
+    if(nuevos.length){PT.filas=null;ptPintar();}
+    return;
+  }
+  const rep=van.filter((c,i)=>[...base,...van.slice(0,i).map(z=>z.x)].some(y=>ptCruce(y,c.x))); // 🔁 rival repetido: puede pasar, se confirma
+  if(rep.length&&!await uiConfirm("🔁 ¿Jugaron dos veces contra la misma pareja?",`Contra <b>${esc([...new Set(rep.map(c=>c.x.b.join(" & ")))].join(", "))}</b> ya hay otro partido de ustedes esta mañana${rep.some(c=>base.some(y=>ptCruce(y,c.x)))?" (cargado con otro resultado)":""}.<br><br>Si fueron dos partidos distintos, dale. Si no, corregí la fila${puede?" o el que ya estaba (✏️)":""}.`,"✓ Sí, fueron 2 partidos","✏️ No, corrijo"))return;
+  PT_GUARDANDO=true;
+  try{
+    if(puede){
+      f=ptFechaPT(); if(!f){toast(CAMBIO_FECHA,5000);render();return;} // la nube pudo cambiar con el modal abierto: se aplica sobre lo de AHORA
+      const antes=JSON.parse(JSON.stringify(f.partidos||[])), lista=(f.partidos||[]).slice(), por=(USER&&USER.email)||"admin (este dispositivo)";
+      for(const s of sacar){ const i=lista.findIndex(y=>JSON.stringify(y)===s); if(i<0){toast("⚠️ Lo que corregías cambió en la nube mientras tanto: NO se guardó. Revisalo",5000);render();return;} lista.splice(i,1); }
+      van.forEach(c=>lista.push({...c.x,por,ts:Date.now()}));
+      if(sacar.length)(f.versiones||(f.versiones=[])).push({ts:Date.now(),por,antes:{partidos:antes}}); // 🕓 corrige o borra: lo de antes queda en el historial
+      f.partidos=lista;
+      if(!await save())return; // no entró en la nube: save() avisó y volvió a lo de la nube (las filas siguen en pantalla para reintentar)
+      PT.filas=null; PT.borrar=[];
+      toast(sacar.length?"🕰️ Partidos corregidos — lo de antes quedó en el historial":`🎾 ¡Listo! ${van.length===1?"1 partido cargado":van.length+" partidos cargados"}${dup.length?` (${dup.length} ya estaba${dup.length===1?"":"n"})`:""}`,3500);
+    }else{
+      if(!USER){toast("Primero ingresá con Google (🔑 arriba)");window.fbLogin();return;}
+      const partidos=van.map(c=>ptLimpio(c.x)); toast("📨 Mandando…");
+      try{ await addDoc(collection(db,"propuestas"),{f:f.f,por:USER.email,ts:Date.now(),partidos}); } // solo partidos (sin campeón/cuchara/MVP): así lo piden las reglas
+      catch(e){ toast("⚠️ No se pudo mandar (¿sin señal?): probá de nuevo",4500); return; }
+      ptRecordar(f.f,partidos); PT.filas=null; PT.borrar=[];
+      toast("📨 ¡Mandado! Queda ⏳ a confirmar: el organizador lo confirma con un toque",4500);
+    }
+    render(); arriba();
+  }finally{PT_GUARDANDO=false;}
+}
+function ptLadoHTML(x,P,titulo,quien){ // un partido visto desde P, para comparar lado a lado
+  const d=ptDesde(x,P), fila=(t,v,w)=>`<div class="ptsb"><span>${w?"<b style=\"font-family:inherit;font-size:13.5px\">":""}${esc(t.join(" & "))}${w?"</b>":""}</span><b>${v}</b></div>`;
+  return `<div><div class="tag">${titulo}</div><div class="note" style="font-size:12px">${esc(quien)}</div>${fila(P,d.g,d.fin&&d.g>d.r)}${fila(d.el,d.r,d.fin&&d.r>d.g)}<div class="note" style="font-size:12px;margin-top:4px">${!d.fin?"⏱️ sin terminar":d.g+d.r===11?"🎯 tiebreak":"terminado"}</div></div>`;
+}
+function ptConflicto(fe,p,y,x){ // ⚔️ lo cargado y lo propuesto no coinciden: lado a lado, decide el admin → "ya" | "prop" | "dos" | undefined (cancela)
+  return new Promise(res=>{
+    const d=uiShow("⚔️ No coinciden",`${fmtFecha(fe.f)} · propuesta de ${esc(p.por||"?")}. Mismo partido (las mismas parejas${ptMismoN(y,x)?` o el ${x.n}º de ${esc(x.a.join(" & "))}`:""}) con otro resultado: elegí cuál vale.`,`
+      <div class="ptcf">${ptLadoHTML(y,x.a,"📌 Ya cargado",`lo cargó ${y.a.join(" & ")}`)}${ptLadoHTML(x,x.a,"📥 Propuesta",`la manda ${x.a.join(" & ")}`)}</div>
+      <button class="mopt" data-v="ya">📌 Queda lo cargado<small>la propuesta de este partido no se usa</small></button>
+      <button class="mopt" data-v="prop">📥 Va la propuesta<small>corrige lo cargado (lo de antes queda en el historial 🕓)</small></button>
+      <button class="mopt" data-v="dos">➕ Fueron 2 partidos distintos<small>quedan los dos</small></button>
+      <button class="mcancel" data-x>Cancelar (no se confirma nada)</button>`);
+    d.querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>{uiClose();res(b.dataset.v);});
+    d.querySelector("[data-x]").onclick=()=>{uiClose();res(undefined);};
+  });
+}
+async function confirmarPropPartidos(ids){ // ✔️ una o varias propuestas de partidos: se suman sin duplicar; lo que no coincide se muestra lado a lado
+  if(!ISADMIN&&CLOUD)return;
+  const g0=NUBE_GEN, props=ids.map(id=>PROPUESTAS.find(x=>x.id===id)).filter(p=>p&&Array.isArray(p.partidos));
+  const work=new Map(), cambiada=new Set(), hechas=[], c={n:0,dup:0,reemp:0,queda:0}, na=nombreActualFn();
+  for(const p of props){
+    const mal=propMal(p); if(mal){toast(`⚠️ La de ${p.por||"?"} es inválida (${mal}): descartala con 🗑️`,4500);continue;}
+    const fe=fechaDeProp(p); if(!fe){toast(`⚠️ La fecha del ${fmtFecha(p.f)} ya no existe: no se aplicó (descartala con 🗑️)`,4500);continue;}
+    const nc=propNoCoincide(p,fe); if(nc){toast(`⚠️ No se confirmó la de ${p.por||"?"}: ${nc}`,5000);continue;}
+    if(!work.has(fe))work.set(fe,(fe.partidos||[]).slice());
+    const l=work.get(fe);
+    for(const x0 of p.partidos){
+      const x={...ptLimpio(x0),a:x0.a.map(na),b:x0.b.map(na),por:p.por||"?",ts:+p.ts||Date.now()}; // 🔁 renombrados/unidos: con el nombre de hoy
+      if(l.some(y=>!partidoMal(y)&&ptIgual(y,x))){c.dup++;continue;} // lo cargó la otra pareja igual (o ya estaba): no se duplica
+      const y=l.find(y=>!partidoMal(y)&&(ptMismoN(y,x)||ptCruce(y,x)));
+      if(y){ const v=await ptConflicto(fe,p,y,x); if(v===undefined){toast("No se confirmó nada");return;}
+        if(v==="ya"){c.queda++;continue;}
+        if(v==="prop"){l[l.indexOf(y)]=x;c.reemp++;cambiada.add(fe);continue;} }
+      l.push(x); c.n++; cambiada.add(fe);
+    }
+    hechas.push(p);
+  }
+  if(!hechas.length)return;
+  if(g0!==NUBE_GEN){toast(AVISO_PISADA,4500);render();return;} // la nube cambió con un modal abierto: no se pisa nada (las propuestas quedan)
+  if(cambiada.size){
+    work.forEach((l,fe)=>{ if(!cambiada.has(fe))return;
+      if(l.length<(fe.partidos||[]).length||(fe.partidos||[]).some(y=>!l.includes(y)))(fe.versiones||(fe.versiones=[])).push({ts:Date.now(),por:`${(USER&&USER.email)||"admin"} (propuesta de partidos)`,antes:{partidos:JSON.parse(JSON.stringify(fe.partidos||[]))}});
+      fe.partidos=l; });
+    if(!await save(g0))return; // no entró en la nube: las propuestas quedan para reintentar
+  }
+  hechas.forEach(p=>deleteDoc(doc(db,"propuestas",p.id)).catch(()=>{}));
+  const t=[c.n?`${c.n} sumado${c.n===1?"":"s"}`:"",c.reemp?`${c.reemp} corregido${c.reemp===1?"":"s"} (lo de antes, al historial)`:"",c.dup?`${c.dup} ya estaba${c.dup===1?"":"n"}`:"",c.queda?`${c.queda} quedó como estaba`:""].filter(Boolean).join(" · ");
+  toast(`✔️ ${hechas.length===1?"Confirmada":hechas.length+" confirmadas"} — 🎾 ${t||"nada nuevo"}`,4500);
+  render();
+}
+function propPtHTML(p){ // 📥 qué trae una propuesta de partidos y cómo queda contra lo cargado
+  const fe=fechaDeProp(p), na=nombreActualFn(), ya=fe?partidosFecha(fe):[];
+  const items=p.partidos.map(x0=>{ const x={...x0,a:x0.a.map(na),b:x0.b.map(na)};
+    return esc(ptTxt(x))+(ya.some(y=>ptIgual(y,x))?` <small style="color:var(--okT)">✓ ya estaba</small>`:ya.some(y=>ptMismoN(y,x)||ptCruce(y,x))?` <b class="warn">⚠️ no coincide con lo cargado</b>`:""); });
+  return `🎾 ${fmtFecha(p.f)} · <b>${esc(p.partidos[0].a.join(" & "))}</b>: ${items.length===1?"1 partido":items.length+" partidos"}<br><small style="font-weight:600">${items.join("<br>")}</small>`;
+}
+function propsPartidos(){ return PROPUESTAS.filter(p=>Array.isArray(p.partidos)&&!propMal(p)); }
+
 /* ---------- GALA DE TEMPORADA ---------- */
 function rachaMaxDe(fechas,n){
   let max=0,cur=0;
@@ -2416,9 +2841,10 @@ function vSorteo(){
 
     ${(()=>{const fp=fechaConParejas();return fp?`<div class="card pad" style="margin-top:12px;border-color:var(--A)">
       <div class="tag" style="margin-bottom:8px;color:var(--aT)">📅 Fecha del ${fmtFecha(fp.f)} ya cargada · ${fp.parejas.length} parejas</div>
-      <div class="note" style="margin-bottom:8px">Las parejas ya están definidas en la fecha cargada. Con un toque sorteo <b>los cruces y las canchas</b> (usa el Nº de la suerte de arriba, así es repetible).</div>
+      <div class="note" style="margin-bottom:8px">Las parejas ya están definidas en la fecha cargada. Con un toque sorteo un <b>fixture tentativo</b> de cruces y canchas (usa el Nº de la suerte de arriba, así es repetible): en la cancha se acomoda según quién llega, y lo que vale son los partidos que carga cada pareja después.</div>
       ${fp.parejas.map((p,i)=>`<div class="row" style="padding:5px 0"><span><b>${i+1})</b> ${esc(p.join(" & "))}</span></div>`).join("")}
-      <button class="btn block" id="btnFixFecha" style="margin-top:10px">🆚 Sortear fixture del ${fmtFecha(fp.f)}</button>
+      <button class="btn block" id="btnFixFecha" style="margin-top:10px">🆚 Sortear fixture tentativo del ${fmtFecha(fp.f)}</button>
+      ${prodeCerrado(fp.f)?`<button class="btn block" data-ptgo="${esc(fp.f)}" style="margin-top:8px;background:#22c55e;color:#0a0b0d">🎾 ¿Ya jugaron? Cargá los partidos reales</button>`:""}
     </div>`:"";})()}
 
     <div class="card pad" style="margin-top:12px">
@@ -2537,7 +2963,8 @@ function revelar(orden,{sup,problemas,seedRaw,manual,fecha}){ // fecha = la fech
     const pares=nombresPar(), r1=buildRounds(pares.map((p,i)=>({id:i+1,label:p.join(" & ")})))[0];
     let txt="🎾🔥 *PAREJAS DEL DOMINGO*\nCopones Buena Vista\n\n"+pares.map((p,i)=>`*${i+1})* ${p.join(" & ")}`).join("\n");
     if(sup)txt+=`\n⏳ Suplente rotativo: ${sup.n}`;
-    txt+="\n\n🆚 *1ª ronda:*\n"+r1.map((m,mi)=>m[0]&&m[1]?`${mi<courts?"Cancha "+(mi+1):"⏳ Espera"}: ${m[0].label} vs ${m[1].label}`:`Libre: ${(m[0]||m[1]).label}`).join("\n");
+    txt+="\n\n🆚 *Fixture tentativo (se acomoda en la cancha)* · 1ª ronda:\n"+r1.map((m,mi)=>m[0]&&m[1]?`${mi<courts?"Cancha "+(mi+1):"⏳ Espera"}: ${m[0].label} vs ${m[1].label}`:`Libre: ${(m[0]||m[1]).label}`).join("\n");
+    if(guardado)txt+=`\n📝 Lo que vale es lo que se juega: después, cada pareja carga sus partidos 👉 ${linkApp("partidos",fDest)}`; // 🎾 solo si la fecha está en la app (si no, el link no tendría a dónde ir)
     txt+=`\n\n🔀 Sorteo transparente · Nº de la suerte: *${seedRaw}*${edited?" · _con retoques a mano_":""}\n¿Cuál es el bueno? 🤔`;
     txt+=`\n\n👉 *${guardado?"Las parejas, el ranking y tu perfil":"El ranking y tu perfil"} en la app:*\n${APP_URL}\n\n_Nos vemos el domingo 8:30 ☕🎾_`;
     shareWA(txt);
@@ -2615,7 +3042,9 @@ function revelar(orden,{sup,problemas,seedRaw,manual,fecha}){ // fecha = la fech
       </div>
       <div class="note" style="margin-top:8px;font-size:12px">✏️ ¿Quedó alguien mal parado? <b>Tocá un nombre y después otro</b> para intercambiarlos — los cruces se rearman solos.</div>
       <div class="card pad" style="margin-top:12px;${first?`animation:pop .45s ${(orden.length*0.3+0.2).toFixed(1)}s both`:""}">
-        <div class="tag" style="margin-bottom:2px">🆚 Cruces por cancha</div>
+        <div class="tag" style="margin-bottom:2px">🆚 Fixture tentativo (se acomoda en la cancha)</div>
+        <div class="note" style="font-size:12px">Es una guía para arrancar: en la cancha se acomoda según quién llega. Lo que vale son los partidos que carga cada pareja después 🎾</div>
+        ${fecha&&prodeCerrado(fecha.f)?`<button class="btn block" data-ptgo="${esc(fecha.f)}" style="margin-top:10px;background:#22c55e;color:#0a0b0d">🎾 ¿Ya jugaron? Cargá los partidos reales</button>`:""}
         ${rounds.slice(0,3).map((ms,ri)=>`
           <div class="tag" style="color:var(--aT);margin:10px 0 2px">Ronda ${ri+1}</div>
           ${ms.map((m,mi)=>m[0]&&m[1]
@@ -2638,6 +3067,7 @@ function revelar(orden,{sup,problemas,seedRaw,manual,fecha}){ // fecha = la fech
         paint(false);pintarMsg();
       });
       out.querySelector("#sharePairs").onclick=compartir;
+      out.querySelectorAll("[data-ptgo]").forEach(b=>b.onclick=()=>go("partidos",b.dataset.ptgo)); // 🎾 lo real, después de jugar
       const sf=out.querySelector("#saveFecha"); if(sf)sf.onclick=guardar;
     };
     estado=()=>{if(out.isConnected){paint(false);pintarMsg();}};
@@ -2692,6 +3122,11 @@ function propMal(p){ // 📥 una propuesta la puede escribir cualquiera: si trae
   if(p.pala!=null&&!listaTxt(p.pala,2,3))return "cuchara rara";
   if(p.mvp!=null&&typeof p.mvp!=="string")return "MVP raro";
   if(p.sinCafe!=null&&!listaTxt(p.sinCafe))return "café raro";
+  if(p.partidos!=null){ // 🎾 una propuesta de partidos viene sola (sin campeón/cuchara/MVP/café) y con cada partido válido: lo mismo que piden las reglas
+    if(["campeon","pala","mvp","sinCafe"].some(k=>p[k]!=null))return "partidos mezclados con resultado";
+    if(!Array.isArray(p.partidos)||!p.partidos.length||p.partidos.length>10)return "partidos raros";
+    const m=p.partidos.map(x=>partidoMal(x,true)).find(Boolean); if(m)return "partido raro: "+m;
+  }
   return "";
 }
 function propNoCoincide(p,fe){ // ¿lo propuesto es de las parejas/jugadores de esa fecha?
@@ -2701,6 +3136,8 @@ function propNoCoincide(p,fe){ // ¿lo propuesto es de las parejas/jugadores de 
   if(misma(p.campeon||fe.campeon,p.pala||fe.pala))return "el Kia y la cuchara quedarían la misma pareja";
   if(p.mvp&&!js.includes(p.mvp))return "el MVP no jugó esa fecha";
   if(Array.isArray(p.sinCafe)&&!p.sinCafe.every(n=>js.includes(n)))return "en el café hay alguien que no jugó";
+  if(Array.isArray(p.partidos)&&!propMal(p)){ const na=nombreActualFn(), es=t=>fe.parejas.some(q=>misma(q,t.map(na)));
+    const m=p.partidos.find(x=>!es(x.a)||!es(x.b)); if(m)return `el ${m.n}º partido es de una pareja que no jugó esa fecha`; }
   return "";
 }
 function fechaDeProp(p){ const fs=DATA.fechas.filter(x=>x.f===p.f); return fs.find(x=>!propNoCoincide(p,x))||fs[0]||null; } // si hay dos el mismo día, la de esas parejas
@@ -2718,6 +3155,7 @@ function fechaMal(f){
   if(f.pala!=null&&f.pala!==false&&!listaTxt(f.pala))return `la cuchara del ${f.f} es rara`;
   if(f.mvp!=null&&f.mvp!==false&&typeof f.mvp!=="string")return `el MVP del ${f.f} es raro`;
   if(f.sinCafe!=null&&f.sinCafe!==false&&!listaTxt(f.sinCafe))return `el café del ${f.f} es raro`; // false = "no se sabe"
+  if(f.partidos!=null&&(!Array.isArray(f.partidos)||f.partidos.some(x=>partidoMal(x))))return `los partidos del ${f.f} son raros (un set a 6: 6-5 es tiebreak, no hay 6-6 ni 7-5)`;
   return "";
 }
 function datosMal(d){ // "" si son datos de la app bien armados; si no, qué tienen de raro
@@ -2735,7 +3173,7 @@ function resumenCambio(antes,despues,lblAntes,lblDespues){ // 🔎 vista previa:
   const lista=a=>a.length>6?a.slice(0,6).join(", ")+` y ${a.length-6} más`:a.join(", ");
   let h=`<div class="note" style="margin:6px 0">📍 <b>${lblAntes}:</b> ${antes?desc(antes):"vacía (no hay nada)"}<br>➡️ <b>${lblDespues}:</b> ${desc(despues)}</div>`;
   if(!antes)return h;
-  const res=f=>JSON.stringify([f.parejas,f.campeon||null,f.pala==null?null:f.pala,f.mvp==null?null:f.mvp,Array.isArray(f.sinCafe)||f.sinCafe===false?f.sinCafe:null]);
+  const res=f=>JSON.stringify([f.parejas,f.campeon||null,f.pala==null?null:f.pala,f.mvp==null?null:f.mvp,Array.isArray(f.sinCafe)||f.sinCafe===false?f.sinCafe:null,f.partidos||null]);
   const mapa=d=>{const m={};(d.fechas||[]).forEach(f=>{if(!(f.f in m))m[f.f]=f;});return m;};
   const A=mapa(antes),B=mapa(despues);
   const se=Object.keys(A).filter(k=>!(k in B)).sort().reverse(), entran=Object.keys(B).filter(k=>!(k in A)).sort().reverse();
@@ -2746,7 +3184,7 @@ function resumenCambio(antes,despues,lblAntes,lblDespues){ // 🔎 vista previa:
   const rows=[];
   if(se.length)rows.push(`<span class="warn">🗑️ Se pierden ${se.length} fecha${se.length===1?"":"s"}:</span> ${esc(lista(se.map(fmtFecha)))}`);
   if(entran.length)rows.push(`➕ Entran ${entran.length} fecha${entran.length===1?"":"s"}: ${esc(lista(entran.map(fmtFecha)))}`);
-  if(cambian.length)rows.push(`✏️ Cambian parejas o resultados en ${cambian.length}: ${esc(lista(cambian.map(fmtFecha)))}`);
+  if(cambian.length)rows.push(`✏️ Cambian parejas, resultados o partidos en ${cambian.length}: ${esc(lista(cambian.map(fmtFecha)))}`);
   if(jSe.length)rows.push(`<span class="warn">👥 Salen del plantel:</span> ${esc(lista(jSe))}`);
   if(jEntran.length)rows.push(`👥 Entran al plantel: ${esc(lista(jEntran))}`);
   if(cop.length)rows.push(`🎯 Cambia el copón de: ${esc(lista(cop))}`);
@@ -2811,12 +3249,18 @@ function vAdmin(){
       </div>`;
   const propCard = (CLOUD&&PROPUESTAS.length)
     ? `<div class="card pad" style="border-color:#7c3aed;margin-bottom:12px">
-        <div class="tag" style="color:var(--lilaT);margin-bottom:8px">📥 Propuestas de resultados (${PROPUESTAS.length})</div>
+        <div class="tag" style="color:var(--lilaT);margin-bottom:8px">📥 Propuestas de resultados y partidos (${PROPUESTAS.length})</div>
+        ${propsPartidos().length>=2?`<button class="btn sm block" data-ptokall style="margin-bottom:8px;background:#22c55e;color:#0a0b0d">✅ Confirmar todas (🎾 ${propsPartidos().length} de partidos)</button>`:""}
         ${PROPUESTAS.map(p=>{
           const mal=propMal(p);
           if(mal)return `<div class="adline" style="flex-wrap:wrap">
           <span class="an">⚠️ Propuesta inválida (${esc(mal)}) · no se puede confirmar<br><small style="color:var(--muted)">propuso ${esc(p.por||"?")}</small></span>
           <button data-propno="${esc(p.id)}" title="Descartar">🗑️ Descartar</button>
+        </div>`;
+          if(Array.isArray(p.partidos))return `<div class="adline" style="flex-wrap:wrap">
+          <span class="an">${propPtHTML(p)}<br><small style="color:var(--muted)">propuso ${esc(p.por||"?")}</small></span>
+          <button data-ptok="${esc(p.id)}" title="Confirmar" style="color:var(--okT);font-weight:800;font-size:14px">✔️ Confirmar</button>
+          <button data-propno="${esc(p.id)}" title="Rechazar">🗑️</button>
         </div>`;
           const fe=fechaDeProp(p), {pisa}=fe?difProp(p,fe):{pisa:[]}; // ⚠️ lo que ya está cargado distinto, a la vista
           const bits=["campeon","pala","mvp","sinCafe"].filter(k=>p[k]!=null).map(k=>`${NOMDATO[k].split(" ")[0]} ${esc(valorTxt(k,p[k]))}${pisa.includes(k)?` <b class="warn">⚠️ ya cargado: ${esc(valorTxt(k,fe[k]))}</b>`:""}`);
@@ -2844,8 +3288,9 @@ function vAdmin(){
     <div class="card pad" style="margin-top:12px">
       <div class="tag" style="margin-bottom:8px">📅 Fechas cargadas (${DATA.fechas.length})</div>
       ${DATA.fechas.map((f,i)=>`<div class="adline">
-        <span class="an">${fmtFecha(f.f)} · ${f.parejas.length} parejas ${f.campeon?'🏆':''}${f.confirmada?'✅':''}${faltantesDe(f).length?` <small style="color:var(--warnT)">· falta: ${faltantesTxt(f)}</small>`:''}</span>
+        <span class="an">${fmtFecha(f.f)} · ${f.parejas.length} parejas ${f.campeon?'🏆':''}${f.confirmada?'✅':''}${partidosFecha(f).length?` <small style="color:var(--muted)">· 🎾 ${partidosFecha(f).length}</small>`:''}${faltantesDe(f).length?` <small style="color:var(--warnT)">· falta: ${faltantesTxt(f)}</small>`:''}</span>
         ${f.versiones&&f.versiones.length?`<button data-hist="${i}" title="Historial de cambios">🕓</button>`:''}
+        ${f.parejas.length>=2&&(fechaJugada(f)||prodeCerrado(f.f))?`<button data-ptgo="${esc(f.f)}" title="Cargar/corregir los partidos">🎾</button>`:''}
         <button data-editcamp="${i}" title="Cargar/corregir resultado">👑</button>
         <button data-delf="${i}" title="Borrar">🗑️</button>
       </div>`).join("")||'<div class="empty">Sin fechas</div>'}
@@ -2971,6 +3416,12 @@ function bind(){
   document.querySelectorAll("[data-go2]").forEach(b=>b.onclick=()=>go(b.dataset.go2));
   document.querySelectorAll("[data-perfil]").forEach(b=>{b.onclick=()=>go("perfil",b.dataset.perfil);
     if(!/^(BUTTON|A)$/.test(b.tagName)){b.setAttribute("role","link");b.tabIndex=0;b.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();b.click();}};}}); // filas enteras tocables (y con teclado)
+  document.querySelectorAll("[data-ptgo]").forEach(b=>b.onclick=e=>{e.stopPropagation();go("partidos",b.dataset.ptgo);}); // 🎾 a cargar los partidos de esa fecha
+  document.querySelectorAll("[data-ptok],[data-ptokall]").forEach(b=>b.onclick=async()=>{ // ✔️ propuestas de partidos (Inicio y Admin): con un toque
+    if(b.dataset.yendo)return; b.dataset.yendo="1"; // doble toque: una sola vez
+    try{await confirmarPropPartidos(b.dataset.ptok?[b.dataset.ptok]:propsPartidos().map(p=>p.id));}finally{delete b.dataset.yendo;}
+  });
+  if(VIEW==="partidos")ptBind();
 
   if(VIEW==="inicio"){
     // ⏳ cuenta regresiva en vivo
@@ -3010,6 +3461,7 @@ function bind(){
     const dvo=document.getElementById("dvOk"); if(dvo)dvo.onclick=()=>{guardarVisto(DV_PEND||estadoVisita());DV_BASE={listo:1};render();};
     const dvh=document.querySelector("[data-dvhero]"), hero=document.querySelector("#app .hero"); if(dvh)dvh.onclick=()=>{if(hero)hero.scrollIntoView({behavior:suave(),block:"start"});};
     const dvp=document.querySelector("[data-dvprode]"), pc=document.getElementById("prodeCard"); if(dvp)dvp.onclick=()=>{if(pc)pc.scrollIntoView({behavior:suave(),block:"start"});};
+    const dvt=document.querySelector("[data-dvpt]"), ptd=document.getElementById("ptDia"); if(dvt)dvt.onclick=()=>{if(ptd)ptd.scrollIntoView({behavior:suave(),block:"start"});}; // 🎾 a los partidos del domingo
     const dvq=document.querySelector("[data-dvquien]"); if(dvq)dvq.onclick=()=>{ if(!document.getElementById("uimodal"))quienSoy(); };
     document.querySelectorAll('#desdeVisita [role="link"]').forEach(el=>el.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();el.click();}});
     const dsh=document.getElementById("dvShare");
@@ -3089,7 +3541,7 @@ function bind(){
   }
 
   if(VIEW==="ranking"){
-    document.querySelectorAll("#rkseg button").forEach(b=>b.onclick=()=>{RKTAB=b.dataset.t;document.getElementById("rktable").innerHTML=RKTAB==='jug'?tablaJug():RKTAB==='par'?tablaPar():tablaProde();document.querySelectorAll("#rkseg button").forEach(x=>x.classList.toggle("on",x.dataset.t===RKTAB));bind();});
+    document.querySelectorAll("#rkseg button").forEach(b=>b.onclick=()=>{RKTAB=b.dataset.t;document.getElementById("rktable").innerHTML=tablaRK();document.querySelectorAll("#rkseg button").forEach(x=>x.classList.toggle("on",x.dataset.t===RKTAB));bind();});
     const rs=document.getElementById("rkseason");
     if(rs)rs.onchange=()=>{RKSEASON=rs.value;render();};
   }
@@ -3104,6 +3556,7 @@ function bind(){
       const pct=ind.pj?Math.round(ind.camp/ind.pj*100):0, pl=(n,s,p)=>n+" "+(n===1?s:p);
       const txt=`🎾 *${PARAM}* en Copones Buena Vista\n📅 ${pl(ind.pj,"fecha","fechas")} · 🚗 ${pl(ind.camp,"Kia","Kias")} (${pct}%)`
         +(ind.mvp?` · 🎖️ ${pl(ind.mvp,"MVP","MVPs")}`:"")+(ind.pala?` · 🥄 ${pl(ind.pala,"cuchara","cucharas")}`:"")
+        +(()=>{const s=esGenerico(PARAM)?null:statsPartidos(allFechas())[PARAM];return s&&s.pj?`\n🎾 Partidos: ${s.g}G-${s.p}P (${Math.round(s.g/s.pj*100)}%) · games ${s.gf}-${s.gc}`:"";})()
         +`\n👉 ${MYPLAYER===PARAM?"Mi perfil":"Su perfil"} en la app: ${url}`; // el link va UNA vez (en el texto)
       if(navigator.share){try{await navigator.share({text:txt});}catch(e){}}
       else shareWA(txt);
@@ -3221,6 +3674,7 @@ function bind(){
     });
     const confirmarProp=async id=>{
       const p=PROPUESTAS.find(x=>x.id===id); if(!p)return;
+      if(Array.isArray(p.partidos)){await confirmarPropPartidos([id]);return;} // 🎾 las de partidos tienen su propia confirmación (sin duplicar, conflictos lado a lado)
       if(propMal(p)){toast("⚠️ Propuesta inválida: descartala con 🗑️",4500);return;}
       const g0=NUBE_GEN; // si la nube cambia con el modal abierto, save(g0) no pisa nada
       let fe=fechaDeProp(p);
@@ -3398,6 +3852,7 @@ function bind(){
         if(Array.isArray(a.parejas))partes.push(`👥 ${esc(a.parejas.map(p=>p.join(" & ")).join(" · "))}`);
         const res=["campeon","pala","mvp","sinCafe"].filter(k=>k in a).map(k=>`${NOMDATO[k].split(" ")[0]} ${esc(valorTxt(k,a[k]))}`); // solo lo que guardó esa versión (un reemplazo de parejas no trae resultado)
         if(res.length)partes.push(res.join(" · "));
+        if(Array.isArray(a.partidos))partes.push(`🎾 ${a.partidos.length===1?"1 partido":a.partidos.length+" partidos"}${a.partidos.length?": "+a.partidos.filter(x=>!partidoMal(x)).map(x=>esc(ptTxt(x))).join(" · "):""}`); // 🎾 cómo estaban los partidos antes de corregirlos
         return `<div class="mopt" style="cursor:default"><b>${t}</b> · lo cambió ${esc(v.por)}<small>Decía: ${partes.join("<br>")||"—"}</small></div>`;
       });
       const d=uiShow(`🕰️ Historial de cambios`,`Fecha del ${fmtFecha(f.f)} · la versión vigente es la que se ve en la app`,lineas.join("")+`<button class="mcancel" data-x>Cerrar</button>`);

@@ -13,7 +13,13 @@ La app se publica sola con GitHub Pages desde la rama `main` (tarda 1-2 minutos)
 
 1. Unir la rama a `main` (en GitHub: *Pull request → Merge*, o `git checkout main && git merge --ff-only claude/mejoras-30 && git push`).
 2. Abrir la app con la cuenta de admin: si hay parches de datos pendientes, se guardan solos en la nube ("Guardado en la nube ☁️").
-3. Si la versión trae cambios en `firestore.rules`, pegarlas en Firebase **después** de publicar la app (pasos en [SEGURIDAD.md](SEGURIDAD.md)).
+3. Si la versión trae cambios en `firestore.rules`, pegarlas en Firebase **después** de publicar la app (pasos en [SEGURIDAD.md](SEGURIDAD.md)). La de los partidos a un set 🎾 trae reglas nuevas para `propuestas` (sección "Partidos a un set" de SEGURIDAD.md); mientras no se publiquen, la carga de partidos anda igual.
+
+## 🎾 Partidos a un set
+
+- Después de jugar, cada pareja carga sus partidos en **"🎾 Cargá tus partidos"** (link directo: `#partidos=AAAA-MM-DD`): rival y resultado con botones (6-0 … 6-5🎯 / 0-6 … 5-6🎯, o "⏱️ No se terminó" con cómo iba).
+- El admin guarda directo (si corrige o borra algo, lo de antes queda en el historial 🕓 de la fecha); un jugador manda una propuesta que el admin confirma con un toque desde el Inicio o Admin ("✅ Confirmar todas" si hay varias). Si las dos parejas cargan el mismo partido no se duplica; si no coinciden, se muestran lado a lado y elige el admin.
+- Se ven en "🎾 Partidos del domingo" (debajo del resultado), en el perfil, en la pestaña "🎾 Partidos" del Ranking y en "⚔️ Comparar con…". **No cambian el ranking oficial** (Kias y fechas). El fixture que sortea la app es tentativo: lo que vale es lo que se carga.
 
 **Volver atrás** si algo sale mal:
 

@@ -12,6 +12,7 @@ La app guarda todo en Firestore (Firebase). Lo que protege esos datos de un
 | Guardar/editar los datos de la app | Solo admins (vos + co-admins 👑), y **solo sobre la última versión de la nube** |
 | Borrar el documento entero de datos | **Nadie** |
 | Proponer un resultado | Cualquiera logueado con Google, **firmado con su propio mail** y con el formato de la app |
+| Proponer sus partidos 🎾 (a un set) | Cualquiera logueado, firmado con su mail, **solo partidos** (hasta 10) y cada uno con el formato de un set a 6 |
 | Editar la propuesta de otro | **Nadie** (no se pisan entre sí) |
 | Confirmar/borrar propuestas | Solo admins |
 | Agregar o quitar co-admins | Solo vos (los dueños) |
@@ -51,6 +52,47 @@ La app guarda todo en Firestore (Firebase). Lo que protege esos datos de un
 Las reglas se probaron en el emulador oficial de Firestore con los writes exactos que hace la
 app (y con los ataques: HTML en la fecha, propuestas firmadas como otro, prode fuera de hora,
 anotar a otro, guardar con datos viejos).
+
+## 🎾 Partidos a un set (octubre 2026, tanda P)
+
+Cada pareja carga sus partidos de la mañana desde la app ("🎾 Cargá tus partidos"). El admin los guarda
+directo en los datos (`app/data`, como todo lo demás); un jugador común **propone** y el admin confirma con un
+toque. Por eso la colección `propuestas` ahora acepta **dos tipos que no se mezclan**:
+
+- **de resultado** (como antes): `f`, `por`, `ts` y campeón / cuchara / MVP / café;
+- **de partidos**: `f`, `por`, `ts` y `partidos` — y nada más (sin campeón, cuchara, MVP ni café).
+
+`partidos` es una lista de **1 a 10** partidos, y cada uno es un mapa con **exactamente** estos 6 campos:
+
+| Campo | Qué es | Qué exige la regla |
+|---|---|---|
+| `n` | Nº de partido de la mañana para la pareja que lo carga | entero de 1 a 10 |
+| `a` | la pareja que lo carga | lista de 2 nombres (texto de 1 a 60 letras, sin `\|`) |
+| `b` | el rival | lista de 2 nombres; nadie de `a` puede estar en `b` |
+| `ga`, `gb` | games de cada una | enteros de 0 a 6, **sin 6-6** (un set a 6: 6-5 = tiebreak; no existe 7-x) |
+| `fin` | ¿se terminó? | booleano: `true` si alguna llegó a 6, `false` si no (ej. 4-2 por la hora) |
+
+Quién lo cargó (`por`) y cuándo (`ts`) los pone el admin al confirmar: un jugador no los puede inventar.
+
+**Ojo con el límite de las reglas:** Firestore corta a las **1000 expresiones por pedido**, y las reglas no
+recorren listas (se revisa cada uno de los 10 lugares). Una validación "campo por campo" se pasaba de 1000 con
+5 partidos, así que está escrita "flaca": los números, el booleano y los nombres se juntan en un solo texto que
+se valida con **una** expresión regular (`x * 1` da error si no es número, `!fin` si no es booleano y
+`texto + nombre` si el nombre no es texto; un error = rechazado). Se probó que entran 10 partidos y no 11.
+**Si se agregan campos o chequeos, hay que volver a probar 10 partidos en el emulador.**
+
+La app valida lo mismo antes de mandar (y el Admin, antes de mostrar o confirmar una propuesta, y el
+importador de respaldos): un partido raro (6-6, 7-5, contra su propia pareja, terminado sin llegar a 6…) se ve
+como "⚠️ Propuesta inválida" y no se puede confirmar. Con las reglas **publicadas hoy** (las viejas),
+`propuestas` acepta cualquier cosa de un logueado: la carga funciona igual y esa validación de la app es la
+que protege hasta que se publiquen las nuevas.
+
+Probado en el emulador (`t-P-rules.js` del scratchpad de pruebas): la propuesta **exacta** que escribe la app,
+los 4 partidos reales del 11/10, 10 partidos, y más de 40 casos raros rechazados (11 partidos, 6-6, 7-5, decimales,
+números como texto, pareja de 1 o de 3, rival propio, nombre vacío / de 61 letras / con `|` / que no es texto,
+campos de más o de menos, mezclada con campeón/MVP/café, firmada como otro, sin login). Las pruebas viejas
+(`t-T1-rules.js`) siguen pasando, y la app nueva también funciona con las reglas publicadas hoy
+(`t-compat-viejas.js`).
 
 ## Cómo aplicarlas (2 minutos)
 
