@@ -1687,7 +1687,8 @@ async function cargarResultado(f){
     d.querySelector("#palaAuto").classList.toggle("hidden",!palaAuto);
     d.querySelectorAll('[data-g="mvp"]').forEach(b=>b.classList.toggle("on",b.dataset.v==="nadie"?est.mvp===false:(typeof est.mvp==="string"&&("j:"+est.mvp)===b.dataset.v)));
     // lo cargado que no es de esta fecha (datos viejos) se muestra, para que no parezca "sin cargar"
-    const raros=[["campeon",Array.isArray(est.campeon)&&!f.parejas.some(t=>misma(t,est.campeon))],["pala",Array.isArray(est.pala)&&!f.parejas.some(t=>misma(t,est.pala))],["mvp",typeof est.mvp==="string"&&!jugadores.includes(est.mvp)]].filter(r=>r[1]);
+    // la cuchara también puede quedar a nombre de uno solo de los que jugaron (ej. 11/10: a Patán)
+    const raros=[["campeon",Array.isArray(est.campeon)&&!f.parejas.some(t=>misma(t,est.campeon))],["pala",Array.isArray(est.pala)&&!f.parejas.some(t=>misma(t,est.pala))&&!(est.pala.length===1&&jugadores.includes(est.pala[0]))],["mvp",typeof est.mvp==="string"&&!jugadores.includes(est.mvp)]].filter(r=>r[1]);
     d.querySelector("#raros").innerHTML=raros.map(([k])=>`<div class="note warn" style="margin-bottom:6px">⚠️ ${NOMDATO[k]} cargado: <b>${esc(valorTxt(k,est[k]))}</b> — no es de las parejas de esta fecha: elegí de la lista</div>`).join("");
     const cz=d.querySelector("#cafeZona");
     cz.innerHTML=est.cafe==="reg"
