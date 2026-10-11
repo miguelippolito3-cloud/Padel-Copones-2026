@@ -21,19 +21,61 @@ service cloud.firestore {
             && exists(/databases/$(database)/documents/admins/$(request.auth.token.email)));
     }
 
-    // 📊 Los datos de la app (ranking, fechas, jugadores)
-    // Todos pueden leer (la app funciona sin login y el backup semanal también lee de acá).
-    // Solo los admins pueden escribir.
-    match /app/{doc} {
-      allow read: if true;
-      allow write: if esAdmin();
+    // ---- Ayudas para validar lo que se escribe ----
+    function datos() { return request.resource.data; }
+    function esFecha(s) { return s is string && s.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$'); }
+    function texto(s, max) { return s is string && s.size() <= max; }
+    function pareja(x) { return x is list && x.size() >= 2 && x.size() <= 3; }
+    // 🕣 Arranque del partido de la fecha `f` (AAAA-MM-DD): ese día a las 8:30 hora Argentina.
+    // Argentina es UTC-3 todo el año (sin horario de verano), así que 8:30 ART = 11:30 UTC.
+    // request.time viene en UTC.
+    function arranque(f) {
+      let p = f.split('-');
+      return timestamp.date(int(p[0]), int(p[1]), int(p[2])) + duration.value(690, 'm');
+    }
+    // Nombre que muestra la app: la primera palabra del nombre de la cuenta de Google (o el mail si no tiene)
+    function primerNombre() {
+      let n = request.auth.token.get('name', '');
+      return ((n is string && n != '') ? n : request.auth.token.email).split(' ')[0];
+    }
+    // El jugador que se declara tiene que ser el vinculado a la PROPIA cuenta (usuarios/{uid}, "⭐ Este soy yo").
+    // Así nadie anota ni pronostica a nombre de otro sin que quede a la vista en Admin → Usuarios logueados.
+    function jugadorPropio(j) {
+      return j == null
+        || (exists(/databases/$(database)/documents/usuarios/$(request.auth.uid))
+            && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.get('jugador', null) == j);
     }
 
-    // 👤 Usuarios logueados: cada uno escribe SOLO su propio documento.
+    // 📊 Los datos de la app (ranking, fechas, jugadores)
+    // Todos pueden leer (la app funciona sin login y el backup semanal también lee de acá).
+    // Solo los admins pueden escribir, y solo sobre la ÚLTIMA versión: `prev` tiene que ser
+    // el `updated` que hay hoy en la nube (un celular con datos viejos no pisa lo nuevo).
+    match /app/{doc} {
+      allow read: if true;
+      allow create: if esAdmin() && appValido();
+      allow update: if esAdmin() && appValido()
+        && datos().get('prev', -1) == resource.data.get('updated', 0);
+      allow delete: if false;
+    }
+    function appValido() {
+      return datos().keys().hasOnly(['json', 'updated', 'by', 'prev'])
+        && datos().json is string
+        && datos().updated is int
+        && datos().by == request.auth.token.email;
+    }
+
+    // 👤 Usuarios logueados: cada uno escribe SOLO su propio documento, con los campos de la app.
     // Los admins pueden ver la lista completa (panel de usuarios).
     match /usuarios/{uid} {
       allow read: if esAdmin() || (request.auth != null && request.auth.uid == uid);
-      allow write: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && datos().keys().hasOnly(['email', 'nombre', 'ultimoIngreso', 'jugador', 'vinculadoEl'])
+        && datos().email == request.auth.token.email
+        && texto(datos().get('nombre', ''), 200)
+        && datos().get('ultimoIngreso', 0) is int
+        && (datos().get('jugador', null) == null || texto(datos().jugador, 60))
+        && datos().get('vinculadoEl', 0) is int;
+      allow delete: if request.auth != null && request.auth.uid == uid;
     }
 
     // 👑 Co-admins: solo los dueños los agregan o quitan.
@@ -44,23 +86,41 @@ service cloud.firestore {
       allow write: if esDueno();
     }
 
-    // 📝 Propuestas de resultados: cualquier usuario logueado puede CREAR una,
-    // pero nadie puede editar la de otro (no se pisan entre sí) y
+    // 📝 Propuestas de resultados: cualquier usuario logueado puede CREAR una, firmada con SU mail
+    // y con los campos que manda la app; nadie puede editar la de otro (no se pisan entre sí) y
     // solo los admins las leen, confirman y borran.
     match /propuestas/{id} {
-      allow create: if request.auth != null;
+      allow create: if request.auth != null
+        && datos().keys().hasAll(['f', 'por', 'ts'])
+        && datos().keys().hasOnly(['f', 'por', 'ts', 'campeon', 'pala', 'mvp', 'sinCafe'])
+        && esFecha(datos().f)
+        && datos().por == request.auth.token.email
+        && datos().ts is int
+        && (!('campeon' in datos()) || pareja(datos().campeon))
+        && (!('pala' in datos()) || pareja(datos().pala))
+        && (!('mvp' in datos()) || texto(datos().mvp, 60))
+        && (!('sinCafe' in datos()) || (datos().sinCafe is list && datos().sinCafe.size() <= 40));
       allow update: if false;
       allow read, delete: if esAdmin();
     }
 
-    // 🎲 Prode: cada usuario escribe SOLO su pronóstico (el id lleva su uid),
-    // todos los logueados los leen (para el ranking de adivinos).
+    // 🎲 Prode: cada usuario escribe SOLO su pronóstico (el id lleva su uid), a su nombre,
+    // y se cierra a las 8:30 (hora Argentina) del domingo de esa fecha: con el partido en juego ya no se toca.
+    // Todos los logueados los leen (para el ranking de adivinos).
     match /prode/{id} {
       allow read: if request.auth != null;
       allow create, update: if request.auth != null
-        && id == request.resource.data.f + '_' + request.auth.uid
-        && request.resource.data.uid == request.auth.uid;
-      allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
+        && datos().keys().hasOnly(['f', 'uid', 'nombre', 'jugador', 'pareja', 'ts'])
+        && esFecha(datos().f)
+        && id == datos().f + '_' + request.auth.uid
+        && datos().uid == request.auth.uid
+        && datos().nombre == primerNombre()
+        && jugadorPropio(datos().get('jugador', null))
+        && pareja(datos().pareja)
+        && datos().ts is int
+        && request.time < arranque(datos().f);
+      allow delete: if request.auth != null && resource.data.uid == request.auth.uid
+        && request.time < arranque(resource.data.f);
     }
 
     // 📸 Fotos publicadas desde la app (Kia, cuchara, MVP, café y fotos de perfil).
@@ -74,12 +134,18 @@ service cloud.firestore {
       allow delete: if esAdmin();
     }
 
-    // 🙋 Asistencia al próximo domingo: misma lógica que el prode.
+    // 🙋 Asistencia al próximo domingo: cada uno se anota o se baja SOLO a sí mismo
+    // (id con su uid, su nombre de Google y, si declara jugador, el vinculado a su cuenta).
     match /asistencia/{id} {
       allow read: if request.auth != null;
       allow create, update: if request.auth != null
-        && id == request.resource.data.f + '_' + request.auth.uid
-        && request.resource.data.uid == request.auth.uid;
+        && datos().keys().hasOnly(['f', 'uid', 'nombre', 'jugador', 'ts'])
+        && esFecha(datos().f)
+        && id == datos().f + '_' + request.auth.uid
+        && datos().uid == request.auth.uid
+        && datos().nombre == primerNombre()
+        && jugadorPropio(datos().get('jugador', null))
+        && datos().ts is int;
       allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
     }
 

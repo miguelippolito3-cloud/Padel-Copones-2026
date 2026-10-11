@@ -319,7 +319,7 @@
    La seguridad la dan las "reglas" de Firestore (solo el admin puede escribir). */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, addDoc, deleteDoc, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyBWLltxhNx-3XT0u9-KqKb5hYV2k4jZueY",
@@ -376,6 +376,7 @@ const CLOUD = !JSON.stringify(FIREBASE_CONFIG).includes("PEGAR_ACA");
 let USER=null, ISADMIN=false, auth=null, db=null, dbRef=null, CLOUDSTATE="conectando";
 let AUTHREADY=false; // ya sabemos si hay sesión o no (evita el pestañeo del candado al abrir)
 let MYPLAYER=null; try{MYPLAYER=localStorage.getItem("cb_myplayer")||null;}catch(e){}
+let MILINK=null; // el jugador vinculado a esta cuenta EN LA NUBE (usuarios/{uid}): es el único que aceptan las reglas
 let PROPUESTAS=[], propSub=false;
 let USUARIOS=[], COADMINS=[], SORTEO_FECHA=null;
 let PRODE=[], ASIS=[], socialSub=false; // 🎲 prode y 🙋 asistencia (colecciones nuevas)
@@ -431,17 +432,61 @@ let PARCHE_PENDIENTE=false; // se aplicó un parche que la nube todavía no tien
 const LS="padel_espn_v1";
 let DATA=load();
 function load(){ try{const s=JSON.parse(localStorage.getItem(LS)); if(s&&s.jugadores&&s.fechas) return normalizeData(s);}catch(e){} return JSON.parse(JSON.stringify(SEED)); }
-function save(){
-  try{localStorage.setItem(LS,JSON.stringify(DATA));}catch(e){}
-  if(CLOUD){
-    if(ISADMIN){
-      setDoc(dbRef,{json:JSON.stringify(DATA),updated:Date.now(),by:USER.email})
-        .then(()=>toast("Guardado en la nube ☁️"))
-        .catch(()=>toast("⚠️ Error al guardar en la nube"));
-    }else{
-      toast(USER?"Solo el admin puede guardar cambios":"Ingresá con Google (solo admin edita)");
-    }
-  }
+/* 💾 GUARDADO SEGURO: nunca se pisa la nube con datos viejos.
+   - Sin una copia fresca de la nube (conectando / error) no se escribe nada.
+   - Se escribe con una transacción: si el "updated" de la nube no es el que usamos de base
+     (alguien guardó en el medio), NO se pisa: nos quedamos con lo de la nube y se avisa.
+   - localStorage es solo una copia de la nube: se escribe con lo que llega o con lo que se guardó bien. */
+let CLOUD_VER=null, CLOUD_JSON=null; // "updated" y json de la última versión de la nube que tiene este dispositivo
+let NUBE_GEN=0;      // sube cada vez que llega una versión AJENA de la nube y reemplaza DATA
+let ENVIANDO=null;   // lo que estamos subiendo (para reconocer el eco de nuestro propio guardado)
+let SAVEQ=Promise.resolve(), SAVEPEND=false;
+const AVISO_PISADA="⚠️ Alguien guardó recién; se actualizó con lo último, repetí el cambio";
+function hayNubeFresca(){ return CLOUDSTATE==="ok"||CLOUDSTATE==="vacia"; }
+function avisoTarde(t){ setTimeout(()=>toast(t,4500),60); } // después del toast de quien llamó a save()
+function save(g0){ // → Promise<bool>. g0 = NUBE_GEN de cuando se armó el cambio (si hubo un modal en el medio)
+  if(!CLOUD){ try{localStorage.setItem(LS,JSON.stringify(DATA));}catch(e){} return Promise.resolve(true); }
+  if(!ISADMIN){ toast(USER?"Solo el admin puede guardar cambios":"Ingresá con Google (solo admin edita)"); return Promise.resolve(false); }
+  if(!hayNubeFresca()){ volverANube(); render(); avisoTarde("📴 Todavía no hay conexión con la nube: NO se guardó. Repetilo cuando cargue"); return Promise.resolve(false); }
+  if(g0!==undefined&&g0!==NUBE_GEN){ volverANube(); render(); avisoTarde(AVISO_PISADA); return Promise.resolve(false); }
+  if(SAVEPEND)return SAVEQ; // ya hay un guardado esperando turno: se lleva lo último de DATA
+  SAVEPEND=true; const gen=NUBE_GEN;
+  return SAVEQ=SAVEQ.then(()=>{ SAVEPEND=false;
+    if(gen!==NUBE_GEN){ volverANube(); render(); toast(AVISO_PISADA,4500); return false; } // llegó otra versión mientras esperaba
+    return subirNube(); });
+}
+async function subirNube(){
+  const base=CLOUD_VER, json=JSON.stringify(DATA), ver=Math.max(Date.now(),(base||0)+1);
+  let ultima=null;
+  ENVIANDO={ver,json};
+  try{
+    await runTransaction(db,async tx=>{
+      const s=await tx.get(dbRef);
+      const v=s.exists()?(s.data().updated||0):null;
+      if(v!==base){ ultima=s.exists()?s.data():null; throw new Error("pisada"); }
+      tx.set(dbRef,{json,updated:ver,by:USER.email,prev:base});
+    });
+    CLOUD_VER=ver; CLOUD_JSON=json; if(CLOUDSTATE==="vacia")CLOUDSTATE="ok";
+    try{localStorage.setItem(LS,json);}catch(e){}
+    toast("Guardado en la nube ☁️");
+    return true;
+  }catch(e){
+    if(e&&e.message==="pisada"){ if(!(ultima&&aplicarNube(ultima.json,ultima.updated||0)))volverANube(); toast(AVISO_PISADA,4500); }
+    else{ volverANube(); toast("⚠️ No se pudo guardar en la nube (¿sin señal?): NO quedó guardado. Repetilo",4500); }
+    render();
+    return false;
+  }finally{ ENVIANDO=null; }
+}
+function aplicarNube(json,ver){ // una versión de la nube reemplaza a DATA → true si se pudo leer
+  try{ const d=JSON.parse(json); if(d&&d.jugadores&&d.fechas){
+    PARCHE_PENDIENTE=false; DATA=normalizeData(d); CLOUD_VER=ver; CLOUD_JSON=json; NUBE_GEN++;
+    try{localStorage.setItem(LS,JSON.stringify(DATA));}catch(e){}
+    return true; } }catch(e){}
+  return false;
+}
+function volverANube(){ // descarta lo que no se pudo guardar: vuelve a la última copia de la nube
+  try{ if(CLOUD_JSON){ const d=JSON.parse(CLOUD_JSON); if(d&&d.jugadores&&d.fechas){ DATA=normalizeData(d); NUBE_GEN++; return; } } }catch(e){}
+  DATA=load(); NUBE_GEN++;
 }
 
 /* ---- Conexión a la nube ---- */
@@ -452,12 +497,12 @@ if(CLOUD){
   dbRef=doc(db,"app","data");
   onAuthStateChanged(auth,u=>{
     AUTHREADY=true;
-    USER=u;ISADMIN=!!(u&&ADMINS.includes(u.email));
+    USER=u;ISADMIN=!!(u&&ADMINS.includes(u.email));MILINK=null;
     if(u){
       // registra el ingreso (para el panel de usuarios del admin)
       setDoc(doc(db,"usuarios",u.uid),{email:u.email,nombre:u.displayName||"",ultimoIngreso:Date.now()},{merge:true}).catch(()=>{});
       // ⭐ Este soy yo: recupera el jugador vinculado a esta cuenta
-      getDoc(doc(db,"usuarios",u.uid)).then(s=>{ if(s.exists()&&s.data().jugador){MYPLAYER=s.data().jugador;try{localStorage.setItem("cb_myplayer",MYPLAYER);}catch(e){}render();} else maybeQuienSoy(); }).catch(()=>{});
+      getDoc(doc(db,"usuarios",u.uid)).then(s=>{ if(s.exists()&&s.data().jugador){MILINK=MYPLAYER=s.data().jugador;try{localStorage.setItem("cb_myplayer",MYPLAYER);}catch(e){}render();} else maybeQuienSoy(); }).catch(()=>{});
       // 👑 co-admins: si no es dueño, chequea la lista dinámica
       if(!ISADMIN){
         getDoc(doc(db,"admins",(u.email||"").toLowerCase())).then(s=>{ if(s.exists()){ISADMIN=true;subAdmin();renderAuth();render();guardarParches();} }).catch(()=>{});
@@ -471,9 +516,15 @@ if(CLOUD){
   onSnapshot(dbRef,snap=>{
     if(snap.exists()){
       CLOUDSTATE="ok";
-      try{const d=JSON.parse(snap.data().json); if(d&&d.jugadores&&d.fechas){PARCHE_PENDIENTE=false;DATA=normalizeData(d); try{localStorage.setItem(LS,JSON.stringify(DATA));}catch(e){} guardarParches();}}catch(e){}
+      const sd=snap.data(), ver=sd.updated||0;
+      const eco=(ver===CLOUD_VER&&sd.json===CLOUD_JSON)||(ENVIANDO&&ver===ENVIANDO.ver&&sd.json===ENVIANDO.json);
+      if(eco){CLOUD_VER=ver;CLOUD_JSON=sd.json;} // es lo que guardamos nosotros: DATA ya lo tiene (no se reemplaza)
+      else if(aplicarNube(sd.json,ver))guardarParches();
+      else{CLOUD_VER=ver;CLOUD_JSON=sd.json;} // ilegible: no se toca DATA, pero se puede guardar encima
+    }else if(snap.metadata&&snap.metadata.fromCache){
+      return; // sin señal: todavía no sabemos si la nube está vacía
     }else{
-      CLOUDSTATE="vacia";
+      CLOUDSTATE="vacia";CLOUD_VER=null;CLOUD_JSON=null;
     }
     render();
     setTimeout(maybeQuienSoy,800); // primer ingreso: recién acá hay plantel para elegir
@@ -492,7 +543,7 @@ async function maybeQuienSoy(){
   try{localStorage.setItem("cb_askwho","1");}catch(e){}
   if(!v||v==="__no__")return;
   setDoc(doc(db,"usuarios",USER.uid),{email:USER.email,jugador:v,vinculadoEl:Date.now()},{merge:true})
-    .then(()=>{MYPLAYER=v;try{localStorage.setItem("cb_myplayer",v);}catch(e){}toast("⭐ ¡Listo! Tu perfil quedó vinculado");render();})
+    .then(()=>{MILINK=MYPLAYER=v;try{localStorage.setItem("cb_myplayer",v);}catch(e){}toast("⭐ ¡Listo! Tu perfil quedó vinculado");render();})
     .catch(()=>{});
 }
 function subSocial(){ // suscripciones para todos los logueados
@@ -620,9 +671,10 @@ function comprimirCanvas(cv){ // que entre en un documento de la nube (l\u00edmi
 // Foto de perfil: publicada desde la app > guardada en los datos > la del repo (fotos/perfil/<apodo>.jpg)
 function fotoPerfil(n){const nube=fotoNube("perfil",slugName(n));if(nube)return nube;const j=DATA.jugadores.find(x=>x.n===n);if(j&&j.foto)return j.foto;const slug=slugName(n);return slug?`fotos/perfil/${slug}.jpg`:null;}
 function slugName(n){return String(n).replace(/\(.*?\)/g,"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^A-Za-z0-9]/g,"").toLowerCase();}
-function fmtFecha(s){const [y,m,d]=s.split("-");const ms=["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];return `${+d} ${ms[+m-1]} ${y}`;}
+function fmtFecha(s){const x=/^(\d{4})-(\d{2})-(\d{2})$/.exec(s);if(!x)return esc(String(s)); // lo que no es una fecha vuelve escapado (puede venir de afuera)
+  const ms=["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];return `${+x[3]} ${ms[+x[2]-1]||x[2]} ${x[1]}`;}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-function toast(t){const el=document.getElementById("toast");el.textContent=t;el.classList.add("show");clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove("show"),1800);}
+function toast(t,ms){const el=document.getElementById("toast");el.textContent=t;el.classList.add("show");clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove("show"),ms||1800);}
 
 /* ---------- MODALES PROPIOS (reemplazan a prompt/confirm) ---------- */
 function uiClose(){const m=document.getElementById("uimodal");if(m)m.remove();}
@@ -637,7 +689,7 @@ function verFoto(url,titulo,quien){ // 📸 visor interno: la foto se abre EN la
   d.id="fotoview"; d.className="modal-ov"; d.style.zIndex="95";
   d.innerHTML=`<div style="max-width:94vw;max-height:88vh;text-align:center">
     <img src="${esc(url)}" alt="" style="max-width:94vw;max-height:78vh;border-radius:14px;border:1px solid var(--line);box-shadow:0 10px 40px rgba(0,0,0,.55)">
-    ${titulo?`<div class="tag" style="margin-top:10px;justify-content:center;display:flex">${titulo}</div>`:""}
+    ${titulo?`<div class="tag" style="margin-top:10px;justify-content:center;display:flex">${esc(titulo)}</div>`:""}
     ${quien?`<div style="margin-top:6px;font-weight:800;font-size:15px">${esc(quien)}</div>`:""}
     <div class="note" style="margin-top:6px;text-align:center">Tocá en cualquier lado para volver</div></div>`;
   d.onclick=()=>d.remove();
@@ -720,7 +772,7 @@ function cropFlow(aspect,titulo){ // 📸 elegir foto → recortar en un modal �
     inp.onchange=()=>{
       eligio=true;
       const file=inp.files[0]; if(!file){res(null);return;}
-      const d=uiShow(titulo||"📸 Encuadrá la foto","Arrastrala para acomodarla y ajustá el zoom",`
+      const d=uiShow(esc(titulo||"📸 Encuadrá la foto"),"Arrastrala para acomodarla y ajustá el zoom",`
         <div id="cfFrame" style="position:relative;width:100%;max-width:330px;aspect-ratio:${aspect};overflow:hidden;border-radius:12px;border:2px dashed var(--A);margin:0 auto;touch-action:none;cursor:grab;background:#000">
           <img id="cfImg" alt="" style="position:absolute;left:0;top:0;transform-origin:0 0;user-select:none;-webkit-user-drag:none;max-width:none" draggable="false">
         </div>
@@ -806,16 +858,27 @@ function vBloqueo(){ // 🔒 sin sesión no se ve NADA: bienvenida + login oblig
 }
 function render(){
   const app=document.getElementById("app");
-  if(CLOUD&&!USER){app.innerHTML=vBloqueo();bind();renderTicker();return;}
-  if(VIEW==="inicio")app.innerHTML=vInicio();
-  else if(VIEW==="ranking")app.innerHTML=vRanking();
-  else if(VIEW==="sorteo")app.innerHTML=vSorteo();
-  else if(VIEW==="jugadores")app.innerHTML=vJugadores();
-  else if(VIEW==="perfil")app.innerHTML=vPerfil(PARAM);
-  else if(VIEW==="admin")app.innerHTML=vAdmin();
-  bind();
-  renderTicker();
-  updateNavDot();
+  try{
+    if(CLOUD&&!USER){app.innerHTML=vBloqueo();bind();renderTicker();return;}
+    if(VIEW==="inicio")app.innerHTML=vInicio();
+    else if(VIEW==="ranking")app.innerHTML=vRanking();
+    else if(VIEW==="sorteo")app.innerHTML=vSorteo();
+    else if(VIEW==="jugadores")app.innerHTML=vJugadores();
+    else if(VIEW==="perfil")app.innerHTML=vPerfil(PARAM);
+    else if(VIEW==="admin")app.innerHTML=vAdmin();
+    bind();
+  }catch(e){ // 🛟 red de seguridad: un dato raro no deja la pantalla vieja ni la app colgada
+    console.error(e);
+    app.innerHTML=`<section><div class="card pad" id="renderErr" style="margin-top:12px;border-color:var(--red)">
+      <div class="tag" style="color:var(--red2);margin-bottom:6px">⚠️ Algo raro en los datos</div>
+      <div class="note">Esta pantalla no se pudo dibujar porque algún dato llegó con un formato inesperado. No se borró nada: probá otra sección y avisale al organizador.</div>
+      <div class="note" style="margin-top:6px;font-size:12px;color:var(--muted)">Detalle: ${esc((e&&e.message)||e)}</div>
+      ${VIEW!=="inicio"?`<button class="btn block" id="errHome" style="margin-top:10px">🏠 Volver al Inicio</button>`:""}
+    </div></section>`;
+    const eh=document.getElementById("errHome"); if(eh)eh.onclick=()=>go("inicio");
+  }
+  try{renderTicker();}catch(e){console.error(e);}
+  try{updateNavDot();}catch(e){console.error(e);}
 }
 /* 🔴 avisos: puntito en la barra con lo pendiente (propuestas, fecha incompleta, prode sin jugar) */
 function pendCount(){
@@ -825,7 +888,7 @@ function pendCount(){
   const f0=DATA.fechas[0];
   if(CLOUD&&USER&&f0&&!f0.campeon&&f0.parejas.length>=2&&f0!==fechaPendiente()){
     const h=new Date(),hoyS=h.getFullYear()+"-"+String(h.getMonth()+1).padStart(2,"0")+"-"+String(h.getDate()).padStart(2,"0");
-    if(f0.f>=hoyS&&!miProdeDe(f0.f))n++; // 🎲 te falta jugar el prode
+    if(f0.f>=hoyS&&!miProdeDe(f0.f)&&!prodeCerrado(f0.f))n++; // 🎲 te falta jugar el prode
   }
   return n;
 }
@@ -941,13 +1004,14 @@ function vInicio(){
       ${CLOUD?`<button class="btn block" id="propBtn2" style="margin-top:10px;background:var(--card2);border:1px solid var(--line);color:var(--txt)">📝 Proponer resultado (lo aprueba el organizador)</button>`:""}
     </div>`;})():""}
     ${CLOUD&&USER&&prox&&!prox.campeon&&prox.parejas.length>=2?(()=>{ // 🎲 PRODE
-      const mio=miProdeDe(prox.f);
+      const mio=miProdeDe(prox.f), cerrado=prodeCerrado(prox.f);
       const cuantos=PRODE.filter(x=>x.f===prox.f).length;
       return `<div class="card pad" style="margin-bottom:12px;border-color:#7c3aed">
         <div class="tag" style="margin-bottom:6px;color:#c4b5fd">🎲 PRODE · ¿Quién se lleva el Kia?</div>
-        ${mio?`<div class="note" style="margin-bottom:8px">Tu pronóstico: <b style="color:#c4b5fd">🎯 ${esc(mio.pareja.join(" & "))}</b></div>`
-             :`<div class="note" style="margin-bottom:8px">Jugá tu pronóstico antes del domingo. No vale plata, vale honor.</div>`}
-        <button class="btn block" id="prodeBtn" style="background:#7c3aed">${mio?"🎲 Cambiar mi pronóstico":"🎲 Hacer mi pronóstico"}</button>
+        ${mio?`<div class="note" style="margin-bottom:8px">Tu pronóstico: <b style="color:#c4b5fd">🎯 ${esc(Array.isArray(mio.pareja)?mio.pareja.join(" & "):"?")}</b></div>`
+             :`<div class="note" style="margin-bottom:8px">${cerrado?"No jugaste pronóstico esta vez.":"Jugá tu pronóstico antes del domingo. No vale plata, vale honor."}</div>`}
+        ${cerrado?`<div class="note" style="text-align:center;font-weight:800">🔒 Prode cerrado: se jugó hasta las 8:30</div>`
+          :`<button class="btn block" id="prodeBtn" style="background:#7c3aed">${mio?"🎲 Cambiar mi pronóstico":"🎲 Hacer mi pronóstico"}</button>`}
         <div class="note" style="margin-top:6px;text-align:center">${cuantos} pronóstico${cuantos===1?"":"s"} del grupo · el ranking de adivinos está en 📊 Ranking</div>
       </div>`;})():""}
     ${heroHTML}
@@ -978,7 +1042,7 @@ function vInicio(){
       const dato=datoSemanal();
       return dato?`<div class="card pad" style="margin-top:12px">
         <div class="tag" style="margin-bottom:6px">📊 El dato del lunes</div>
-        <div style="font-size:15px;font-weight:700;line-height:1.5">${dato}</div>
+        <div style="font-size:15px;font-weight:700;line-height:1.5">${esc(dato)}</div>
         <button class="btn ghost sm block" id="datoShare" style="margin-top:10px">📲 Tirarlo al grupo</button>
       </div>`:"";})()}
     ${(()=>{ // 📸 un día como hoy
@@ -1024,7 +1088,7 @@ function miniRank(list,field){
     <tr><td><span class="rk ${i<3?'g'+(i+1):''}">${i+1}</span><span class="pname" data-perfil="${esc(p.n)}">${chip(p.n)} ${esc(p.n)}</span></td>
     <td style="text-align:right"><span class="big">${p[field]}</span></td></tr>`).join("")}</tbody></table>`;
 }
-function chip(n){const c=coponDe(n);return `<span class="cchip ${COL[c]}">${c||"·"}</span>`;}
+function chip(n){const c=coponDe(n);return `<span class="cchip ${COL[c]||"ch0"}">${esc(c||"·")}</span>`;}
 
 /* ---------- RANKING ---------- */
 let RKTAB="jug", RKSEASON="actual";
@@ -1125,7 +1189,7 @@ function plcardHTML(n,real,s){
     <div class="pls">${s.pj} ${s.pj===1?'fecha':'fechas'}</div>
   </div>`;
 }
-function copName(c){return c?("Copón "+c):"Invitado/otro";}
+function copName(c){return c?("Copón "+esc(c)):"Invitado/otro";}
 
 /* ---------- PERFIL ---------- */
 function vPerfil(name){
@@ -1356,14 +1420,15 @@ async function cargarResultado(f){
       if(JSON.stringify(cafeNew)!==JSON.stringify(cafeOld))cambios++;
       uiClose();
       if(!cambios){toast("No cambiaste nada — quedó todo como estaba");res(false);return;}
+      if(!DATA.fechas.includes(f)){toast(AVISO_PISADA,4500);render();res(false);return;} // la nube cambió mientras cargabas
       f.campeon=est.campeon;
       f.pala=est.pala;
       f.mvp=est.mvp;
       if(est.cafeReg)f.sinCafe=[...est.sinCafe]; else delete f.sinCafe;
       if(completa)(f.versiones||(f.versiones=[])).push({ts:Date.now(),por:(USER&&USER.email)||"admin (este dispositivo)",antes});
       f.confirmada=true; // la carga directa siempre la hace un admin
-      save();toast(completa?"🕰️ Corregido — la versión anterior quedó en el historial":"Resultado cargado ✓");render();
-      res(true);
+      const sv=save();toast(completa?"🕰️ Corregido — la versión anterior quedó en el historial":"Resultado cargado ✓");render();
+      sv.then(res); // las fotos se ofrecen solo si el resultado quedó guardado
     };
     d.querySelector("[data-x]").onclick=()=>{uiClose();res(false);};
   });
@@ -1633,6 +1698,8 @@ function probsKia(parejas){ // probabilidad de Kia por pareja (softmax del ratin
   return ex.map(e=>Math.max(1,Math.round(e/s*100)));
 }
 function miProdeDe(f){ return USER?PRODE.find(x=>x.f===f&&x.uid===USER.uid):null; }
+// 🔒 el prode de una fecha se cierra a las 8:30 hora Argentina (UTC-3) de ese día, igual que en firestore.rules
+function prodeCerrado(f){ return Date.now()>=new Date(f+"T08:30:00-03:00").getTime(); }
 function tablaProde(){ // 🎯 ranking de adivinos
   const cerradas={}; allFechas().forEach(f=>{if(f.campeon)cerradas[f.f]=f.campeon;});
   const m={};
@@ -1813,7 +1880,7 @@ function vSorteo(){
         }).join("");})()}
         <div class="sortcol co-S">
           <div class="sh" style="color:#22c55e">🎁 Sorpresas<small id="cnt-S"></small></div>
-          ${looseNames().map(n=>`<button class="ptoggle k-S ${SEL.has(n)?'on':''}" data-tog="${esc(n)}">${esc(n)}${coponDe(n)?` <small style="opacity:.75">(${coponDe(n)})</small>`:""}</button>`).join("")||'<div class="note" style="font-size:12px;margin-bottom:6px">—</div>'}
+          ${looseNames().map(n=>`<button class="ptoggle k-S ${SEL.has(n)?'on':''}" data-tog="${esc(n)}">${esc(n)}${coponDe(n)?` <small style="opacity:.75">(${esc(coponDe(n))})</small>`:""}</button>`).join("")||'<div class="note" style="font-size:12px;margin-bottom:6px">—</div>'}
           <div style="display:flex;gap:5px;margin-top:6px">
             <input id="newsorp" placeholder="Nuevo…" style="flex:1;min-width:0;padding:8px">
             <button class="btn sm" id="addsorp" style="padding:7px 11px">+</button>
@@ -1920,7 +1987,7 @@ function revelar(orden,{sup,problemas,seedRaw,manual}){
       out.innerHTML=`
       <div class="pairwrap">${orden.map((p,i)=>`
         <div class="pcard" style="animation-delay:${first?(i*0.3).toFixed(1):0}s"><div class="no">${i+1}</div>
-          ${p.map((x,j)=>`<div class="pl swapable" data-swap="${i}:${j}"><span class="cchip ${COL[x.c]||"ch0"}">${x.c||"·"}</span>${esc(x.n)}</div>`).join('<div class="amp">&</div>')}
+          ${p.map((x,j)=>`<div class="pl swapable" data-swap="${i}:${j}"><span class="cchip ${COL[x.c]||"ch0"}">${esc(x.c||"·")}</span>${esc(x.n)}</div>`).join('<div class="amp">&</div>')}
         </div>`).join("")}
       </div>
       <div class="note" style="margin-top:8px;font-size:12px">✏️ ¿Quedó alguien mal parado? <b>Tocá un nombre y después otro</b> para intercambiarlos — los cruces se rearman solos.</div>
@@ -2000,6 +2067,104 @@ function bigShow(orden,sup,manual){ // 📺 sorteo a pantalla completa, para pro
 }
 
 /* ---------- ADMIN ---------- */
+const RXFECHA=/^\d{4}-\d{2}-\d{2}$/;
+const listaTxt=(x,min,max)=>Array.isArray(x)&&x.length>=(min||0)&&x.length<=(max||99)&&x.every(n=>typeof n==="string");
+function propMal(p){ // 📥 una propuesta la puede escribir cualquiera: si trae algo raro, no se muestra ni se confirma
+  if(typeof p.f!=="string"||!RXFECHA.test(p.f))return "fecha rara";
+  if(p.campeon!=null&&!listaTxt(p.campeon,2,3))return "campeón raro";
+  if(p.pala!=null&&!listaTxt(p.pala,2,3))return "cuchara rara";
+  if(p.mvp!=null&&typeof p.mvp!=="string")return "MVP raro";
+  if(p.sinCafe!=null&&!listaTxt(p.sinCafe))return "café raro";
+  return "";
+}
+function propNoCoincide(p,fe){ // ¿lo propuesto es de las parejas/jugadores de esa fecha?
+  const igual=(a,b)=>a.length===b.length&&a.every(n=>b.includes(n));
+  const js=fe.parejas.flat();
+  if(p.campeon&&!fe.parejas.some(t=>igual(t,p.campeon)))return "el campeón no es una pareja de esa fecha";
+  if(p.pala&&!fe.parejas.some(t=>igual(t,p.pala)))return "la cuchara no es una pareja de esa fecha";
+  if(p.mvp&&!js.includes(p.mvp))return "el MVP no jugó esa fecha";
+  if(Array.isArray(p.sinCafe)&&!p.sinCafe.every(n=>js.includes(n)))return "en el café hay alguien que no jugó";
+  return "";
+}
+/* ♻️ Reemplazar TODA la nube (Importar / Subir los datos de este dispositivo):
+   validar, mostrar qué cambia y bajar un respaldo de la nube actual antes de pisarla */
+function fechaMal(f){
+  if(!f||typeof f!=="object")return "hay una fecha que no es un objeto";
+  if(typeof f.f!=="string"||!RXFECHA.test(f.f))return `hay una fecha con día raro (${String(f.f).slice(0,20)})`;
+  if(!Array.isArray(f.parejas)||!f.parejas.every(t=>listaTxt(t,1)))return `la fecha ${f.f} no tiene parejas válidas`;
+  if(f.campeon!=null&&f.campeon!==false&&!listaTxt(f.campeon))return `el campeón del ${f.f} es raro`;
+  if(f.pala!=null&&f.pala!==false&&!listaTxt(f.pala))return `la cuchara del ${f.f} es rara`;
+  if(f.mvp!=null&&f.mvp!==false&&typeof f.mvp!=="string")return `el MVP del ${f.f} es raro`;
+  if(f.sinCafe!=null&&!listaTxt(f.sinCafe))return `el café del ${f.f} es raro`;
+  return "";
+}
+function datosMal(d){ // "" si son datos de la app bien armados; si no, qué tienen de raro
+  if(!d||typeof d!=="object"||!Array.isArray(d.jugadores)||!Array.isArray(d.fechas))return "no tiene jugadores y fechas";
+  if(d.jugadores.some(j=>!j||typeof j.n!=="string"||!j.n.trim()))return "hay un jugador sin nombre";
+  for(const f of d.fechas){const m=fechaMal(f);if(m)return m;}
+  if(d.historial!=null){
+    if(!Array.isArray(d.historial))return "el historial de temporadas es raro";
+    for(const t of d.historial){if(!t||!Array.isArray(t.fechas))return "hay una temporada sin fechas";for(const f of t.fechas){const m=fechaMal(f);if(m)return m;}}
+  }
+  return "";
+}
+function resumenCambio(antes,despues,lblAntes,lblDespues){ // 🔎 vista previa: qué hay ahora, qué queda y qué cambia
+  const desc=d=>{const fs=(d.fechas||[]).map(f=>f.f).sort();return `<b>${fs.length}</b> fechas (última: ${fs.length?fmtFecha(fs[fs.length-1]):"—"}) · <b>${(d.jugadores||[]).length}</b> jugadores${(d.historial||[]).length?` · ${d.historial.length} temporadas cerradas`:""}`;};
+  const lista=a=>a.length>6?a.slice(0,6).join(", ")+` y ${a.length-6} más`:a.join(", ");
+  let h=`<div class="note" style="margin:6px 0">📍 <b>${lblAntes}:</b> ${antes?desc(antes):"vacía (no hay nada)"}<br>➡️ <b>${lblDespues}:</b> ${desc(despues)}</div>`;
+  if(!antes)return h;
+  const res=f=>JSON.stringify([f.parejas,f.campeon||null,f.pala==null?null:f.pala,f.mvp==null?null:f.mvp,Array.isArray(f.sinCafe)?f.sinCafe:null]);
+  const mapa=d=>{const m={};(d.fechas||[]).forEach(f=>{if(!(f.f in m))m[f.f]=f;});return m;};
+  const A=mapa(antes),B=mapa(despues);
+  const se=Object.keys(A).filter(k=>!(k in B)).sort().reverse(), entran=Object.keys(B).filter(k=>!(k in A)).sort().reverse();
+  const cambian=Object.keys(A).filter(k=>k in B&&res(A[k])!==res(B[k])).sort().reverse();
+  const jA=(antes.jugadores||[]).map(j=>j.n),jB=(despues.jugadores||[]).map(j=>j.n);
+  const jSe=jA.filter(n=>!jB.includes(n)),jEntran=jB.filter(n=>!jA.includes(n));
+  const cop=(despues.jugadores||[]).filter(j=>{const a=(antes.jugadores||[]).find(x=>x.n===j.n);return a&&a.c!==j.c;}).map(j=>j.n);
+  const rows=[];
+  if(se.length)rows.push(`<span class="warn">🗑️ Se pierden ${se.length} fecha${se.length===1?"":"s"}:</span> ${esc(lista(se.map(fmtFecha)))}`);
+  if(entran.length)rows.push(`➕ Entran ${entran.length} fecha${entran.length===1?"":"s"}: ${esc(lista(entran.map(fmtFecha)))}`);
+  if(cambian.length)rows.push(`✏️ Cambian parejas o resultados en ${cambian.length}: ${esc(lista(cambian.map(fmtFecha)))}`);
+  if(jSe.length)rows.push(`<span class="warn">👥 Salen del plantel:</span> ${esc(lista(jSe))}`);
+  if(jEntran.length)rows.push(`👥 Entran al plantel: ${esc(lista(jEntran))}`);
+  if(cop.length)rows.push(`🎯 Cambia el copón de: ${esc(lista(cop))}`);
+  return h+`<div class="note" style="margin:6px 0">${rows.length?rows.join("<br>"):"✓ Mismas fechas, resultados y plantel (cambian solo detalles)."}</div>`;
+}
+function hoyISO(){const h=new Date();return h.getFullYear()+"-"+String(h.getMonth()+1).padStart(2,"0")+"-"+String(h.getDate()).padStart(2,"0");}
+function descargarJSON(txt,nombre){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([txt],{type:"application/json"}));a.download=nombre;document.body.appendChild(a);a.click();a.remove();}
+function bajarRespaldo(motivo){ // ⬇️ copia de lo que hay en la nube AHORA (o en este dispositivo, sin nube)
+  let txt=CLOUD?CLOUD_JSON:JSON.stringify(DATA);
+  if(!txt)return false;
+  try{txt=JSON.stringify(JSON.parse(txt),null,2);}catch(e){}
+  descargarJSON(txt,`copones-respaldo-${motivo}-${hoyISO()}.json`);
+  return true;
+}
+function nubeAhora(){ try{return CLOUD_JSON?JSON.parse(CLOUD_JSON):null;}catch(e){return null;} }
+async function subirEsteDispositivo(){ // ☁️ solo tiene sentido si la nube está vacía o difiere de lo que hay acá
+  if(!hayNubeFresca()){toast("📴 Todavía no hay una copia fresca de la nube: no se sube nada",4500);return;}
+  if(CLOUD_JSON&&CLOUD_JSON===JSON.stringify(DATA)){toast("✓ La nube ya tiene exactamente estos datos: no hay nada para subir",3500);return;}
+  const g0=NUBE_GEN, nube=nubeAhora();
+  if(!await uiConfirm("☁️ ¿Subir los datos de este dispositivo?",resumenCambio(nube,DATA,"La nube ahora","Queda (este dispositivo)")+
+    `<div class="note" style="margin-top:6px"><b>Se reemplaza TODO lo de la nube, para todos.</b> ${nube?"Antes se descarga una copia de la nube actual a este dispositivo.":""}</div>`,"☁️ Sí, subir todo","Mejor no"))return;
+  if(g0!==NUBE_GEN){toast(AVISO_PISADA,4500);render();return;}
+  if(nube)bajarRespaldo("antes-de-subir");
+  save(g0);
+}
+async function importarDatos(txt){ // ⬆️ Importar un JSON (ej. un backup de la carpeta backups/)
+  let d; try{d=JSON.parse(txt);}catch(e){toast("Archivo inválido: no es un JSON",4500);return;}
+  const mal=datosMal(d); if(mal){toast("Archivo inválido: "+mal,6000);return;}
+  if(CLOUD&&!hayNubeFresca()){toast("📴 Todavía no hay una copia fresca de la nube: probá en un rato",4500);return;}
+  const pp=PARCHE_PENDIENTE, nuevo=normalizeData(d); PARCHE_PENDIENTE=pp; // la vista previa muestra lo que realmente va a quedar (con los parches)
+  const g0=NUBE_GEN, ahora=CLOUD?(CLOUDSTATE==="vacia"?null:DATA):DATA;
+  if(!await uiConfirm("⚠️ ¿Reemplazar TODO con este archivo?",resumenCambio(ahora,nuevo,CLOUD?"La nube ahora":"Ahora","Queda (el archivo)")+
+    `<div class="note" style="margin-top:6px"><b>Se reemplaza TODO${CLOUD?", para todos":""}.</b> ${ahora?`Antes se descarga una copia de lo actual a este dispositivo (copones-respaldo-antes-de-importar-${hoyISO()}.json).`:""}</div>`,"♻️ Sí, reemplazar todo","Mejor no"))return;
+  if(g0!==NUBE_GEN){toast(AVISO_PISADA,4500);render();return;}
+  if(ahora)bajarRespaldo("antes-de-importar");
+  DATA=nuevo;
+  render();
+  save(g0).then(ok=>{if(ok)toast(CLOUD?"📥 Datos importados y guardados en la nube ☁️":"📥 Datos importados ✓",3500);});
+}
+function fmtTs(ms){const d=new Date(ms);return typeof ms==="number"&&!isNaN(d.getTime())?fmtFecha(d.toISOString().slice(0,10)):"";}
 function vAdmin(){
   if(CLOUD&&!ISADMIN){
     return `<section>
@@ -2014,7 +2179,7 @@ function vAdmin(){
   }
   const cloudCard = CLOUD
     ? `<div class="card pad" style="border-color:#2a6e3f;margin-bottom:12px">
-        <div class="tag" style="color:#4ade80;margin-bottom:6px">☁️ Nube conectada · ${CLOUDSTATE==="ok"?"✓ con datos":CLOUDSTATE==="vacia"?"⚠️ VACÍA":CLOUDSTATE==="error"?"⚠️ error":"…"}</div>
+        <div class="tag" style="color:${CLOUDSTATE==="ok"?"#4ade80":"#ffcf4d"};margin-bottom:6px">${CLOUDSTATE==="ok"?"☁️ Nube conectada · ✓ con datos":CLOUDSTATE==="vacia"?"☁️ Nube conectada · ⚠️ VACÍA":CLOUDSTATE==="error"?"⚠️ Sin conexión con la nube · recargá la app":"⏳ Conectando con la nube… (no guardes todavía)"}</div>
         <div class="note">Ingresaste como <b>${esc(USER?USER.email:"")}</b> (admin 👑). Los datos viven en la base de datos: todo lo que guardes <b>lo ven todos al instante</b>, sin tocar GitHub.</div>
         <button class="btn sm block" style="margin-top:10px" id="pushCloud">☁️ Subir los datos de este dispositivo a la nube</button>
       </div>`
@@ -2026,6 +2191,11 @@ function vAdmin(){
     ? `<div class="card pad" style="border-color:#7c3aed;margin-bottom:12px">
         <div class="tag" style="color:#c4b5fd;margin-bottom:8px">📥 Propuestas de resultados (${PROPUESTAS.length})</div>
         ${PROPUESTAS.map(p=>{
+          const mal=propMal(p);
+          if(mal)return `<div class="adline" style="flex-wrap:wrap">
+          <span class="an">⚠️ Propuesta inválida (${esc(mal)}) · no se puede confirmar<br><small style="color:var(--muted)">propuso ${esc(p.por||"?")}</small></span>
+          <button data-propno="${esc(p.id)}" title="Descartar">🗑️ Descartar</button>
+        </div>`;
           const bits=[];
           if(p.campeon)bits.push(`🚗 ${esc(p.campeon.join(" & "))}`);
           if(p.pala)bits.push(`🥄 ${esc(p.pala.join(" & "))}`);
@@ -2079,7 +2249,7 @@ function vAdmin(){
           <option value="cafe">☕ Café</option>
           <option value="perfil">👤 Foto de perfil</option>
         </select></div>
-        <div class="field" style="flex:1;min-width:130px" id="fkFechaWrap"><label>Fecha</label><select id="fkFecha">${DATA.fechas.map(f=>`<option value="${f.f}">${fmtFecha(f.f)}${f.campeon?" 🏆":""}</option>`).join("")}</select></div>
+        <div class="field" style="flex:1;min-width:130px" id="fkFechaWrap"><label>Fecha</label><select id="fkFecha">${DATA.fechas.map(f=>`<option value="${esc(f.f)}">${fmtFecha(f.f)}${f.campeon?" 🏆":""}</option>`).join("")}</select></div>
         <div class="field hidden" style="flex:1;min-width:130px" id="fkJugWrap"><label>Jugador</label><select id="fkJug">${DATA.jugadores.map(j=>`<option value="${esc(j.n)}">${esc(j.n)}</option>`).join("")}</select></div>
       </div>
       <button class="btn block" id="fkPub" style="margin-top:10px">📷 Elegir foto, recortar y publicar</button>
@@ -2104,9 +2274,9 @@ function vAdmin(){
       <div class="tag" style="margin-bottom:8px">👥 Usuarios logueados (${USUARIOS.length})</div>
       <div class="note" style="margin-bottom:8px">Cuentas de Google que entraron a la app, con qué jugador se vincularon (⭐) y su último ingreso.</div>
       ${USUARIOS.length
-        ?[...USUARIOS].sort((a,b)=>(b.ultimoIngreso||0)-(a.ultimoIngreso||0)).map(u=>`<div class="adline">
+        ?[...USUARIOS].sort((a,b)=>(+b.ultimoIngreso||0)-(+a.ultimoIngreso||0)).map(u=>`<div class="adline">
             <span class="an">${u.jugador?`⭐ <b>${esc(u.jugador)}</b>`:`<span style="color:var(--muted)">sin vincular</span>`}
-            <small style="color:var(--muted)">· ${esc(u.email||u.nombre||"?")}${u.ultimoIngreso?` · último ingreso: ${fmtFecha(new Date(u.ultimoIngreso).toISOString().slice(0,10))}`:""}</small></span>
+            <small style="color:var(--muted)">· ${esc(u.email||u.nombre||"?")}${fmtTs(u.ultimoIngreso)?` · último ingreso: ${fmtTs(u.ultimoIngreso)}`:""}</small></span>
           </div>`).join("")
         :'<div class="empty" style="padding:10px">Todavía no entró nadie logueado</div>'}
       <div class="note" style="margin-top:6px">Vinculados: <b>${USUARIOS.filter(u=>u.jugador).length}</b> de ${USUARIOS.length} · Jugadores del plantel: ${DATA.jugadores.length}</div>
@@ -2204,18 +2374,20 @@ function bind(){
       const yo=ASIS.find(a=>a.f===pj.f&&a.uid===USER.uid);
       try{
         if(yo){await deleteDoc(doc(db,"asistencia",`${pj.f}_${USER.uid}`));toast("😴 Te bajaste del domingo");}
-        else{await setDoc(doc(db,"asistencia",`${pj.f}_${USER.uid}`),{f:pj.f,uid:USER.uid,nombre:(USER.displayName||USER.email||"?").split(" ")[0],jugador:MYPLAYER||null,ts:Date.now()});toast("🙋 ¡Anotado para el domingo!");}
+        else{await setDoc(doc(db,"asistencia",`${pj.f}_${USER.uid}`),{f:pj.f,uid:USER.uid,nombre:(USER.displayName||USER.email||"?").split(" ")[0],jugador:MILINK||null,ts:Date.now()});toast("🙋 ¡Anotado para el domingo!");}
       }catch(e){toast("⚠️ No se pudo (¿reglas actualizadas?)");}
     };
     // 🎲 prode
     const pr=document.getElementById("prodeBtn");
     if(pr)pr.onclick=async()=>{
       const f=DATA.fechas[0]; if(!f||f.campeon)return;
-      const v=await uiPick("🎲 ¿Quién se lleva el Kia?",`${fmtFecha(f.f)} · elegí tu pareja campeona (podés cambiarlo hasta el domingo)`,
+      if(prodeCerrado(f.f)){toast("🔒 El prode cerró a las 8:30 del domingo");render();return;}
+      const v=await uiPick("🎲 ¿Quién se lleva el Kia?",`${fmtFecha(f.f)} · elegí tu pareja campeona (podés cambiarlo hasta el domingo a las 8:30)`,
         f.parejas.map((p,i)=>({label:`${i+1}) ${esc(p.join(" & "))} <small>🎯 ${probsKia(f.parejas)[i]}% según la historia</small>`,value:p})));
       if(v===undefined)return;
+      if(prodeCerrado(f.f)){toast("🔒 El prode cerró a las 8:30 del domingo");render();return;}
       try{
-        await setDoc(doc(db,"prode",`${f.f}_${USER.uid}`),{f:f.f,uid:USER.uid,nombre:(USER.displayName||USER.email||"?").split(" ")[0],jugador:MYPLAYER||null,pareja:v,ts:Date.now()});
+        await setDoc(doc(db,"prode",`${f.f}_${USER.uid}`),{f:f.f,uid:USER.uid,nombre:(USER.displayName||USER.email||"?").split(" ")[0],jugador:MILINK||null,pareja:v,ts:Date.now()});
         toast("🎲 ¡Pronóstico jugado! Se resuelve el domingo");
       }catch(e){toast("⚠️ No se pudo guardar (¿reglas actualizadas?)");}
     };
@@ -2307,7 +2479,7 @@ function bind(){
     if(me)me.onclick=()=>{
       if(!USER){toast("Primero ingresá con Google (🔑 arriba)");window.fbLogin();return;}
       setDoc(doc(db,"usuarios",USER.uid),{email:USER.email,jugador:PARAM,vinculadoEl:Date.now()},{merge:true})
-        .then(()=>{MYPLAYER=PARAM;try{localStorage.setItem("cb_myplayer",PARAM);}catch(e){}toast("⭐ ¡Perfil vinculado!");render();})
+        .then(()=>{MILINK=MYPLAYER=PARAM;try{localStorage.setItem("cb_myplayer",PARAM);}catch(e){}toast("⭐ ¡Perfil vinculado!");render();})
         .catch(()=>toast("⚠️ No se pudo vincular (faltan las reglas nuevas)"));
     };
     const fo=document.getElementById("fotoBtn"); // 📸 foto de perfil directa (admin)
@@ -2396,14 +2568,17 @@ function bind(){
   if(VIEW==="admin"){
     if(CLOUD&&!ISADMIN)return; // vista bloqueada: no hay controles que atar
     const pc=document.getElementById("pushCloud");
-    if(pc)pc.onclick=()=>save();
+    if(pc)pc.onclick=subirEsteDispositivo;
     document.querySelectorAll("[data-propok]").forEach(b=>b.onclick=()=>{
       const p=PROPUESTAS.find(x=>x.id===b.dataset.propok); if(!p)return;
+      if(propMal(p)){toast("⚠️ Propuesta inválida: descartala con 🗑️",4500);return;}
       const fe=DATA.fechas.find(x=>x.f===p.f);
-      if(!fe){toast("Esa fecha ya no existe");}
-      else{ fe.campeon=p.campeon||fe.campeon; fe.pala=p.pala||fe.pala; fe.mvp=p.mvp||fe.mvp; if(Array.isArray(p.sinCafe))fe.sinCafe=p.sinCafe; fe.confirmada=true; save(); }
-      deleteDoc(doc(db,"propuestas",p.id)).catch(()=>{});
-      toast("✔️ Resultado confirmado");
+      if(!fe){toast("Esa fecha ya no existe");deleteDoc(doc(db,"propuestas",p.id)).catch(()=>{});return;}
+      const nc=propNoCoincide(p,fe); if(nc){toast(`⚠️ No se confirmó: ${nc}. Revisala y cargala a mano`,5000);return;}
+      fe.campeon=p.campeon||fe.campeon; fe.pala=p.pala||fe.pala; fe.mvp=p.mvp||fe.mvp; if(Array.isArray(p.sinCafe))fe.sinCafe=p.sinCafe; fe.confirmada=true;
+      save().then(ok=>{ if(!ok)return; // si no entró en la nube, la propuesta queda para reintentar
+        deleteDoc(doc(db,"propuestas",p.id)).catch(()=>{});
+        toast("✔️ Resultado confirmado"); });
     });
     document.querySelectorAll("[data-propno]").forEach(b=>b.onclick=()=>{
       deleteDoc(doc(db,"propuestas",b.dataset.propno)).then(()=>toast("Propuesta descartada")).catch(()=>{});
@@ -2516,7 +2691,8 @@ function bind(){
     document.querySelectorAll("[data-delf]").forEach(b=>b.onclick=async()=>{
       const f=DATA.fechas[+b.dataset.delf]; if(!f)return;
       if(!await uiConfirm("🗑️ ¿Borrar esta fecha?",`La del <b>${fmtFecha(f.f)}</b> (${f.parejas.length} parejas). Esto no se puede deshacer.`,"🗑️ Sí, borrala"))return;
-      DATA.fechas.splice(+b.dataset.delf,1);save();render();
+      const i=DATA.fechas.indexOf(f); if(i<0){toast(AVISO_PISADA,4500);render();return;} // la nube cambió mientras preguntaba
+      DATA.fechas.splice(i,1);save();render();
     });
     document.querySelectorAll("[data-editcamp]").forEach(b=>b.onclick=()=>cargarResultado(DATA.fechas[+b.dataset.editcamp]));
     document.querySelectorAll("[data-hist]").forEach(b=>b.onclick=()=>{
@@ -2534,13 +2710,14 @@ function bind(){
     document.querySelectorAll("[data-delj]").forEach(b=>b.onclick=async()=>{
       const j=DATA.jugadores[+b.dataset.delj]; if(!j)return;
       if(!await uiConfirm(`🗑️ ¿Sacar a ${esc(j.n)} del plantel?`,"Su historial de fechas no se borra: va a aparecer como jugador sorpresa.","🗑️ Sí, sacalo"))return;
-      DATA.jugadores.splice(+b.dataset.delj,1);save();render();
+      const i=DATA.jugadores.indexOf(j); if(i<0){toast(AVISO_PISADA,4500);render();return;} // la nube cambió mientras preguntaba
+      DATA.jugadores.splice(i,1);save();render();
     });
     document.getElementById("addj").onclick=()=>{const v=document.getElementById("newj").value.trim();if(!v)return;DATA.jugadores.push({n:v,c:""});save();render();};
-    document.getElementById("expData").onclick=()=>{const blob=new Blob([JSON.stringify(DATA,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="copones-datos.json";a.click();toast("Datos exportados ✓");};
+    document.getElementById("expData").onclick=()=>{descargarJSON(JSON.stringify(DATA,null,2),"copones-datos.json");toast("Datos exportados ✓");};
     document.getElementById("copyData").onclick=async()=>{try{await navigator.clipboard.writeText(JSON.stringify(DATA,null,2));toast("Datos copiados");}catch(e){toast("No se pudo copiar");}};
     document.getElementById("impData").onclick=()=>document.getElementById("impFile").click();
-    document.getElementById("impFile").onchange=e=>{const file=e.target.files[0];if(!file)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(d.jugadores&&d.fechas){DATA=d;save();toast("Datos importados");render();}else toast("Archivo inválido");}catch(err){toast("Archivo inválido");}};r.readAsText(file);};
+    document.getElementById("impFile").onchange=e=>{const file=e.target.files[0];e.target.value="";if(!file)return;const r=new FileReader();r.onload=()=>importarDatos(r.result);r.readAsText(file);};
   }
 }
 
