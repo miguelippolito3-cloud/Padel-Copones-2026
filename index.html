@@ -489,6 +489,13 @@ const PARCHES=[
     if(!d.fechas.some(x=>x.f==="2026-10-11")) d.fechas.push({f:"2026-10-11",parejas:[["Pati","Taya"],["Negro Mon","Mike Rafa"],["TIS","Pachuza"],["Chichón","Chuck"],["Alba","MP"],["Don (Diegui)","Bati"],["Matso","Calambre"],["Track","Toto"]],campeon:null,pala:null,mvp:null});
     d.fechas.sort((a,b)=>b.f.localeCompare(a.f));
   }},
+  { id:"2026-10-11-resultado", aplicar:d=>{ // resultado del 11/10 (lo pasó Mike): Kia Matso & Ficky (Calambre), la cuchara a Patán (Pati), se fueron sin café TIS, Pati y Chichón
+    const f=d.fechas.find(x=>x.f==="2026-10-11"); if(!f)return;
+    if(!f.campeon){ f.campeon=["Matso","Calambre"]; f.confirmada=true; }
+    if(f.pala===undefined||f.pala===null)f.pala=["Pati"];
+    if(!Array.isArray(f.sinCafe))f.sinCafe=["TIS","Pati","Chichón"];
+    if(f.campeon.join()==="Matso,Calambre")f.fotoQuien={...(f.fotoQuien||{}),kia:["Matso","Calambre"]};
+  }},
 ];
 let PARCHE_PENDIENTE=false; // se aplicó un parche que la nube todavía no tiene
 const LS="padel_espn_v1";
@@ -1205,7 +1212,7 @@ function vInicio(){
           ${ult.campeon.map(n=>{const r=rachaKiasDe(n,ult.f);return r>=2?`<div class="tag">🔥 <b style="color:var(--hotT)">${r}ª Kia al hilo de ${esc(n)}</b></div>`:"";}).join("")}
           <div class="tag">${ult.confirmada?'<span style="color:var(--okT)">✅ Fecha confirmada por el organizador</span>':'<span style="color:var(--warnT)">⏳ A confirmar por el organizador</span>'}</div>
         </div>
-        ${(()=>{const figs=[["kia","🚗 Campeones"],["pala","🥄 Cuchara"],["mvp","🎖️ MVP"],["cafe","☕ Café"]].map(([t,lbl])=>fotoCandidatas(t,ult.f).map((s,i)=>{
+        ${(()=>{const figs=[["kia","🚗 Campeones"],["pala","🥄 Cuchara"],["mvp","🎖️ MVP"],["cafe","☕ Café"],["grupo","👥 El grupo"]].map(([t,lbl])=>fotoCandidatas(t,ult.f).map((s,i)=>{
             const n=/^fotos\/.*-(\d)\.jpg$/.exec(s), tras=n?s.replace(/-\d\.jpg$/,+n[1]>2?`-${n[1]-1}.jpg`:".jpg"):"", espera=tras&&!FOTO_OK.has(tras); // la -2 se pide recién si cargó la base (nada de 404 a ciegas)
             return `<figure${espera?' style="display:none"':""}><img ${espera?`data-sig="${esc(fotoMin(s))}" data-tras="${esc(tras)}"`:`src="${esc(fotoMin(s))}"`} alt="" loading="lazy" decoding="async" data-foto="${esc(s)}" data-fototit="${lbl} · ${fmtFecha(ult.f)}" data-fotoquien="${esc(quienEnFoto(ult,t,s))}" style="cursor:pointer" onerror="fotoFail(this)" onload="fotoOk(this)"><figcaption>${i?"":lbl}</figcaption></figure>`;}).join("")).join("");
           return figs?`<div class="kiagrid fotoblock" style="grid-template-columns:repeat(4,1fr);margin-top:12px">${figs}</div>`:"";})()}
@@ -1755,6 +1762,7 @@ async function ofrecerFotos(f){ // 📸 después de cargar el resultado: fotos d
       {label:"🥄 Foto de la cuchara de madera",value:"pala"},
       {label:"🎖️ Foto del MVP",value:"mvp"},
       {label:"☕ Foto del café",value:"cafe"},
+      {label:"👥 Foto del grupo",value:"grupo"},
       {label:primera?"✅ Ahora no, sin fotos":"✅ Listo, no hay más fotos",value:"fin"}
     ]);
     if(!v||v==="fin")return;
@@ -2702,6 +2710,7 @@ function vAdmin(){
           <option value="pala">🥄 Cuchara de madera</option>
           <option value="mvp">🎖️ MVP</option>
           <option value="cafe">☕ Café</option>
+          <option value="grupo">👥 El grupo</option>
           <option value="perfil">👤 Foto de perfil</option>
         </select></div>
         <div class="field" style="flex:1;min-width:130px" id="fkFechaWrap"><label>Fecha</label><select id="fkFecha">${DATA.fechas.map(f=>`<option value="${esc(f.f)}">${fmtFecha(f.f)}${f.campeon?" 🏆":""}</option>`).join("")}</select></div>
