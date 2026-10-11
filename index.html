@@ -607,6 +607,9 @@ const PARCHES=[
       .filter(x=>!ya.some(y=>y.n===x.n&&[y.a,y.b].some(t=>t.join()===yo.join())));
     if(nuevos.length)f.partidos=[...ya,...nuevos];
   }},
+  { id:"2026-10-11-mvp-ficky", aplicar:d=>{ // el MVP del 11/10 (Ficky) no llegó a la nube: un celu con la app vieja abierta guardó el resultado sin él
+    const f=d.fechas.find(x=>x.f==="2026-10-11"); if(f&&(f.mvp===undefined||f.mvp===null))f.mvp="Calambre";
+  }},
 ];
 let PARCHE_PENDIENTE=false; // se aplicó un parche que la nube todavía no tiene
 const LS="padel_espn_v1";
