@@ -426,11 +426,12 @@ const PARCHES=[
     if(!d.fechas.some(x=>x.f==="2026-10-11")) d.fechas.push({f:"2026-10-11",parejas:[["Pati","Taya"],["Negro Mon","Mike Rafa"],["TIS","Pachuza"],["Chichón","Chuck"],["Alba","MP"],["Don (Diegui)","Bati"],["Matso","Calambre"],["Track","Toto"]],campeon:null,pala:null,mvp:null});
     d.fechas.sort((a,b)=>b.f.localeCompare(a.f));
   }},
-  { id:"2026-10-11-resultado", aplicar:d=>{ // resultado del 11/10 (lo pasó Mike): Kia Matso & Ficky (Calambre), la cuchara a Patán (Pati), se fueron sin café TIS, Pati y Chichón
+  { id:"2026-10-11-resultado", aplicar:d=>{ // resultado del 11/10 (lo pasó Mike): Kia Matso & Ficky (Calambre), MVP Ficky, la cuchara a Patán (Pati), se fueron sin café TIS, Pati y Chichón
     const f=d.fechas.find(x=>x.f==="2026-10-11"); if(!f)return;
     if(!f.campeon){ f.campeon=["Matso","Calambre"]; f.confirmada=true; }
     if(f.pala===undefined||f.pala===null)f.pala=["Pati"];
     if(!Array.isArray(f.sinCafe))f.sinCafe=["TIS","Pati","Chichón"];
+    if(f.mvp===undefined||f.mvp===null)f.mvp="Calambre"; // MVP: Ficky
     if(f.campeon.join()==="Matso,Calambre")f.fotoQuien={...(f.fotoQuien||{}),kia:["Matso","Calambre"]};
   }},
 ];
