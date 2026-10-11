@@ -151,6 +151,22 @@
   .kiagrid figure{margin:0}
   .kiagrid img{width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:10px;border:1px solid var(--line)}
   .kiagrid figcaption{font-family:"Barlow Condensed";font-weight:600;font-size:12px;color:var(--muted);margin-top:3px;text-align:center}
+  /* ⚔️ cara a cara: A | dato | B */
+  .cmphead,.cmpr{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:6px;text-align:center}
+  .cmphead{margin-bottom:6px}
+  .cmphead b{display:block;font-size:15px;margin-top:6px;overflow-wrap:anywhere}
+  .cmpav{width:56px;height:56px;border-radius:14px;margin:0 auto;display:flex;align-items:center;justify-content:center;font-family:"Anton";font-size:24px;color:#0a0b0d}
+  img.cmpav{display:block;object-fit:cover;border:1px solid var(--line)}
+  .cmpvs{font-family:"Anton",Impact,sans-serif;font-size:22px;color:var(--red2)}
+  .cmpr{padding:7px 0;border-bottom:1px solid var(--line)}
+  .cmpr:last-child{border-bottom:0}
+  .cmpr b{font-family:"Anton",Impact,sans-serif;font-weight:400;font-size:22px;line-height:1.1}
+  .cmpr b.w{color:var(--goldT)}
+  .cmpr span{font-size:12.5px;color:var(--muted);min-width:104px}
+  .cmpr.sm b{font-size:18px}
+  .cmpbox{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:10px}
+  .cmpbox summary{cursor:pointer;min-height:44px;display:flex;align-items:center;list-style:none} .cmpbox summary::-webkit-details-marker{display:none}
+  .cmpbox summary:before{content:"▸";margin-right:6px} .cmpbox details[open] summary:before{content:"▾"}
   .phead .pn{font-family:"Anton";font-size:30px;line-height:1}
   .phead .pm{font-family:"Barlow Condensed";font-weight:600;color:var(--muted);letter-spacing:.06em;margin-top:4px}
   .row{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--line);font-size:14.5px}
@@ -862,11 +878,10 @@ function uiShow(title,sub,inner){
   d.querySelector("[data-mx]").onclick=()=>{const c=d.querySelector("[data-x]");if(c)c.click();else uiClose();};
   return d;
 }
-function uiPick(title,sub,options){ // options: [{label,sub?,value}] → Promise<value|undefined si cancela>
+function uiPick(title,sub,options,grid){ // options: [{label,sub?,value}] → Promise<value|undefined si cancela>. grid: en 2 columnas (listas largas)
   return new Promise(res=>{
-    const d=uiShow(title,sub,
-      options.map((o,i)=>`<button class="mopt" data-i="${i}">${o.label}${o.sub?`<small>${o.sub}</small>`:""}</button>`).join("")+
-      `<button class="mcancel" data-x>Cancelar</button>`);
+    const ops=options.map((o,i)=>`<button class="mopt" data-i="${i}">${o.label}${o.sub?`<small>${o.sub}</small>`:""}</button>`).join("");
+    const d=uiShow(title,sub,(grid?`<div class="mgrid">${ops}</div>`:ops)+`<button class="mcancel" data-x>Cancelar</button>`);
     d.querySelectorAll(".mopt").forEach(b=>b.onclick=()=>{uiClose();res(options[+b.dataset.i].value);});
     d.querySelector("[data-x]").onclick=()=>{uiClose();res(undefined);};
     d.onclick=e=>{if(e.target===d){uiClose();res(undefined);}};
@@ -1444,6 +1459,7 @@ function vPerfil(name){
           ${d.victima?`<div class="row" data-perfil="${esc(d.victima.n)}" style="padding:7px 0"><span class="muted">😎 ${yo?"Tu":"Su"} víctima favorita</span><span><span class="pname"><b>${esc(d.victima.n)}</b></span> <b style="color:var(--okT)">${d.victima.w}-${d.victima.l}</b></span></div>`:""}
           ${d.verdugo?`<div class="row" data-perfil="${esc(d.verdugo.n)}" style="padding:7px 0"><span class="muted">😈 ${yo?"Te":"Lo"} tiene de hijo</span><span><span class="pname"><b>${esc(d.verdugo.n)}</b></span> <b style="color:var(--red2)">${d.verdugo.w}-${d.verdugo.l}</b></span></div>`:""}
         </div>`:"";})()}
+      ${!gen&&ind.pj?`<button class="btn ghost block" id="cmpBtn" style="margin-top:12px">⚔️ Comparar con…</button>`:""}
       ${badgesHTML(ind,name)}
       ${comps.length?`<div class="row" style="display:block;border-bottom:0">
         <div class="tag" style="margin-bottom:8px">Compañeros más frecuentes</div>
@@ -2034,6 +2050,91 @@ function duelosDe(name){ // ⚔️ por títulos del día: gano si salí campeón
   const victima=[...arr].filter(x=>x.w>=2&&x.w>x.l).sort((a,b)=>(b.w-b.l)-(a.w-a.l)||b.w-a.w)[0]; // solo con récord a favor
   const verdugo=[...arr].filter(x=>x.l>=2&&x.l>x.w).sort((a,b)=>(b.l-b.w)-(a.l-a.w)||b.l-a.l)[0];  // solo con récord en contra
   return {victima:victima||null,verdugo:verdugo||null};
+}
+/* ---------- ⚔️ CARA A CARA: solo con lo que hay (fechas jugadas y premios del día; no hay resultados partido a partido) ---------- */
+const NIVEL_ICO=["🥄","🎾","🎖️","🚗"]; // quién terminó mejor esa fecha: cuchara < sin premio < MVP < Kia
+function caraACara(a,b){
+  const ind=statsInd(allFechas()), vacio=n=>({n,pj:0,camp:0,pala:0,mvp:0,cafe:0,cafeReg:0}); // los mismos números del perfil
+  const r={a,b,A:ind[a]||vacio(a),B:ind[b]||vacio(b),juntos:0,kiasJ:0,palasJ:0,cruces:[],sinPremios:0,ga:0,gb:0,iguales:0};
+  const losDos=l=>Array.isArray(l)&&l.includes(a)&&l.includes(b);
+  fechasJugadas(allFechas()).forEach(f=>{
+    const ta=f.parejas.find(p=>p.includes(a)), tb=f.parejas.find(p=>p.includes(b));
+    if(!ta||!tb)return; // no coincidieron
+    if(ta===tb){r.juntos++;if(losDos(f.campeon))r.kiasJ++;if(losDos(f.pala))r.palasJ++;return;}
+    if(!f.campeon){r.sinPremios++;return;} // sin el campeón cargado no se sabe quién terminó mejor
+    const nv=n=>f.campeon.includes(n)?3:f.mvp===n?2:Array.isArray(f.pala)&&f.pala.includes(n)?0:1;
+    const x=nv(a), y=nv(b); r.cruces.push({f:f.f,x,y});
+    if(x>y)r.ga++; else if(y>x)r.gb++; else r.iguales++;
+  });
+  r.prox=allFechas().filter(f=>!fechaJugada(f)).map(f=>{const ta=f.parejas.find(p=>p.includes(a)),tb=f.parejas.find(p=>p.includes(b));return ta&&tb?{f:f.f,juntos:ta===tb}:null;}).filter(Boolean); // 📅 ya sorteada
+  return r;
+}
+function vsAvatar(n){
+  const src=fotoPerfil(n), foto=src&&!FOTO_MAL.has(src), ini=`<div class="cmpav" style="background:${avatarColor(n)}${foto?";display:none":""}">${initials(n)}</div>`;
+  return foto?`<img class="cmpav" src="${esc(fotoMin(src))}" alt="" decoding="async" data-foto="${esc(src)}" onerror="fotoAvFail(this,'flex')">${ini}`:ini;
+}
+function vsHTML(r){
+  const {A,B}=r, pct=s=>s.pj?Math.round(s.camp/s.pj*100):0, pl=(n,s,p)=>n+" "+(n===1?s:p);
+  const fila=(lbl,x,y,vx,vy)=>{ // vx/vy: valores para marcar al mejor (sin ellos, no se marca)
+    const w=vx===undefined||vx===vy?0:vx>vy?1:2;
+    return `<div class="cmpr"><b${w===1?' class="w"':""}>${x}</b><span>${lbl}</span><b${w===2?' class="w"':""}>${y}</b></div>`;};
+  const tot=r.cruces.length+r.sinPremios;
+  return `<div class="cmphead">
+      <div>${vsAvatar(r.a)}<b>${esc(r.a)}</b>${chip(r.a)}</div><div class="cmpvs">VS</div><div>${vsAvatar(r.b)}<b>${esc(r.b)}</b>${chip(r.b)}</div>
+    </div>
+    ${r.prox.map(p=>`<div class="note" style="text-align:center;color:var(--aT)">📅 ${fmtFecha(p.f)}: ${p.juntos?"juegan juntos":"se cruzan en la misma fecha"}</div>`).join("")}
+    <div class="cmpbox">
+      ${fila("📅 Fechas",A.pj,B.pj)}
+      ${fila("🚗 Kias",A.camp,B.camp,A.camp,B.camp)}
+      ${fila("📈 Efectividad",pct(A)+"%",pct(B)+"%",pct(A),pct(B))}
+      ${fila("🎖️ MVP",A.mvp,B.mvp,A.mvp,B.mvp)}
+      ${fila("🥄 Cucharas",A.pala,B.pala)}
+      ${A.cafeReg||B.cafeReg?fila("☕ Se quedó al café",A.cafeReg?A.cafe+"/"+A.cafeReg:"—",B.cafeReg?B.cafe+"/"+B.cafeReg:"—"):""}
+    </div>
+    <div class="cmpbox">
+      <div class="tag">🤝 Juntos como pareja</div>
+      ${r.juntos?`<div style="margin-top:4px"><b>${pl(r.juntos,"fecha","fechas")}</b> · 🚗 ${pl(r.kiasJ,"Kia","Kias")} juntos${r.palasJ?` · 🥄 ${pl(r.palasJ,"cuchara","cucharas")}`:""}</div>`
+        :`<div class="note" style="margin-top:4px">Nunca jugaron juntos.</div>`}
+    </div>
+    <div class="cmpbox">
+      <div class="tag">⚔️ En la misma fecha, en distinta pareja</div>
+      ${!tot?`<div class="note" style="margin-top:4px">Nunca coincidieron en una fecha en parejas distintas.</div>`:`
+      <div style="margin-top:4px"><b>${pl(tot,"fecha","fechas")}</b>${r.sinPremios?` <span class="note">(${r.sinPremios} sin premios cargados: no cuentan)</span>`:""}</div>
+      ${r.cruces.length?`<div class="cmpr" style="border-bottom:0;margin-top:4px"><b${r.ga>r.gb?' class="w"':""} style="font-size:30px">${r.ga}</b><span>terminó mejor${r.iguales?`<br>${pl(r.iguales,"igualada","igualadas")}`:""}</span><b${r.gb>r.ga?' class="w"':""} style="font-size:30px">${r.gb}</b></div>
+      ${(()=>{const ka=r.cruces.filter(c=>c.x===3).length, kb=r.cruces.filter(c=>c.y===3).length; // = el récord de ⚔️ Duelos del perfil
+        return `<div class="cmpr" style="border-bottom:0"><b${ka>kb?' class="w"':""} style="font-size:18px">${ka}</b><span>🚗 Kias en esas fechas</span><b${kb>ka?' class="w"':""} style="font-size:18px">${kb}</b></div>`;})()}
+      <div class="note">Según los premios del día: 🚗 Kia › 🎖️ MVP › 🎾 sin premio › 🥄 cuchara. No hay resultados partido a partido.</div>
+      <details><summary class="tag">Fecha por fecha</summary>
+        ${r.cruces.map(c=>`<div class="cmpr sm"><b>${NIVEL_ICO[c.x]}</b><span>${fmtFecha(c.f)}</span><b>${NIVEL_ICO[c.y]}</b></div>`).join("")}
+      </details>`:""}`}
+    </div>`;
+}
+function vsTexto(r){ // 📲 para el grupo
+  const {A,B}=r, pct=s=>s.pj?Math.round(s.camp/s.pj*100):0, pl=(n,s,p)=>n+" "+(n===1?s:p);
+  return `⚔️ *${r.a} vs ${r.b}* · Copones Buena Vista\n📅 Fechas: ${A.pj} - ${B.pj}\n🚗 Kias: ${A.camp} - ${B.camp} (${pct(A)}% - ${pct(B)}%)\n🎖️ MVP: ${A.mvp} - ${B.mvp}\n🥄 Cucharas: ${A.pala} - ${B.pala}\n`
+    +`🤝 Juntos: ${r.juntos?pl(r.juntos,"fecha","fechas")+" · 🚗 "+pl(r.kiasJ,"Kia","Kias"):"nunca"}\n`
+    +(r.cruces.length?`⚔️ En distinta pareja terminó mejor: ${r.a} ${r.ga} · ${r.b} ${r.gb}${r.iguales?` · igualadas ${r.iguales}`:""} (por premios del día)\n`:"")
+    +`👉 ${location.href.split("#")[0]}#perfil=${encodeURIComponent(r.a)}`;
+}
+async function abrirComparar(a){ // ⚔️ elegir con quién (los que más coincidieron con él, primero) y mostrar el cara a cara
+  const co={}, ind=statsInd(allFechas()); // co[n] = [en distinta pareja, juntos]
+  fechasJugadas(allFechas()).forEach(f=>{const t=f.parejas.find(p=>p.includes(a)); if(!t)return;
+    f.parejas.forEach(p=>p.forEach(n=>{ if(n===a||esGenerico(n))return; const c=co[n]||(co[n]=[0,0]); c[p===t?1:0]++; }));});
+  const vez=n=>(co[n]||[0,0])[0]+(co[n]||[0,0])[1];
+  const nombres=Object.keys(ind).filter(n=>n!==a&&ind[n].pj>0).sort((x,y)=>(y===MYPLAYER)-(x===MYPLAYER)||vez(y)-vez(x)||x.localeCompare(y));
+  if(!nombres.length){toast("No hay con quién compararlo todavía");return;}
+  const b=await uiPick(`⚔️ ¿Con quién comparás a ${esc(a)}?`,"⚔️ fechas en distinta pareja · 🤝 fechas juntos",
+    nombres.map(n=>{const c=co[n]||[0,0];return {label:`${n===MYPLAYER?"⭐ ":""}${esc(n)}`,sub:vez(n)?`⚔️ ${c[0]} · 🤝 ${c[1]}`:"nunca coincidieron",value:n};}),true);
+  if(!b)return;
+  const r=caraACara(a,b);
+  const d=uiShow("⚔️ Cara a cara","Fechas jugadas, todas las temporadas",vsHTML(r)+`
+    <button class="mok" data-ok style="margin-top:12px">📲 Mandarlo al grupo</button>
+    <button class="btn ghost sm block" data-cmpver style="margin-top:8px">👤 Ver el perfil de ${esc(b)}</button>
+    <button class="mcancel" data-x>Cerrar</button>`);
+  d.querySelector("[data-ok]").onclick=async()=>{const t=vsTexto(r); if(navigator.share){try{await navigator.share({text:t});}catch(e){}} else shareWA(t);};
+  d.querySelector("[data-cmpver]").onclick=()=>{uiClose(); setTimeout(()=>go("perfil",b),150);}; // primero se va la entrada del modal del historial
+  d.querySelector("[data-x]").onclick=uiClose;
+  d.onclick=e=>{if(e.target===d)uiClose();};
 }
 const SECRETOS_TOTAL=10;
 function logrosSecretos(name,ind){ // 🏅 se revelan solo al desbloquearse
@@ -2817,6 +2918,7 @@ function bind(){
 
   if(VIEW==="perfil"){
     const vb=document.getElementById("volverBtn"); if(vb)vb.onclick=volver;
+    const cb=document.getElementById("cmpBtn"); if(cb)cb.onclick=()=>abrirComparar(PARAM); // ⚔️ cara a cara
     const sh=document.getElementById("share");
     if(sh)sh.onclick=async()=>{
       const url=location.href.split("#")[0]+"#perfil="+encodeURIComponent(PARAM);
