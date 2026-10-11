@@ -20,6 +20,9 @@
     --txt:#f4f6fa; --muted:#98a0ad; --red:#e2102a; --red2:#ff3350;
     --A:#f5c518; --B:#2f7bff; --C:#fb923c; --D:#a78bfa;
     --gold:#ffd34d; --spoon:#8a8f99;
+    /* 🎨 acentos usados como TEXTO: en oscuro son los mismos; el modo claro los oscurece para que se lean sobre blanco */
+    --aT:var(--A); --bT:var(--B); --cT:var(--C); --dT:var(--D); --goldT:var(--gold);
+    --okT:#4ade80; --warnT:#ffcf4d; --hotT:#fb923c; --lilaT:#c4b5fd; --sorT:#22c55e;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
@@ -89,9 +92,9 @@
   .pills .pill:nth-child(1){border-top:3px solid var(--A)}
   .pills .pill:nth-child(2){border-top:3px solid var(--C)}
   .pills .pill:nth-child(3){border-top:3px solid var(--B)}
-  .pills .pill:nth-child(1) .n{color:var(--A)}
-  .pills .pill:nth-child(2) .n{color:var(--C)}
-  .pills .pill:nth-child(3) .n{color:var(--B)}
+  .pills .pill:nth-child(1) .n{color:var(--aT)}
+  .pills .pill:nth-child(2) .n{color:var(--cT)}
+  .pills .pill:nth-child(3) .n{color:var(--bT)}
 
   /* tables / standings */
   table{width:100%;border-collapse:collapse}
@@ -113,7 +116,7 @@
   .rk.g1{background:var(--gold);color:#111}.rk.g2{background:#c9ccd4;color:#111}.rk.g3{background:#cd7f43;color:#111}
   .pname{font-weight:700;display:inline-flex;align-items:center;gap:8px;cursor:pointer}
   .big{font-family:"Anton";font-size:18px}
-  .cA{color:var(--A)}.cB{color:var(--B)}.cC{color:var(--C)}.cD{color:var(--D)}
+  .cA{color:var(--aT)}.cB{color:var(--bT)}.cC{color:var(--cT)}.cD{color:var(--dT)}
   .cchip{display:inline-block;min-width:18px;text-align:center;font-family:"Anton";font-size:11px;padding:1px 5px;border-radius:5px;color:#0a0b0d}
   .chA{background:var(--A)}.chB{background:var(--B);color:#fff}.chC{background:var(--C)}.chD{background:var(--D)}.ch0{background:#3a3f49;color:#aeb4bf}
 
@@ -174,8 +177,8 @@
   .sortcols{display:grid;grid-template-columns:repeat(5,1fr);gap:9px}
   @media(max-width:700px){.sortcols{grid-template-columns:repeat(2,1fr)}}
   .sortcol{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px;border-top:3px solid var(--cc,#444)}
-  .co-A{--cc:var(--A)}.co-B{--cc:var(--B)}.co-C{--cc:var(--C)}.co-D{--cc:var(--D)}.co-S{--cc:#22c55e}
-  .sortcol .sh{font-family:"Anton";font-size:15px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:baseline;color:var(--cc,#ccc)}
+  .co-A{--cc:var(--A);--ccT:var(--aT)}.co-B{--cc:var(--B);--ccT:var(--bT)}.co-C{--cc:var(--C);--ccT:var(--cT)}.co-D{--cc:var(--D);--ccT:var(--dT)}.co-S{--cc:#22c55e;--ccT:var(--sorT)}
+  .sortcol .sh{font-family:"Anton";font-size:15px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:baseline;color:var(--ccT,var(--cc,#ccc))}
   .sortcol .sh small{font-family:"Inter";font-weight:700;font-size:11px;color:var(--muted)}
   .ptoggle{display:block;width:100%;text-align:center;background:var(--card2);border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:8px 6px;margin-bottom:6px;font-weight:700;font-size:13px;cursor:pointer;transition:.12s;font-family:inherit}
   .ptoggle:last-child{margin-bottom:0}
@@ -185,18 +188,18 @@
   @media(max-width:820px){.plcols{grid-template-columns:repeat(2,1fr)}}
   @media(max-width:460px){.plcols{grid-template-columns:1fr}}
   .plcol{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;border-top:3px solid var(--cc,#444)}
-  .plhead{font-family:"Anton";font-size:13px;letter-spacing:.03em;color:var(--cc,#ccc);margin-bottom:10px;display:flex;align-items:center;gap:7px;text-transform:uppercase}
+  .plhead{font-family:"Anton";font-size:13px;letter-spacing:.03em;color:var(--ccT,var(--cc,#ccc));margin-bottom:10px;display:flex;align-items:center;gap:7px;text-transform:uppercase}
   .plcard{background:var(--card2);border:1px solid var(--line);border-radius:9px;padding:9px 10px;margin-bottom:7px;cursor:pointer;transition:.12s}
   .plcard:hover{border-color:var(--cc,#888);transform:translateX(2px)}
   .plcard:last-child{margin-bottom:0}
   .pln{font-weight:800;font-size:14.5px;line-height:1.15}
-  .pchamp{color:var(--gold);font-size:12px;font-weight:700}
+  .pchamp{color:var(--goldT);font-size:12px;font-weight:700}
   .plr{font-family:"Barlow Condensed";font-weight:600;color:var(--muted);font-size:12px;letter-spacing:.02em;margin-top:2px}
-  .pls{font-family:"Barlow Condensed";font-weight:700;color:var(--cc,#888);font-size:10.5px;margin-top:5px;text-transform:uppercase;letter-spacing:.07em}
+  .pls{font-family:"Barlow Condensed";font-weight:700;color:var(--ccT,var(--cc,#888));font-size:10.5px;margin-top:5px;text-transform:uppercase;letter-spacing:.07em}
   .co-inv{--cc:#7a828f}
 
   .note{color:var(--muted);font-size:13px;line-height:1.55}
-  .warn{color:#ffcf4d;font-weight:700}
+  .warn{color:var(--warnT);font-weight:700}
   .empty{color:var(--muted);text-align:center;padding:26px 10px}
 
   /* admin list edit */
@@ -301,8 +304,15 @@
   body.light{
     --bg:#eef1f6; --bg2:#e3e7ee; --card:#ffffff; --card2:#e9edf3; --line:#d3d9e2;
     --txt:#131720; --muted:#5c6573;
+    /* 🎨 acentos oscurecidos para TEXTO: contraste AA (4.5:1) sobre blanco y sobre los grises claros */
+    --red2:#b8102a; --spoon:#636a77;
+    --aT:#7a5c00; --bT:#1a56c4; --cT:#b93a0a; --dT:#6d28d9; --goldT:#8a5a00;
+    --okT:#147a3a; --warnT:#8f5600; --hotT:#b93a0a; --lilaT:#6d28d9; --sorT:#147a3a;
   }
-  body.light .top{background:linear-gradient(180deg,#ffffff,#eef1f6);border-bottom-color:var(--line)}
+  body.light .co-inv{--ccT:#5c6573}
+  /* 🌓 lo que sigue oscuro en claro: la barra de arriba (así la hora y la batería del iPhone instalado, que van en blanco, se leen), el modo pantalla y el visor de fotos */
+  body.light .top,body.light .bigshow,body.light #fotoview{--txt:#f4f6fa;--muted:#98a0ad;--card2:#1d2027;--line:#2a2e37;--red2:#ff3350;color:var(--txt)}
+  body.light #fotoview{background:rgba(0,0,0,.88)}
   body.light .ticker{background:#e3e7ee;border-bottom-color:var(--line)}
   body.light .ticker .run b{color:#131720}
   body.light .nav{background:rgba(255,255,255,.95);border-top-color:var(--line)}
@@ -314,6 +324,7 @@
 </style>
 </head>
 <body>
+<script>try{if(localStorage.getItem("cb_theme")==="light")document.body.classList.add("light");}catch(e){} /* 🌓 el tema antes del primer pintado (sin destello oscuro) */</script>
 
 <div class="top">
   <div class="topin">
@@ -327,7 +338,7 @@
 <div class="rainbow"></div>
 <div class="ticker"><span class="run" id="ticker"></span></div>
 
-<div class="wrap" id="app"></div>
+<div class="wrap" id="app"><div class="empty">Cargando… si tarda, revisá la señal 📶</div></div>
 
 <div class="nav"><div class="navin" id="nav">
   <a href="#inicio" data-go="inicio" class="on"><span class="ic">🏠</span>Inicio</a>
@@ -731,9 +742,36 @@ function fotoPerfil(n){const nube=fotoNube("perfil",slugName(n));if(nube)return 
 function slugName(n){return String(n).replace(/\(.*?\)/g,"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^A-Za-z0-9]/g,"").toLowerCase();}
 function fmtFecha(s){const x=/^(\d{4})-(\d{2})-(\d{2})$/.exec(s);if(!x)return esc(String(s)); // lo que no es una fecha vuelve escapado (puede venir de afuera)
   const ms=["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];return `${+x[3]} ${ms[+x[2]-1]||x[2]} ${x[1]}`;}
-const FOTO_MAL=new Set(); // 📸 fotos que ya fallaron: no se vuelven a dibujar (si no, cada redibujo hace saltar la pantalla)
+// 📸 fotos que ya fallaron: no se vuelven a pedir ni a dibujar (si no, cada redibujo hace saltar la pantalla).
+// Las del repo se recuerdan en la sesión (sessionStorage): recargar no repite los 404 de las -2/-3/-4 que no existen
+const FOTO_MAL=new Set((()=>{try{return JSON.parse(sessionStorage.getItem("cb_fotomal")||"[]");}catch(e){return [];}})());
+const FOTO_OK=new Set(); // 📸 las que sí cargaron (la -2 se prueba recién cuando cargó la base, y así)
+function fotoMal(s){
+  if(!s)return; FOTO_MAL.add(s);
+  if(navigator.onLine&&/^fotos\//.test(s))try{sessionStorage.setItem("cb_fotomal",JSON.stringify([...FOTO_MAL].filter(x=>/^fotos\//.test(x))));}catch(e){} // sin señal no se anota: puede existir
+}
+function fotoMin(s){ // 📸 miniatura liviana (360 px) de una foto del repo: fotos/<tipo>/min/<nombre>.jpg; si ya falló, la grande
+  const m=/^(fotos\/[a-z]+\/)([^/]+\.jpg)$/.exec(s||""), mi=m&&m[1]+"min/"+m[2];
+  return mi&&!FOTO_MAL.has(mi)?mi:s;
+}
+window.fotoMinFail=img=>{ // faltaba la miniatura: pasa a la grande (data-foto). Devuelve true si probó con la grande
+  const s=img.getAttribute("src"), big=img.dataset.foto;
+  if(!big||s===big||FOTO_MAL.has(big))return false;
+  fotoMal(s); img.src=big; return true;
+};
+window.fotoOk=img=>{ // cargó: se anota y, si la que sigue (-2, -3…) esperaba a esta, ahora se prueba
+  const big=img.dataset.foto||img.getAttribute("src"); FOTO_OK.add(big);
+  const fg=img.closest("figure"), sig=fg&&fg.nextElementSibling, si=sig&&sig.querySelector("img[data-sig]");
+  if(si&&si.dataset.tras===big){sig.style.display="";si.src=si.dataset.sig;si.removeAttribute("data-sig");}
+};
+window.fotoAvFail=(img,disp)=>{ // avatar sin foto: queda la inicial / el emoji
+  if(fotoMinFail(img))return;
+  fotoMal(img.getAttribute("src")); fotoMal(img.dataset.foto);
+  img.style.display="none"; img.nextElementSibling.style.display=disp;
+};
 window.fotoFail=img=>{ // 📸 una foto que no existe se oculta; si en su bloque no queda ninguna, se va el bloque con su título
-  FOTO_MAL.add(img.getAttribute("src"));
+  if(fotoMinFail(img))return;
+  fotoMal(img.getAttribute("src")); fotoMal(img.dataset.foto);
   const fg=img.closest("figure"); if(fg)fg.style.display="none";
   const bl=img.closest(".fotoblock"); if(bl&&[...bl.querySelectorAll("figure")].every(f=>f.style.display==="none"))bl.style.display="none";
 };
@@ -1095,7 +1133,7 @@ function domingoHTML(prox){
     const mia=MYPLAYER?prox.parejas.findIndex(p=>p.includes(MYPLAYER)):-1;
     if(mia>=0){ const comp=prox.parejas[mia].filter(x=>x!==MYPLAYER);
       h+=`<div id="miPareja"${comp.length===1?` data-perfil="${esc(comp[0])}"`:""} style="margin-top:10px;padding:10px 12px;border-radius:11px;border:1px solid var(--A);background:rgba(245,197,24,.08)">
-        <div class="tag" style="color:var(--A)">⭐ Tu pareja${otra}</div>
+        <div class="tag" style="color:var(--aT)">⭐ Tu pareja${otra}</div>
         <div style="font-weight:800;font-size:17px;margin-top:2px">🎾 Jugás con ${esc(comp.join(" & ")||"—")} →</div>
         <div class="note" style="font-size:12px">Pareja ${mia+1} · 🎯 ${pr[mia]}% de chances de Kia</div>
       </div>`; }
@@ -1109,9 +1147,9 @@ function domingoHTML(prox){
         :CLOUD?`<button class="btn block" id="propBtn2" style="margin-top:10px;background:var(--card2);border:1px solid var(--line);color:var(--txt)">📝 Proponer resultado (lo aprueba el organizador)</button>`:"";
   }
   return `<div class="card pad" id="domingo" style="border-color:rgba(245,197,24,.45)">
-    <div class="tag" style="color:var(--A)">🎾 PRÓXIMA FECHA · ${fmtFecha(pj.f)} · 8:30</div>
+    <div class="tag" style="color:var(--aT)">🎾 PRÓXIMA FECHA · ${fmtFecha(pj.f)} · 8:30</div>
     <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap">
-      ${jugada?"":`<div id="cdown" class="anton" style="font-size:27px;color:var(--A)">…</div>`}<span class="tag">📍 Buena Vista</span>
+      ${jugada?"":`<div id="cdown" class="anton" style="font-size:27px;color:var(--aT)">…</div>`}<span class="tag">📍 Buena Vista</span>
     </div>
     <div class="note" id="convoca" style="color:var(--txt)">${estado}</div>
     ${h}
@@ -1137,12 +1175,14 @@ function vInicio(){
         <div class="champ"><div class="cup">🏆</div><div class="names">${esc(ult.campeon.join(" & "))}<small>Campeones del domingo</small></div></div>
         <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:12px">
           ${ult.pala?`<div class="tag">🥄 Cuchara de madera: <b style="color:var(--txt)">${esc(ult.pala.join(" & "))}</b></div>`:""}
-          ${ult.mvp?`<div class="tag">🎖️ MVP: <b style="color:var(--gold)">${esc(ult.mvp)}</b></div>`:""}
+          ${ult.mvp?`<div class="tag">🎖️ MVP: <b style="color:var(--goldT)">${esc(ult.mvp)}</b></div>`:""}
           ${ult.sinCafe&&ult.sinCafe.length?`<div class="tag">🏃 Sin café: <b style="color:var(--red2)">${esc(ult.sinCafe.join(", "))}</b></div>`:""}
-          ${ult.campeon.map(n=>{const r=rachaKiasDe(n,ult.f);return r>=2?`<div class="tag">🔥 <b style="color:#fb923c">${r}ª Kia al hilo de ${esc(n)}</b></div>`:"";}).join("")}
-          <div class="tag">${ult.confirmada?'<span style="color:#4ade80">✅ Fecha confirmada por el organizador</span>':'<span style="color:#ffcf4d">⏳ A confirmar por el organizador</span>'}</div>
+          ${ult.campeon.map(n=>{const r=rachaKiasDe(n,ult.f);return r>=2?`<div class="tag">🔥 <b style="color:var(--hotT)">${r}ª Kia al hilo de ${esc(n)}</b></div>`:"";}).join("")}
+          <div class="tag">${ult.confirmada?'<span style="color:var(--okT)">✅ Fecha confirmada por el organizador</span>':'<span style="color:var(--warnT)">⏳ A confirmar por el organizador</span>'}</div>
         </div>
-        ${(()=>{const figs=[["kia","🚗 Campeones"],["pala","🥄 Cuchara"],["mvp","🎖️ MVP"],["cafe","☕ Café"]].map(([t,lbl])=>fotoCandidatas(t,ult.f).map((s,i)=>`<figure><img src="${esc(s)}" alt="" loading="lazy" data-foto="${esc(s)}" data-fototit="${lbl} · ${fmtFecha(ult.f)}" data-fotoquien="${esc(quienEnFoto(ult,t,s))}" style="cursor:pointer" onerror="fotoFail(this)"><figcaption>${i?"":lbl}</figcaption></figure>`).join("")).join("");
+        ${(()=>{const figs=[["kia","🚗 Campeones"],["pala","🥄 Cuchara"],["mvp","🎖️ MVP"],["cafe","☕ Café"]].map(([t,lbl])=>fotoCandidatas(t,ult.f).map((s,i)=>{
+            const n=/^fotos\/.*-(\d)\.jpg$/.exec(s), tras=n?s.replace(/-\d\.jpg$/,+n[1]>2?`-${n[1]-1}.jpg`:".jpg"):"", espera=tras&&!FOTO_OK.has(tras); // la -2 se pide recién si cargó la base (nada de 404 a ciegas)
+            return `<figure${espera?' style="display:none"':""}><img ${espera?`data-sig="${esc(fotoMin(s))}" data-tras="${esc(tras)}"`:`src="${esc(fotoMin(s))}"`} alt="" loading="lazy" decoding="async" data-foto="${esc(s)}" data-fototit="${lbl} · ${fmtFecha(ult.f)}" data-fotoquien="${esc(quienEnFoto(ult,t,s))}" style="cursor:pointer" onerror="fotoFail(this)" onload="fotoOk(this)"><figcaption>${i?"":lbl}</figcaption></figure>`;}).join("")).join("");
           return figs?`<div class="kiagrid fotoblock" style="grid-template-columns:repeat(4,1fr);margin-top:12px">${figs}</div>`:"";})()}
         <div style="display:flex;gap:8px;margin-top:14px">
           <button class="btn" id="flyerBtn" style="flex:1.2;background:#25D366;color:#0a0b0d">🖼️ Flyer + texto al grupo</button>
@@ -1171,8 +1211,8 @@ function vInicio(){
     const mio=miProdeDe(fProde.f), cerrado=prodeCerrado(fProde.f);
     const cuantos=PRODE.filter(x=>x.f===fProde.f).length;
     return `<div class="card pad" style="border-color:#7c3aed">
-      <div class="tag" style="margin-bottom:6px;color:#c4b5fd">🎲 PRODE · ¿Quién se lleva el Kia?${cerrado?" · 🔒 CERRADO":""}</div>
-      ${mio?`<div class="note" style="margin-bottom:8px">Tu pronóstico: <b style="color:#c4b5fd">🎯 ${esc(Array.isArray(mio.pareja)?mio.pareja.map(nombreActual).join(" & "):"?")}</b></div>`
+      <div class="tag" style="margin-bottom:6px;color:var(--lilaT)">🎲 PRODE · ¿Quién se lleva el Kia?${cerrado?" · 🔒 CERRADO":""}</div>
+      ${mio?`<div class="note" style="margin-bottom:8px">Tu pronóstico: <b style="color:var(--lilaT)">🎯 ${esc(Array.isArray(mio.pareja)?mio.pareja.map(nombreActual).join(" & "):"?")}</b></div>`
            :`<div class="note" style="margin-bottom:8px">${cerrado?"No jugaste pronóstico esta vez.":"Jugá tu pronóstico hasta el domingo a las 8:30 (ahí se cierra). No vale plata, vale honor."}</div>`}
       ${cerrado?`<div class="note" id="prodeLock" style="text-align:center;font-weight:800">🔒 Prode cerrado desde las 8:30 del ${fmtFecha(fProde.f)}: ya no se puede jugar ni cambiar.<br>Se resuelve cuando se cargue el Kia 🚗</div>`
         :`<button class="btn block" id="prodeBtn" style="background:#7c3aed">${mio?"🎲 Cambiar mi pronóstico (hasta las 8:30)":"🎲 Hacer mi pronóstico"}</button>`}
@@ -1182,7 +1222,7 @@ function vInicio(){
   <section class="dash">
     ${CLOUD&&CLOUDSTATE==="conectando"&&!DATA.fechas.length?`<div class="card pad" style="text-align:center;margin-bottom:12px"><div style="font-size:30px">☁️</div><div class="note">Cargando datos de la nube…</div></div>`:""}
     ${ISADMIN&&CLOUD&&PROPUESTAS.length?`<div class="card pad" style="border-color:#7c3aed;box-shadow:0 0 14px rgba(124,58,237,.25)">
-      <div class="tag" style="margin-bottom:8px;color:#c4b5fd">📥 ${PROPUESTAS.length===1?"HAY 1 PROPUESTA":"HAY "+PROPUESTAS.length+" PROPUESTAS"} ESPERANDO TU CONFIRMACIÓN</div>
+      <div class="tag" style="margin-bottom:8px;color:var(--lilaT)">📥 ${PROPUESTAS.length===1?"HAY 1 PROPUESTA":"HAY "+PROPUESTAS.length+" PROPUESTAS"} ESPERANDO TU CONFIRMACIÓN</div>
       <div class="note" style="margin-bottom:10px">Alguien del grupo cargó datos de una fecha. Revisalos y confirmalos con un toque.</div>
       <button class="btn block" data-go2="admin" style="background:#7c3aed">👑 Revisar y confirmar</button>
     </div>`:""}
@@ -1195,9 +1235,9 @@ function vInicio(){
     ${ult&&ult.mvp?(()=>{ // 👑 Rey de la semana
       const dias=Math.max(0,Math.floor((Date.now()-new Date(ult.f+"T12:00:00").getTime())/86400000));
       return `<div class="card pad" style="margin-top:12px;display:flex;align-items:center;gap:14px;border-color:var(--gold)">
-        ${(()=>{const src=fotoPerfil(ult.mvp);return src?`<img src="${esc(src)}" alt="" data-foto="${esc(src)}" data-fototit="${esc(ult.mvp)}" style="width:66px;height:66px;border-radius:14px;object-fit:cover;border:2px solid var(--gold);cursor:pointer" onerror="this.style.display='none';this.nextElementSibling.style.display='block'"><div style="font-size:42px;display:none">👑</div>`:`<div style="font-size:42px">👑</div>`;})()}
+        ${(()=>{const src=fotoPerfil(ult.mvp);return src&&!FOTO_MAL.has(src)?`<img src="${esc(fotoMin(src))}" alt="" decoding="async" data-foto="${esc(src)}" data-fototit="${esc(ult.mvp)}" style="width:66px;height:66px;border-radius:14px;object-fit:cover;border:2px solid var(--gold);cursor:pointer" onerror="fotoAvFail(this,'block')"><div style="font-size:42px;display:none">👑</div>`:`<div style="font-size:42px">👑</div>`;})()}
         <div style="flex:1" data-perfil="${esc(ult.mvp)}">
-          <div class="tag" style="color:var(--gold)">👑 Rey de la semana</div>
+          <div class="tag" style="color:var(--goldT)">👑 Rey de la semana</div>
           <div class="anton" style="font-size:25px"><span class="pname">${esc(ult.mvp)}</span></div>
           <div class="note">MVP del ${fmtFecha(ult.f)} · reinando hace ${dias} día${dias===1?"":"s"}</div>
         </div>
@@ -1216,7 +1256,7 @@ function vInicio(){
       const tops=rachasTop(), rotas=rachasRotas();
       return tops.length||rotas.length?`<div class="card pad" style="margin-top:12px">
         <div class="tag" style="margin-bottom:6px">🔥 Rachas de asistencia</div>
-        ${tops.map(t=>`<div class="row" data-perfil="${esc(t.n)}" style="padding:4px 0"><span class="pname">${chip(t.n)} ${esc(t.n)}</span><b class="big" style="color:#fb923c">${t.r} seguidos 🔥</b></div>`).join("")}
+        ${tops.map(t=>`<div class="row" data-perfil="${esc(t.n)}" style="padding:4px 0"><span class="pname">${chip(t.n)} ${esc(t.n)}</span><b class="big" style="color:var(--hotT)">${t.r} seguidos 🔥</b></div>`).join("")}
         ${rotas.map(t=>`<div class="row" data-perfil="${esc(t.n)}" style="padding:4px 0"><span class="muted">💔 Se cortó la racha de <b>${t.r}</b> de <span class="pname" style="color:var(--txt)">${esc(t.n)}</span></span></div>`).join("")}
       </div>`:"";})()}
     ${(()=>{ // 📊 el dato del lunes
@@ -1228,8 +1268,8 @@ function vInicio(){
       </div>`:"";})()}
     ${(()=>{ // 📸 un día como hoy
       const r=recuerdoSemanal();
-      return r?`<div class="card pad" style="margin-top:12px;display:flex;gap:12px;align-items:center">
-        <img src="${esc(r.f.fotoKia)}" alt="" loading="lazy" data-foto="${esc(r.f.fotoKia)}" data-fototit="🏆 ${esc(r.f.campeon.join(' & '))} · ${fmtFecha(r.f.f)}" style="width:84px;height:104px;object-fit:cover;border-radius:10px;border:1px solid var(--line);cursor:pointer">
+      return r&&!FOTO_MAL.has(r.f.fotoKia)?`<div class="card pad fotoblock" style="margin-top:12px;display:flex;gap:12px;align-items:center">
+        <figure style="margin:0;flex:none"><img src="${esc(fotoMin(r.f.fotoKia))}" alt="" loading="lazy" decoding="async" onerror="fotoFail(this)" data-foto="${esc(r.f.fotoKia)}" data-fototit="🏆 ${esc(r.f.campeon.join(' & '))} · ${fmtFecha(r.f.f)}" style="display:block;width:84px;height:104px;object-fit:cover;border-radius:10px;border:1px solid var(--line);cursor:pointer"></figure>
         <div style="flex:1">
           <div class="tag">📸 Un día como hoy…</div>
           <div style="font-weight:800;margin-top:2px">${fmtFecha(r.f.f)} · hace ${r.meses} mes${r.meses===1?"":"es"}</div>
@@ -1298,9 +1338,9 @@ function tablaJug(){
   }
   const mv=(n,i)=>{
     if(RKSEASON!=="actual")return "";
-    if(prevPos[n]===undefined)return ' <small class="mvx" style="color:#4ade80;font-weight:800">🆕</small>';
+    if(prevPos[n]===undefined)return ' <small class="mvx" style="color:var(--okT);font-weight:800">🆕</small>';
     const d=prevPos[n]-pu[i];
-    if(d>0)return ` <small class="mvx" style="color:#4ade80;font-weight:800">▲${d}</small>`;
+    if(d>0)return ` <small class="mvx" style="color:var(--okT);font-weight:800">▲${d}</small>`;
     if(d<0)return ` <small class="mvx" style="color:var(--red2);font-weight:800">▼${-d}</small>`;
     return ' <small class="mvx" style="color:var(--muted)">=</small>';
   };
@@ -1308,10 +1348,10 @@ function tablaJug(){
     ${arr.map((p,i)=>`<tr data-perfil="${esc(p.n)}">
       <td><span class="rk ${pu[i]<=3?'g'+pu[i]:''}">${pu[i]}</span><span class="pname">${chip(p.n)} <span class="nm">${esc(p.n)}</span></span>${mv(p.n,i)}</td>
       <td style="text-align:right"><span class="big">${p.pj}</span></td>
-      <td style="text-align:right;color:var(--gold);font-weight:800">${p.camp||"·"}</td>
-      <td style="text-align:right;color:var(--A);font-weight:800">${p.mvp||"·"}</td>
+      <td style="text-align:right;color:var(--goldT);font-weight:800">${p.camp||"·"}</td>
+      <td style="text-align:right;color:var(--aT);font-weight:800">${p.mvp||"·"}</td>
       <td style="text-align:right;color:var(--spoon)">${p.pala||"·"}</td>
-      <td style="text-align:right;color:#4ade80;font-weight:800">${p.cafe||"·"}</td>
+      <td style="text-align:right;color:var(--okT);font-weight:800">${p.cafe||"·"}</td>
       <td style="text-align:right;color:var(--red2);font-weight:800">${p.nocafe||"·"}</td>
     </tr>`).join("")}
   </tbody></table>`;
@@ -1324,7 +1364,7 @@ function tablaPar(){
     ${arr.slice(0,40).map((p,i)=>`<tr>
       <td><span class="rk ${pu[i]<=3?'g'+pu[i]:''}">${pu[i]}</span> <b>${esc(p.a)}</b> <span class="amp">&</span> <b>${esc(p.b)}</b></td>
       <td style="text-align:right"><span class="big">${p.veces}</span></td>
-      <td style="text-align:right;color:var(--gold);font-weight:800">${p.camp||"·"}</td>
+      <td style="text-align:right;color:var(--goldT);font-weight:800">${p.camp||"·"}</td>
     </tr>`).join("")}
   </tbody></table>`;
 }
@@ -1380,28 +1420,28 @@ function vPerfil(name){
     <button class="btn ghost sm" id="volverBtn" style="margin-bottom:14px">${history.state&&history.state.desde?"← Volver":"← Perfiles"}</button>
     <div class="card pad">
       <div class="phead">
-        ${(()=>{const src=fotoPerfil(name);return src
-          ?`<img class="pav" src="${esc(src)}" alt="${esc(name)}" loading="lazy" data-foto="${esc(src)}" data-fototit="${esc(name)}" style="cursor:pointer" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="pav" style="background:${col};display:none">${initials(name)}</div>`
+        ${(()=>{const src=fotoPerfil(name);return src&&!FOTO_MAL.has(src)
+          ?`<img class="pav" src="${esc(fotoMin(src))}" alt="${esc(name)}" loading="lazy" decoding="async" data-foto="${esc(src)}" data-fototit="${esc(name)}" style="cursor:pointer" onerror="fotoAvFail(this,'flex')"><div class="pav" style="background:${col};display:none">${initials(name)}</div>`
           :`<div class="pav" style="background:${col}">${initials(name)}</div>`;})()}
         <div><div class="pn">${esc(name)}</div><div class="pm">${chip(name)} ${copName(c)}${realDe(name)?" · "+esc(realDe(name)):""}</div></div>
       </div>
       ${gen?`<div class="note" style="margin-top:10px">👥 «${esc(name)}» es un comodín que junta a distintas personas: no se rankea. Cada fecha le cuenta igual a su compañero.</div>`:""}
       <div class="pills" style="margin-top:14px">
         <div class="pill"><div class="n">${ind.pj}</div><div class="k">Fechas</div></div>
-        <div class="pill"><div class="n" style="color:var(--gold)">${ind.camp}</div><div class="k">🚗 Kias</div></div>
+        <div class="pill"><div class="n" style="color:var(--goldT)">${ind.camp}</div><div class="k">🚗 Kias</div></div>
         <div class="pill"><div class="n" style="color:var(--spoon)">${ind.pala}</div><div class="k">🥄 Cucharas</div></div>
       </div>
-      <div class="row"><span class="muted">🎖️ MVP del día</span><b class="big" style="color:var(--gold)">${ind.mvp||0}</b></div>
-      ${racha>=2?`<div class="row"><span class="muted">🔥 Racha de asistencia</span><b class="big" style="color:#fb923c">${racha} seguidas</b></div>`:""}
+      <div class="row"><span class="muted">🎖️ MVP del día</span><b class="big" style="color:var(--goldT)">${ind.mvp||0}</b></div>
+      ${racha>=2?`<div class="row"><span class="muted">🔥 Racha de asistencia</span><b class="big" style="color:var(--hotT)">${racha} seguidas</b></div>`:""}
       ${(()=>{const j=DATA.jugadores.find(x=>x.n===name);return j&&j.nac?`<div class="row"><span class="muted">🎂 Año de nacimiento</span><b class="big">${esc(String(j.nac))}</b></div>`:""})()}
-      ${ind.cafeReg?`<div class="row"><span class="muted">☕ Se quedó al café</span><b class="big" style="color:#4ade80">${ind.cafe}/${ind.cafeReg}</b></div>`:""}
+      ${ind.cafeReg?`<div class="row"><span class="muted">☕ Se quedó al café</span><b class="big" style="color:var(--okT)">${ind.cafe}/${ind.cafeReg}</b></div>`:""}
       ${ind.nocafe?`<div class="row"><span class="muted">🏃 Se rajó sin café</span><b class="big" style="color:var(--red2)">${ind.nocafe}</b></div>`:""}
       <div class="row"><span class="muted">Efectividad (Kias / fechas)</span><b class="big">${winPct}%</b></div>
       ${(()=>{ // ⚔️ duelos históricos (por títulos del día)
         const d=duelosDe(name);
         return d.victima||d.verdugo?`<div class="row" style="display:block">
           <div class="tag" style="margin-bottom:8px">⚔️ Duelos (por títulos del día)</div>
-          ${d.victima?`<div class="row" data-perfil="${esc(d.victima.n)}" style="padding:7px 0"><span class="muted">😎 ${yo?"Tu":"Su"} víctima favorita</span><span><span class="pname"><b>${esc(d.victima.n)}</b></span> <b style="color:#4ade80">${d.victima.w}-${d.victima.l}</b></span></div>`:""}
+          ${d.victima?`<div class="row" data-perfil="${esc(d.victima.n)}" style="padding:7px 0"><span class="muted">😎 ${yo?"Tu":"Su"} víctima favorita</span><span><span class="pname"><b>${esc(d.victima.n)}</b></span> <b style="color:var(--okT)">${d.victima.w}-${d.victima.l}</b></span></div>`:""}
           ${d.verdugo?`<div class="row" data-perfil="${esc(d.verdugo.n)}" style="padding:7px 0"><span class="muted">😈 ${yo?"Te":"Lo"} tiene de hijo</span><span><span class="pname"><b>${esc(d.verdugo.n)}</b></span> <b style="color:var(--red2)">${d.verdugo.w}-${d.verdugo.l}</b></span></div>`:""}
         </div>`:"";})()}
       ${badgesHTML(ind,name)}
@@ -1414,17 +1454,17 @@ function vPerfil(name){
         const kias=allFechas().filter(f=>f.campeon&&f.campeon.includes(name)).map(f=>({f,src:fotoNube("kia",f.f)||f.fotoKia||`fotos/kia/${f.f}.jpg`})).filter(k=>!FOTO_MAL.has(k.src));
         return kias.length?`<div class="row fotoblock" style="display:block;border-bottom:0">
           <div class="tag" style="margin-bottom:4px">🚗 Sus fotos con el Kia</div>
-          <div class="kiagrid">${kias.map(k=>`<figure><img src="${esc(k.src)}" alt="Campeones ${fmtFecha(k.f.f)}" loading="lazy" data-foto="${esc(k.src)}" data-fototit="🏆 ${esc(k.f.campeon.join(' & '))} · ${fmtFecha(k.f.f)}" data-fotoquien="${esc(quienEnFoto(k.f,"kia",k.src))}" style="cursor:pointer" onerror="fotoFail(this)"><figcaption>${fmtFecha(k.f.f)} · con ${esc((k.f.campeon.find(x=>x!==name))||"")}</figcaption></figure>`).join("")}</div>
+          <div class="kiagrid">${kias.map(k=>`<figure><img src="${esc(fotoMin(k.src))}" decoding="async" alt="Campeones ${fmtFecha(k.f.f)}" loading="lazy" data-foto="${esc(k.src)}" data-fototit="🏆 ${esc(k.f.campeon.join(' & '))} · ${fmtFecha(k.f.f)}" data-fotoquien="${esc(quienEnFoto(k.f,"kia",k.src))}" style="cursor:pointer" onerror="fotoFail(this)"><figcaption>${fmtFecha(k.f.f)} · con ${esc((k.f.campeon.find(x=>x!==name))||"")}</figcaption></figure>`).join("")}</div>
         </div>`:"";})()}
       ${(()=>{ // 🥄 galería de cucharas retratadas (solo si existe la foto del día)
         const palas=allFechas().filter(f=>Array.isArray(f.pala)&&f.pala.includes(name)&&!FOTO_MAL.has(fotoSrc("pala",f.f)));
         return palas.length?`<div class="row fotoblock" style="display:block;border-bottom:0">
           <div class="tag" style="margin-bottom:4px">🥄 Sus cucharas retratadas</div>
-          <div class="kiagrid">${palas.map(f=>{const s=fotoSrc("pala",f.f);return `<figure><img src="${esc(s)}" alt="" loading="lazy" data-foto="${esc(s)}" data-fototit="🥄 ${esc(f.pala.join(' & '))} · ${fmtFecha(f.f)}" data-fotoquien="${esc(quienEnFoto(f,"pala",s))}" style="cursor:pointer" onerror="fotoFail(this)"><figcaption>${fmtFecha(f.f)}</figcaption></figure>`;}).join("")}</div>
+          <div class="kiagrid">${palas.map(f=>{const s=fotoSrc("pala",f.f);return `<figure><img src="${esc(fotoMin(s))}" decoding="async" alt="" loading="lazy" data-foto="${esc(s)}" data-fototit="🥄 ${esc(f.pala.join(' & '))} · ${fmtFecha(f.f)}" data-fotoquien="${esc(quienEnFoto(f,"pala",s))}" style="cursor:pointer" onerror="fotoFail(this)"><figcaption>${fmtFecha(f.f)}</figcaption></figure>`;}).join("")}</div>
         </div>`:"";})()}
       <button class="btn block" id="share" style="margin-top:14px">📲 Compartir ${yo?"mis estadísticas":"las estadísticas de "+esc(name)}</button>
       ${CLOUD?(MYPLAYER===name
-        ?`<div class="note" style="text-align:center;margin-top:10px;color:var(--gold)">⭐ Este sos vos</div>`
+        ?`<div class="note" style="text-align:center;margin-top:10px;color:var(--goldT)">⭐ Este sos vos</div>`
         :(MILINK||MYPLAYER)?`<button class="btn ghost sm block" id="meBtn" style="margin-top:8px">⭐ ¿Sos vos? Cambiar tu vínculo a ${esc(name)}</button>`
         :`<button class="btn ghost block" id="meBtn" style="margin-top:8px">⭐ Este soy yo</button>`):""}
       ${CLOUD&&ISADMIN?`<button class="btn ghost sm block" id="fotoBtn" style="margin-top:8px">📸 ${fotoNube("perfil",slugName(name))?"Cambiar":"Ponerle"} foto de perfil</button>`:""}
@@ -1436,7 +1476,7 @@ function vPerfil(name){
         const comp=f.parejas.find(p=>p.includes(name)).filter(x=>x!==name).join(" & ")||"—";
         return `<div class="card pad" style="display:flex;align-items:center;gap:12px;border-style:dashed">
           <div style="font-size:22px">📅</div>
-          <div style="flex:1"><b>con ${esc(comp)}</b><div class="tag" style="margin-top:2px;color:var(--A)">${fmtFecha(f.f)} · Próxima fecha</div></div>
+          <div style="flex:1"><b>con ${esc(comp)}</b><div class="tag" style="margin-top:2px;color:var(--aT)">${fmtFecha(f.f)} · Próxima fecha</div></div>
         </div>`;
       }).join("")}
       ${fechas.length?fechas.map(f=>{
@@ -1731,7 +1771,7 @@ function resumenConvocados(scrollTop){
   msg.innerHTML=`📋 <b>${n} convocados</b> → <b>${pairs} parejas</b>${sup?` + 1 suplente rotativo`:""} → hacen falta <b>${nec} cancha${nec===1?"":"s"}</b>.<br>`+
     (falta>0
       ?`<span class="warn">⚠️ Con las ${CANCHAS_ABONO} del abono, falta reservar ${falta} más.</span>`
-      :`<span style="color:#4ade80">✓ Con las ${CANCHAS_ABONO} del abono estás cubierto.</span>`)+
+      :`<span style="color:var(--okT)">✓ Con las ${CANCHAS_ABONO} del abono estás cubierto.</span>`)+
     (SORTEO_FECHA?`<br>📅 Fecha detectada en el mensaje: <b>${fmtFecha(SORTEO_FECHA)}</b>`:"")+
     `<br><button class="btn" id="drawNow" style="margin-top:10px">🎾 Sortear ahora</button>`;
   const dn=document.getElementById("drawNow"); if(dn)dn.onclick=()=>draw();
@@ -1808,7 +1848,7 @@ function badgesHTML(ind,name){
     <div class="tag" style="margin-bottom:8px">Logros</div>
     <div style="display:flex;flex-wrap:wrap;gap:8px">
       ${b.map(([e,t])=>`<span style="background:var(--card2);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:700">${e} ${t}</span>`).join("")}
-      ${secretos.map(([e,t])=>`<span style="background:linear-gradient(135deg,#2a1f3d,#1d1428);border:1px solid #7c3aed;border-radius:999px;padding:6px 12px;font-size:13px;font-weight:700">✨ ${e} ${t}</span>`).join("")}
+      ${secretos.map(([e,t])=>`<span style="background:linear-gradient(135deg,#2a1f3d,#1d1428);border:1px solid #7c3aed;border-radius:999px;padding:6px 12px;font-size:13px;font-weight:700;color:#f4f6fa">✨ ${e} ${t}</span>`).join("")}
     </div>
     ${name&&faltan>0?`<div class="note" style="margin-top:8px;font-size:12px">🔒 Quedan <b>${faltan}</b> logros secretos por descubrir. Nadie sabe cuáles son…</div>`:""}
   </div>`;
@@ -1974,7 +2014,7 @@ function tablaProde(){ // 🎯 ranking de adivinos
   const arr=Object.values(m).sort((a,b)=>b.ok-a.ok||a.total-b.total);
   if(!arr.length)return `<div class="empty">Todavía no se resolvió ningún pronóstico 🎲<br><small>Se hacen desde el Inicio cuando están las parejas del domingo</small></div>`;
   return `<table class="stand"><thead><tr><th>Adivino</th><th>🎯 Aciertos</th><th>Intentos</th></tr></thead><tbody>
-    ${arr.map((p,i)=>`<tr><td><span class="rk ${i<3?'g'+(i+1):''}">${i+1}</span><b>${esc(p.n)}</b></td><td style="text-align:right;color:var(--gold);font-weight:800">${p.ok}</td><td style="text-align:right">${p.total}</td></tr>`).join("")}
+    ${arr.map((p,i)=>`<tr><td><span class="rk ${i<3?'g'+(i+1):''}">${i+1}</span><b>${esc(p.n)}</b></td><td style="text-align:right;color:var(--goldT);font-weight:800">${p.ok}</td><td style="text-align:right">${p.total}</td></tr>`).join("")}
   </tbody></table>`;
 }
 function duelosDe(name){ // ⚔️ por títulos del día: gano si salí campeón y vos no (jugando ambos)
@@ -2107,7 +2147,7 @@ function vSorteo(){
     </div>
 
     ${(()=>{const fp=fechaConParejas();return fp?`<div class="card pad" style="margin-top:12px;border-color:var(--A)">
-      <div class="tag" style="margin-bottom:8px;color:var(--A)">📅 Fecha del ${fmtFecha(fp.f)} ya cargada · ${fp.parejas.length} parejas</div>
+      <div class="tag" style="margin-bottom:8px;color:var(--aT)">📅 Fecha del ${fmtFecha(fp.f)} ya cargada · ${fp.parejas.length} parejas</div>
       <div class="note" style="margin-bottom:8px">Las parejas ya están definidas en la fecha cargada. Con un toque sorteo <b>los cruces y las canchas</b> (usa el Nº de la suerte de arriba, así es repetible).</div>
       ${fp.parejas.map((p,i)=>`<div class="row" style="padding:5px 0"><span><b>${i+1})</b> ${esc(p.join(" & "))}</span></div>`).join("")}
       <button class="btn block" id="btnFixFecha" style="margin-top:10px">🆚 Sortear fixture del ${fmtFecha(fp.f)}</button>
@@ -2130,7 +2170,7 @@ function vSorteo(){
     <div class="card pad" style="margin-top:12px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
         <div class="tag">Presentes hoy · <span id="selcount">${SEL.size}</span></div>
-        <div>${(()=>{const an=ASIS.filter(a=>a.f===proxJuego().f);return an.length?`<button class="btn ghost sm" id="asisMark" style="color:#4ade80">🙋 ${an.length} anotados</button> `:"";})()}<button class="btn ghost sm" id="selAll">Todos</button> <button class="btn ghost sm" id="selNone">Limpiar</button></div>
+        <div>${(()=>{const an=ASIS.filter(a=>a.f===proxJuego().f);return an.length?`<button class="btn ghost sm" id="asisMark" style="color:var(--okT)">🙋 ${an.length} anotados</button> `:"";})()}<button class="btn ghost sm" id="selAll">Todos</button> <button class="btn ghost sm" id="selNone">Limpiar</button></div>
       </div>
       <div class="sortcols">
         ${(()=>{const indS=statsInd(allFechas());return ["A","B","C","D"].map(c=>{
@@ -2142,7 +2182,7 @@ function vSorteo(){
           </div>`;
         }).join("");})()}
         <div class="sortcol co-S">
-          <div class="sh" style="color:#22c55e">🎁 Sorpresas<small id="cnt-S"></small></div>
+          <div class="sh" style="color:var(--sorT)">🎁 Sorpresas<small id="cnt-S"></small></div>
           ${sorpresasSorteo().map(n=>`<button class="ptoggle k-S ${SEL.has(n)?'on':''}" data-tog="${esc(n)}">${esc(n)} <small style="opacity:.75">(${esc(coponDe(n)||"B?")})</small></button>`).join("")||'<div class="note" style="font-size:12px;margin-bottom:6px">—</div>'}
           <div style="display:flex;gap:5px;margin-top:6px">
             <input id="newsorp" placeholder="Nuevo…" style="flex:1;min-width:0;padding:8px">
@@ -2150,7 +2190,7 @@ function vSorteo(){
           </div>
         </div>
       </div>
-      <div class="note" style="margin-top:8px;font-size:12px">Tocá los que vinieron hoy. Los copones se editan en Admin. Los <b style="color:#22c55e">sorpresa</b> entran al sorteo como copón B (después podés cambiarlos desde Admin).</div>
+      <div class="note" style="margin-top:8px;font-size:12px">Tocá los que vinieron hoy. Los copones se editan en Admin. Los <b style="color:var(--sorT)">sorpresa</b> entran al sorteo como copón B (después podés cambiarlos desde Admin).</div>
     </div>
 
     <div id="drawMsg" class="note" style="margin-top:10px"></div>
@@ -2309,7 +2349,7 @@ function revelar(orden,{sup,problemas,seedRaw,manual,fecha}){ // fecha = la fech
       <div class="card pad" style="margin-top:12px;${first?`animation:pop .45s ${(orden.length*0.3+0.2).toFixed(1)}s both`:""}">
         <div class="tag" style="margin-bottom:2px">🆚 Cruces por cancha</div>
         ${rounds.slice(0,3).map((ms,ri)=>`
-          <div class="tag" style="color:var(--A);margin:10px 0 2px">Ronda ${ri+1}</div>
+          <div class="tag" style="color:var(--aT);margin:10px 0 2px">Ronda ${ri+1}</div>
           ${ms.map((m,mi)=>m[0]&&m[1]
             ?`<div class="row" style="padding:6px 0"><span><b>${mi<courts?"Cancha "+(mi+1):"⏳ Espera"}:</b> ${esc(m[0].label)} <span style="color:var(--red2);font-family:'Anton',Impact,sans-serif"> VS </span> ${esc(m[1].label)}</span></div>`
             :`<div class="row" style="padding:6px 0"><span class="muted"><b>Libre:</b> ${esc((m[0]||m[1]).label)} descansa</span></div>`).join("")}`).join("")}
@@ -2493,17 +2533,17 @@ function vAdmin(){
   }
   const cloudCard = CLOUD
     ? `<div class="card pad" style="border-color:#2a6e3f;margin-bottom:12px">
-        <div class="tag" style="color:${CLOUDSTATE==="ok"?"#4ade80":"#ffcf4d"};margin-bottom:6px">${CLOUDSTATE==="ok"?"☁️ Nube conectada · ✓ con datos":CLOUDSTATE==="vacia"?"☁️ Nube conectada · ⚠️ VACÍA":CLOUDSTATE==="error"?"⚠️ Sin conexión con la nube · recargá la app":"⏳ Conectando con la nube… (no guardes todavía)"}</div>
+        <div class="tag" style="color:${CLOUDSTATE==="ok"?"var(--okT)":"var(--warnT)"};margin-bottom:6px">${CLOUDSTATE==="ok"?"☁️ Nube conectada · ✓ con datos":CLOUDSTATE==="vacia"?"☁️ Nube conectada · ⚠️ VACÍA":CLOUDSTATE==="error"?"⚠️ Sin conexión con la nube · recargá la app":"⏳ Conectando con la nube… (no guardes todavía)"}</div>
         <div class="note">Ingresaste como <b>${esc(USER?USER.email:"")}</b> (admin 👑). Los datos viven en la base de datos: todo lo que guardes <b>lo ven todos al instante</b>, sin tocar GitHub.</div>
         <button class="btn sm block" style="margin-top:10px" id="pushCloud">☁️ Subir los datos de este dispositivo a la nube</button>
       </div>`
     : `<div class="card pad" style="border-color:#6e5b2a;margin-bottom:12px">
-        <div class="tag" style="color:#ffcf4d;margin-bottom:6px">📴 Modo local (sin nube)</div>
+        <div class="tag" style="color:var(--warnT);margin-bottom:6px">📴 Modo local (sin nube)</div>
         <div class="note">Los cambios se guardan solo en este dispositivo. Para activar la base de datos compartida y el login con Google, hay que configurar Firebase (pedile las instrucciones a Claude).</div>
       </div>`;
   const propCard = (CLOUD&&PROPUESTAS.length)
     ? `<div class="card pad" style="border-color:#7c3aed;margin-bottom:12px">
-        <div class="tag" style="color:#c4b5fd;margin-bottom:8px">📥 Propuestas de resultados (${PROPUESTAS.length})</div>
+        <div class="tag" style="color:var(--lilaT);margin-bottom:8px">📥 Propuestas de resultados (${PROPUESTAS.length})</div>
         ${PROPUESTAS.map(p=>{
           const mal=propMal(p);
           if(mal)return `<div class="adline" style="flex-wrap:wrap">
@@ -2514,7 +2554,7 @@ function vAdmin(){
           const bits=["campeon","pala","mvp","sinCafe"].filter(k=>p[k]!=null).map(k=>`${NOMDATO[k].split(" ")[0]} ${esc(valorTxt(k,p[k]))}${pisa.includes(k)?` <b class="warn">⚠️ ya cargado: ${esc(valorTxt(k,fe[k]))}</b>`:""}`);
           return `<div class="adline" style="flex-wrap:wrap">
           <span class="an">${fmtFecha(p.f)} · ${bits.join(" · ")||"sin datos"}<br><small style="color:var(--muted)">propuso ${esc(p.por||"?")}</small></span>
-          <button data-propok="${esc(p.id)}" title="Confirmar" style="color:#4ade80;font-weight:800;font-size:14px">✔️ Confirmar</button>
+          <button data-propok="${esc(p.id)}" title="Confirmar" style="color:var(--okT);font-weight:800;font-size:14px">✔️ Confirmar</button>
           <button data-propno="${esc(p.id)}" title="Rechazar">🗑️</button>
         </div>`;}).join("")}
       </div>`
@@ -2536,7 +2576,7 @@ function vAdmin(){
     <div class="card pad" style="margin-top:12px">
       <div class="tag" style="margin-bottom:8px">📅 Fechas cargadas (${DATA.fechas.length})</div>
       ${DATA.fechas.map((f,i)=>`<div class="adline">
-        <span class="an">${fmtFecha(f.f)} · ${f.parejas.length} parejas ${f.campeon?'🏆':''}${f.confirmada?'✅':''}${faltantesDe(f).length?` <small style="color:#ffcf4d">· falta: ${faltantesTxt(f)}</small>`:''}</span>
+        <span class="an">${fmtFecha(f.f)} · ${f.parejas.length} parejas ${f.campeon?'🏆':''}${f.confirmada?'✅':''}${faltantesDe(f).length?` <small style="color:var(--warnT)">· falta: ${faltantesTxt(f)}</small>`:''}</span>
         ${f.versiones&&f.versiones.length?`<button data-hist="${i}" title="Historial de cambios">🕓</button>`:''}
         <button data-editcamp="${i}" title="Cargar/corregir resultado">👑</button>
         <button data-delf="${i}" title="Borrar">🗑️</button>
@@ -2631,7 +2671,7 @@ function vAdmin(){
       ${looseNames().map(n=>{const def=coponDe(n)||"B";return `<div class="adline">
         <span class="an">${esc(n)} <small style="color:var(--muted)">· ${fechasDe(n)} fecha${fechasDe(n)===1?"":"s"}</small></span>
         <select data-altacop="${esc(n)}">${["A","B","C","D"].map(c=>`<option ${c===def?"selected":""}>${c}</option>`).join("")}</select>
-        <button data-alta="${esc(n)}" title="Dar de alta como jugador estable" style="color:#4ade80;font-size:14px;font-weight:800">⬆️ Alta</button>
+        <button data-alta="${esc(n)}" title="Dar de alta como jugador estable" style="color:var(--okT);font-size:14px;font-weight:800">⬆️ Alta</button>
       </div>`;}).join("")||'<div class="empty" style="padding:10px">No hay sorpresas sueltos 🎉</div>'}
     </div>
 
@@ -2820,7 +2860,7 @@ function bind(){
     const bf=document.getElementById("btnFixFecha");
     if(bf)bf.onclick=()=>drawFixtureFecha(fechaConParejas());
     const bb=document.getElementById("bigBtn");
-    const bigTxt=()=>{bb.textContent=BIGMODE?"📺 Modo pantalla: ON — el sorteo sale gigante":"📺 Modo pantalla: OFF";bb.style.borderColor=BIGMODE?"var(--A)":"";bb.style.color=BIGMODE?"var(--A)":"";};
+    const bigTxt=()=>{bb.textContent=BIGMODE?"📺 Modo pantalla: ON — el sorteo sale gigante":"📺 Modo pantalla: OFF";bb.style.borderColor=BIGMODE?"var(--A)":"";bb.style.color=BIGMODE?"var(--aT)":"";};
     bigTxt();
     bb.onclick=()=>{BIGMODE=!BIGMODE;try{localStorage.setItem("cb_big",BIGMODE?"1":"0");}catch(e){}bigTxt();toast(BIGMODE?"📺 El próximo sorteo sale a pantalla completa":"Modo pantalla apagado");};
     const updCounts=()=>{
@@ -3110,9 +3150,9 @@ function bind(){
   marcarNav();
   // tema claro/oscuro
   const applyTheme=t=>{document.body.classList.toggle("light",t==="light");document.getElementById("themeBtn").textContent=t==="light"?"☀️":"🌙";};
-  let theme=localStorage.getItem("cb_theme")||"dark";
+  let theme="dark"; try{theme=localStorage.getItem("cb_theme")||"dark";}catch(e){}
   applyTheme(theme);
-  document.getElementById("themeBtn").onclick=()=>{theme=theme==="light"?"dark":"light";localStorage.setItem("cb_theme",theme);applyTheme(theme);};
+  document.getElementById("themeBtn").onclick=()=>{theme=theme==="light"?"dark":"light";try{localStorage.setItem("cb_theme",theme);}catch(e){}applyTheme(theme);};
   renderAuth();
   render();
 })();
