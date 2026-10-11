@@ -556,6 +556,16 @@ async function maybeQuienSoy(){
     .then(()=>{MILINK=MYPLAYER=v;try{localStorage.setItem("cb_myplayer",v);}catch(e){}toast("⭐ ¡Listo! Tu perfil quedó vinculado");render();})
     .catch(()=>{});
 }
+let REVINC=""; // ⭐ último intento de pasar el vínculo a un nombre nuevo (uno solo por cambio, aunque falle)
+function revincular(){ // ⭐ si a tu jugador lo renombraron o lo unieron, tu vínculo pasa solo al nombre nuevo (cada uno escribe SOLO su doc)
+  if(!CLOUD||!USER||CLOUDSTATE!=="ok")return; // con datos de la nube (no la copia vieja del celu)
+  if(MYPLAYER&&!MILINK){const n=nombreActual(MYPLAYER);if(n!==MYPLAYER){MYPLAYER=n;try{localStorage.setItem("cb_myplayer",n);}catch(e){}}}
+  if(!MILINK)return;
+  const n=nombreActual(MILINK), uid=USER.uid, intento=uid+":"+MILINK+">"+n; if(n===MILINK||REVINC===intento)return;
+  REVINC=intento;
+  setDoc(doc(db,"usuarios",uid),{email:USER.email,jugador:n},{merge:true})
+    .then(()=>{ if(USER&&USER.uid===uid){MILINK=MYPLAYER=n;try{localStorage.setItem("cb_myplayer",n);}catch(e){}render();} }).catch(()=>{});
+}
 function subSocial(){ // suscripciones para todos los logueados
   if(socialSub||!db)return; socialSub=true;
   onSnapshot(collection(db,"prode"),qs=>{PRODE=qs.docs.map(x=>({id:x.id,...x.data()}));if(VIEW==="inicio"||VIEW==="ranking")renderVivo();},()=>{});
@@ -576,8 +586,9 @@ window.fbLogin=async()=>{
     catch(e2){ toast("No se pudo iniciar sesión"); }
   }
 };
-window.fbLogout=async()=>{ await signOut(auth); };
+window.fbLogout=async()=>{ await signOut(auth); MILINK=MYPLAYER=null; try{localStorage.removeItem("cb_myplayer");}catch(e){} render(); }; // ⭐ el vínculo es de la cuenta: la próxima lo trae de la nube
 function renderAuth(){
+  const na=document.querySelector('#nav a[data-go="admin"]'); if(na)na.style.display=(CLOUD&&!ISADMIN)?"none":""; // ⚙️ solo para admins (sin nube, Admin está abierto); #admin a mano sigue mostrando el candado
   const b=document.getElementById("authBtn");
   if(!CLOUD){b.classList.add("hidden");return;}
   b.classList.remove("hidden");
@@ -673,6 +684,14 @@ async function publicarFoto(tipo,k,dataURL){
   if(!libre)throw new Error("lleno");
   await setDoc(doc(db,"fotos",libre),{tipo,k:String(k),data:dataURL,por:(USER&&USER.email)||"admin",ts:Date.now()});
   FOTOS[libre]={tipo,k:String(k),data:dataURL}; // reflejo inmediato (el snapshot lo confirma despu\u00e9s)
+}
+async function existeArchivo(u){ try{ return (await fetch(u,{method:"HEAD",cache:"no-store"})).ok; }catch(e){ return false; } }
+async function moverFotoPerfil(de,a){ // 📸 la foto de perfil de la nube va por apodo (slug): si el nombre cambia, se muda con él
+  const kd=fotoKey("perfil",de), ka=fotoKey("perfil",a), f=FOTOS[kd];
+  if(!CLOUD||!de||!a||kd===ka||!f||!f.data||FOTOS[ka])return; // si el nuevo ya tiene la suya, no se pisa (la vieja queda donde está)
+  try{ await setDoc(doc(db,"fotos",ka),{...f,k:String(a)}); FOTOS[ka]={...f,k:String(a)};
+    await deleteDoc(doc(db,"fotos",kd)); delete FOTOS[kd]; render(); }
+  catch(e){ toast("⚠️ La foto de perfil no se pudo pasar al nombre nuevo: volvé a subirla",4500); }
 }
 function comprimirCanvas(cv){ // que entre en un documento de la nube (l\u00edmite ~1MB)
   let q=.82, url=cv.toDataURL("image/jpeg",q);
@@ -928,6 +947,8 @@ function render(nav){ // nav = viene de route() (cambio de pantalla): arranca de
   // 🎾 en Sorteo, si no es navegación, el resultado en pantalla (con sus botones), el Nº y las canchas sobreviven al redibujo
   const sv=!nav&&VIEW==="sorteo"&&document.getElementById("seed")?{po:document.getElementById("pairsOut"),dm:document.getElementById("drawMsg"),seed:document.getElementById("seed").value,courts:document.getElementById("courts").value}:null;
   PEND_RENDER=false; document.getElementById("novedades").classList.add("hidden");
+  document.querySelector(".nav").style.display=(CLOUD&&!USER)?"none":""; // 🔒 en el bloqueo no hay barra
+  try{revincular();}catch(e){console.error(e);}
   try{
     if(CLOUD&&!USER)app.innerHTML=vBloqueo(); // sin bind(): el bloqueo no tiene nada que atar (en #sorteo tiraba TypeError)
     else{
@@ -1065,7 +1086,7 @@ function vInicio(){
         <div class="tag" style="margin-bottom:4px">⏳ PRÓXIMO PÁDEL · ${fmtFecha(pj.f)} · 8:30</div>
         <div id="cdown" class="anton" style="font-size:27px;color:var(--A)">…</div>
         ${USER?`
-          <div class="note" style="margin:8px 0">🙋 Anotados: <b>${anotados.length}</b>${anotados.length?` — ${anotados.map(a=>esc(a.jugador||a.nombre||"?")).join(", ")}`:" — sé el primero"}</div>
+          <div class="note" style="margin:8px 0">🙋 Anotados: <b>${anotados.length}</b>${anotados.length?` — ${anotados.map(a=>esc((a.jugador&&nombreActual(a.jugador))||a.nombre||"?")).join(", ")}`:" — sé el primero"}</div>
           <button class="btn ${yo?'ghost':''} block" id="asisBtn">${yo?"😴 Me bajo":"🙋 ¡Juego el domingo!"}</button>`
         :`<div class="note" style="margin-top:8px">🔑 Ingresá con Google para anotarte y ver quiénes juegan.</div>`}
       </div>`;})():""}
@@ -1089,7 +1110,7 @@ function vInicio(){
       const cuantos=PRODE.filter(x=>x.f===fProde.f).length;
       return `<div class="card pad" style="margin-bottom:12px;border-color:#7c3aed">
         <div class="tag" style="margin-bottom:6px;color:#c4b5fd">🎲 PRODE · ¿Quién se lleva el Kia?${cerrado?" · 🔒 CERRADO":""}</div>
-        ${mio?`<div class="note" style="margin-bottom:8px">Tu pronóstico: <b style="color:#c4b5fd">🎯 ${esc(Array.isArray(mio.pareja)?mio.pareja.join(" & "):"?")}</b></div>`
+        ${mio?`<div class="note" style="margin-bottom:8px">Tu pronóstico: <b style="color:#c4b5fd">🎯 ${esc(Array.isArray(mio.pareja)?mio.pareja.map(nombreActual).join(" & "):"?")}</b></div>`
              :`<div class="note" style="margin-bottom:8px">${cerrado?"No jugaste pronóstico esta vez.":"Jugá tu pronóstico hasta el domingo a las 8:30 (ahí se cierra). No vale plata, vale honor."}</div>`}
         ${cerrado?`<div class="note" id="prodeLock" style="text-align:center;font-weight:800">🔒 Prode cerrado desde las 8:30 del ${fmtFecha(fProde.f)}: ya no se puede jugar ni cambiar.<br>Se resuelve cuando se cargue el Kia 🚗</div>`
           :`<button class="btn block" id="prodeBtn" style="background:#7c3aed">${mio?"🎲 Cambiar mi pronóstico (hasta las 8:30)":"🎲 Hacer mi pronóstico"}</button>`}
@@ -1336,6 +1357,7 @@ function vPerfil(name){
       <button class="btn block" id="share" style="margin-top:14px">📲 Compartir mis estadísticas</button>
       ${CLOUD?(MYPLAYER===name
         ?`<div class="note" style="text-align:center;margin-top:10px;color:var(--gold)">⭐ Este sos vos</div>`
+        :(MILINK||MYPLAYER)?`<button class="btn ghost sm block" id="meBtn" style="margin-top:8px">⭐ ¿Sos vos? Cambiar tu vínculo a ${esc(name)}</button>`
         :`<button class="btn ghost block" id="meBtn" style="margin-top:8px">⭐ Este soy yo</button>`):""}
       ${CLOUD&&ISADMIN?`<button class="btn ghost sm block" id="fotoBtn" style="margin-top:8px">📸 ${fotoNube("perfil",slugName(name))?"Cambiar":"Ponerle"} foto de perfil</button>`:""}
     </div>
@@ -1379,6 +1401,16 @@ function allKnownNames(){
   looseNames().forEach(n=>s.add(n));
   return [...s].sort((a,b)=>a.localeCompare(b));
 }
+// 🔁 el nombre de HOY de alguien que se renombró o se unió (su nombre viejo quedó de apodo). Es para lo que vive
+// afuera de los datos (vínculo ⭐, prode, asistencia): cada uno escribe solo lo suyo y el admin no lo puede corregir.
+function nombreVivos(){ const s=new Set(allKnownNames()); (DATA.historial||[]).forEach(t=>(t.fechas||[]).forEach(f=>((f&&f.parejas)||[]).forEach(p=>Array.isArray(p)&&p.forEach(n=>s.add(n))))); return s; } // plantel + todo el que jugó (temporadas cerradas incluidas)
+function nombreActualFn(){
+  const vivos=nombreVivos(), memo={};
+  return n=>{ if(!n||vivos.has(n))return n; if(n in memo)return memo[n];
+    const q=normName(n), j=q&&DATA.jugadores.find(j=>(j.real||"").split("·").some(a=>normName(a)===q));
+    return memo[n]=j?j.n:n; };
+}
+function nombreActual(n){ return !n||DATA.jugadores.some(j=>j.n===n)?n:nombreActualFn()(n); }
 function sorpresasSorteo(){ const s=looseNames(); Object.keys(SORP_LOCAL).forEach(n=>{if(!s.includes(n))s.push(n);}); return s; } // + las que sumó un no admin en este celu
 function fechasDe(n){return DATA.fechas.filter(f=>f.parejas.some(t=>t.includes(n))).length;}
 
@@ -1397,10 +1429,11 @@ function lev1(a,b){ // ¿difieren en una sola letra? (tolerancia de tipeo)
   }
   return ed+(a.length-i)+(b.length-j)<=1;
 }
+const PALABRA_GENERICA=/^(invitad[oa]s?|sorpresas?)$/; // comodines: ni el nombre ni los apodos de un jugador se quedan con "Invitado" o "Sorpresa"
 function playerTokens(j){
-  const t=new Set([normName(j.n)]);
-  j.n.split(/[\s()\/·]+/).forEach(w=>{if(w.length>2)t.add(normName(w));});
-  (j.real||"").split("·").forEach(a=>{const na=normName(a);if(na)t.add(na);a.split(/\s+/).forEach(w=>{if(w.length>2)t.add(normName(w));});});
+  const t=new Set([normName(j.n)]), suma=w=>{const nw=normName(w);if(w.length>2&&!PALABRA_GENERICA.test(nw))t.add(nw);};
+  j.n.split(/[\s()\/·]+/).forEach(suma);
+  (j.real||"").split("·").forEach(a=>{const na=normName(a);if(na&&!PALABRA_GENERICA.test(na))t.add(na);a.split(/\s+/).forEach(suma);});
   return t;
 }
 const EMOJI_APODOS=[[/🐈|🐱|😺/u,"gato"]]; // apodos que el grupo escribe con emoji (ej: "7. 🐈" = Gato)
@@ -1414,7 +1447,7 @@ function matchPlayer(raw){
   //    Primero contra los nombres (plantel + sorpresas) y recién después contra los apodos del perfil.
   if(q.length>=3){
     const unico=pares=>{ const c=new Set(pares.filter(([t])=>t.length>=3&&lev1(t,q)).map(([,n])=>n)); return c.size===1?[...c][0]:(c.size>1?false:null); };
-    const nombres=[...DATA.jugadores.flatMap(j=>[normName(j.n),...j.n.split(/[\s()\/·]+/).filter(w=>w.length>2).map(normName)].map(t=>[t,j.n])),...looseNames().map(n=>[normName(n),n])];
+    const nombres=[...DATA.jugadores.flatMap(j=>[normName(j.n),...j.n.split(/[\s()\/·]+/).filter(w=>w.length>2).map(normName).filter(w=>!PALABRA_GENERICA.test(w))].map(t=>[t,j.n])),...looseNames().map(n=>[normName(n),n])];
     const r1=unico(nombres); if(r1!==null) return r1||null;
     const r2=unico(DATA.jugadores.flatMap(j=>[...playerTokens(j)].map(t=>[t,j.n]))); if(r2) return r2;
   }
@@ -1636,7 +1669,12 @@ function resumenConvocados(scrollTop){
   const dn=document.getElementById("drawNow"); if(dn)dn.onclick=()=>draw();
   if(scrollTop)window.scrollTo({top:0,behavior:"smooth"});
 }
-function mergePlayers(keep,dup){
+function mapQuien(f,fn){ if(f.fotoQuien)Object.keys(f.fotoQuien).forEach(t=>{if(Array.isArray(f.fotoQuien[t]))f.fotoQuien[t]=f.fotoQuien[t].map(fn);}); } // 📸 quién es quién en las fotos
+function sumarApodo(j,a){ // el nombre viejo queda de apodo: las listas de WhatsApp y lo guardado afuera (⭐, prode, asistencia) lo siguen reconociendo
+  a=String(a||"").trim(); if(!j||!a||a===j.n||esGenerico(a)||PALABRA_GENERICA.test(normName(a)))return;
+  if(!(j.real||"").split("·").map(normName).includes(normName(a)))j.real=(j.real?j.real+" · ":"")+a;
+}
+function mergePlayers(keep,dup){ // solo cambia DATA: guarda el que llama
   if(!keep||!dup||keep===dup)return;
   eachFechaArr(DATA).forEach(arr=>arr.forEach(f=>{
     f.parejas=f.parejas.map(t=>{const r=t.map(n=>n===dup?keep:n);return r.filter((n,i)=>r.indexOf(n)===i);});
@@ -1644,13 +1682,16 @@ function mergePlayers(keep,dup){
     if(f.pala){f.pala=f.pala.map(n=>n===dup?keep:n).filter((n,i,a)=>a.indexOf(n)===i);}
     if(f.mvp===dup)f.mvp=keep;
     if(f.sinCafe){f.sinCafe=f.sinCafe.map(n=>n===dup?keep:n).filter((n,i,a)=>a.indexOf(n)===i);}
+    mapQuien(f,n=>n===dup?keep:n);
   }));
   const kI=DATA.jugadores.findIndex(j=>j.n===keep), dI=DATA.jugadores.findIndex(j=>j.n===dup);
-  if(dI>=0&&kI>=0)DATA.jugadores.splice(dI,1);
-  else if(dI>=0&&kI<0)DATA.jugadores[dI].n=keep;
+  if(dI>=0&&kI>=0){ const k=DATA.jugadores[kI], d=DATA.jugadores[dI]; // los apodos y el año del duplicado no se pierden
+    [dup,...(d.real||"").split("·")].forEach(a=>sumarApodo(k,a)); if(!k.nac&&d.nac)k.nac=d.nac;
+    DATA.jugadores.splice(dI,1); }
+  else if(dI>=0&&kI<0){DATA.jugadores[dI].n=keep;sumarApodo(DATA.jugadores[dI],dup);}
+  else if(kI>=0)sumarApodo(DATA.jugadores[kI],dup);
   if(DATA.bolsa)DATA.bolsa=DATA.bolsa.filter(n=>n!==dup);
   if(DATA.bolsaCop)delete DATA.bolsaCop[dup];
-  save();
 }
 function renameInData(d,old,neu){
   (d.jugadores||[]).forEach(j=>{if(j.n===old)j.n=neu;});
@@ -1660,6 +1701,7 @@ function renameInData(d,old,neu){
     if(f.pala)f.pala=f.pala.map(n=>n===old?neu:n);
     if(f.mvp===old)f.mvp=neu;
     if(f.sinCafe)f.sinCafe=f.sinCafe.map(n=>n===old?neu:n);
+    mapQuien(f,n=>n===old?neu:n);
   }));
   if(d.bolsa)d.bolsa=d.bolsa.map(n=>n===old?neu:n);
   if(d.bolsaCop&&d.bolsaCop[old]!==undefined){d.bolsaCop[neu]=d.bolsaCop[old];delete d.bolsaCop[old];}
@@ -1851,14 +1893,15 @@ function cierreProde(f){ return new Date(f+"T08:30:00-03:00").getTime(); }
 function prodeCerrado(f){ return Date.now()>=cierreProde(f); }
 function tablaProde(){ // 🎯 ranking de adivinos
   const cerradas={}; allFechas().forEach(f=>{if(f.campeon)cerradas[f.f]=f.campeon;});
-  const m={};
+  const m={}, na=nombreActualFn(); // 🔁 renombrados/unidos: el prode guardado con el nombre viejo suma en el de hoy
   PRODE.forEach(p=>{
     const win=cerradas[p.f]; if(!win)return;
     if(typeof p.ts==="number"&&p.ts>=cierreProde(p.f))return; // jugado con el partido en curso (antes de las reglas nuevas): no cuenta
-    const who=p.jugador||p.nombre||"?";
+    const who=(p.jugador&&na(p.jugador))||p.nombre||"?";
     const o=m[who]||(m[who]={n:who,total:0,ok:0});
     o.total++;
-    if(Array.isArray(p.pareja)&&p.pareja.length===win.length&&p.pareja.every(x=>win.includes(x)))o.ok++;
+    const w=win.map(na);
+    if(Array.isArray(p.pareja)&&p.pareja.length===win.length&&p.pareja.every(x=>w.includes(na(x))))o.ok++;
   });
   const arr=Object.values(m).sort((a,b)=>b.ok-a.ok||a.total-b.total);
   if(!arr.length)return `<div class="empty">Todavía no se resolvió ningún pronóstico 🎲<br><small>Se hacen desde el Inicio cuando están las parejas del domingo</small></div>`;
@@ -2376,7 +2419,7 @@ function vAdmin(){
         <div style="font-size:44px;margin-bottom:8px">🔒</div>
         <div class="big" style="margin-bottom:6px">Zona del organizador</div>
         <div class="note" style="margin-bottom:14px">${USER?`Estás logueado como <b>${esc(USER.email)}</b>, pero solo la cuenta admin puede cargar resultados y editar el plantel.`:`Ingresá con Google. Solo la cuenta admin puede editar — el resto puede ver rankings y perfiles.`}</div>
-        ${USER?`<button class="btn ghost" onclick="fbLogout()">Cerrar sesión</button>`:`<button class="btn" onclick="fbLogin()">🔑 Ingresar con Google</button>`}
+        ${USER?`<button class="btn ghost" data-go2="inicio">← Volver al inicio</button>`:`<button class="btn" onclick="fbLogin()">🔑 Ingresar con Google</button>`}
       </div>
     </section>`;
   }
@@ -2469,7 +2512,7 @@ function vAdmin(){
       <div class="note" style="margin-bottom:8px">Cuentas de Google que entraron a la app, con qué jugador se vincularon (⭐) y su último ingreso.</div>
       ${USUARIOS.length
         ?[...USUARIOS].sort((a,b)=>(+b.ultimoIngreso||0)-(+a.ultimoIngreso||0)).map(u=>`<div class="adline">
-            <span class="an">${u.jugador?`⭐ <b>${esc(u.jugador)}</b>`:`<span style="color:var(--muted)">sin vincular</span>`}
+            <span class="an">${u.jugador?`⭐ <b>${esc(u.jugador)}</b>${(()=>{const n=nombreActual(u.jugador);return n!==u.jugador?` <small style="color:var(--muted)">→ ahora <b>${esc(n)}</b> (se pasa solo cuando entre)</small>`:nombreVivos().has(n)?"":` <small style="color:var(--red2)">⚠️ ya no está en la app</small>`;})()}`:`<span style="color:var(--muted)">sin vincular</span>`}
             <small style="color:var(--muted)">· ${esc(u.email||u.nombre||"?")}${fmtTs(u.ultimoIngreso)?` · último ingreso: ${fmtTs(u.ultimoIngreso)}`:""}</small></span>
           </div>`).join("")
         :'<div class="empty" style="padding:10px">Todavía no entró nadie logueado</div>'}
@@ -2496,7 +2539,7 @@ function vAdmin(){
 
     <div class="card pad" style="margin-top:12px">
       <div class="tag" style="margin-bottom:8px">✏️ Renombrar jugador</div>
-      <div class="note" style="margin-bottom:10px">Cambia el nombre en todo el historial (fechas, Kias, cucharas, MVP). Los apodos del perfil no se pierden.</div>
+      <div class="note" style="margin-bottom:10px">Cambia el nombre en todo el historial (fechas, Kias, cucharas, MVP, quién es quién en las fotos). El nombre viejo queda de apodo (las listas lo siguen reconociendo) y la foto de perfil y los vinculados ⭐ pasan al nuevo.</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end">
         <div class="field" style="flex:1;min-width:140px"><label>Jugador</label><select id="renSel"><option value="">Elegir…</option>${allKnownNames().map(n=>`<option>${esc(n)}</option>`).join("")}</select></div>
         <div class="field" style="flex:1;min-width:140px"><label>Nuevo nombre</label><input id="renNew" placeholder="Nuevo nombre…"></div>
@@ -2506,7 +2549,7 @@ function vAdmin(){
 
     <div class="card pad" style="margin-top:12px">
       <div class="tag" style="margin-bottom:8px">🧬 Unir jugadores duplicados</div>
-      <div class="note" style="margin-bottom:10px">Si una misma persona quedó con dos nombres (ej: <b>Tapiachu</b> y <b>Pachu</b>), acá los juntás: todas las fechas, Kias, cucharas y MVP del duplicado pasan al que queda. Sirve también para los sorpresa.</div>
+      <div class="note" style="margin-bottom:10px">Si una misma persona quedó con dos nombres (ej: <b>Tapiachu</b> y <b>Pachu</b>), acá los juntás: todas las fechas, Kias, cucharas y MVP del duplicado pasan al que queda, con su nombre y apodos como apodos (y su foto, si el que queda no tiene). Sirve también para los sorpresa.</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end">
         <div class="field" style="flex:1;min-width:150px"><label>✅ Queda este</label><select id="mergeKeep"><option value="">Elegir…</option>${allKnownNames().map(n=>`<option>${esc(n)}</option>`).join("")}</select></div>
         <div class="field" style="flex:1;min-width:150px"><label>🗑️ Se une (desaparece)</label><select id="mergeDup"><option value="">Elegir…</option>${allKnownNames().map(n=>`<option>${esc(n)}</option>`).join("")}</select></div>
@@ -2673,10 +2716,16 @@ function bind(){
       try{ if(navigator.share){await navigator.share({title:"Copones BV",text:txt,url});} else {await navigator.clipboard.writeText(txt);toast("Copiado al portapapeles");} }catch(e){}
     };
     const me=document.getElementById("meBtn");
-    if(me)me.onclick=()=>{
+    if(me)me.onclick=async()=>{
       if(!USER){toast("Primero ingresá con Google (🔑 arriba)");window.fbLogin();return;}
-      setDoc(doc(db,"usuarios",USER.uid),{email:USER.email,jugador:PARAM,vinculadoEl:Date.now()},{merge:true})
-        .then(()=>{MILINK=MYPLAYER=PARAM;try{localStorage.setItem("cb_myplayer",PARAM);}catch(e){}toast("⭐ ¡Perfil vinculado!");render();})
+      const n=PARAM, uid=USER.uid, antes=MILINK||MYPLAYER; // MILINK = el de la nube (el que cuenta); si no, el que recuerda este celu
+      if(!await uiConfirm(antes&&antes!==n?"⚠️ Tu cuenta ya tiene jugador":"⭐ ¿Este sos vos?",
+        (antes&&antes!==n?`Tu cuenta (<b>${esc(USER.email)}</b>) está vinculada a <b>${esc(antes)}</b>.<br><br>¿La pasás a <b>${esc(n)}</b>? `:`Vas a vincular tu cuenta (<b>${esc(USER.email)}</b>) con <b>${esc(n)}</b>. `)
+        +"Tu perfil, tu asistencia y tu prode quedan a ese nombre.",
+        antes&&antes!==n?`🔁 Sí, soy ${esc(n)}`:`⭐ Sí, soy ${esc(n)}`,"No"))return;
+      if(!USER||USER.uid!==uid)return;
+      setDoc(doc(db,"usuarios",uid),{email:USER.email,jugador:n,vinculadoEl:Date.now()},{merge:true})
+        .then(()=>{MILINK=MYPLAYER=n;try{localStorage.setItem("cb_myplayer",n);}catch(e){}toast("⭐ ¡Perfil vinculado!");render();})
         .catch(()=>toast("⚠️ No se pudo vincular (faltan las reglas nuevas)"));
     };
     const fo=document.getElementById("fotoBtn"); // 📸 foto de perfil directa (admin)
@@ -2711,7 +2760,7 @@ function bind(){
     const am=document.getElementById("asisMark");
     if(am)am.onclick=()=>{ // 🙋 marca a los anotados de la app
       let ok=0;
-      ASIS.filter(a=>a.f===proxJuego().f).forEach(a=>{const m=matchPlayer(a.jugador||a.nombre||"");if(m){SEL.add(m);ok++;}});
+      ASIS.filter(a=>a.f===proxJuego().f).forEach(a=>{const m=matchPlayer((a.jugador&&nombreActual(a.jugador))||a.nombre||"");if(m){SEL.add(m);ok++;}});
       route("sorteo");toast(`🙋 ${ok} anotados marcados como presentes`);
     };
     document.getElementById("selAll").onclick=()=>{DATA.jugadores.forEach(j=>{if(j.c)SEL.add(j.n);});route("sorteo");};
@@ -2831,28 +2880,45 @@ function bind(){
     const gn=document.getElementById("galaNow");
     if(gn)gn.onclick=()=>mostrarGala("Temporada en curso",DATA.fechas);
     const br=document.getElementById("btnRen");
-    if(br)br.onclick=()=>{
-      const old=document.getElementById("renSel").value, neu=document.getElementById("renNew").value.trim();
+    if(br)br.onclick=async()=>{
+      const g0=NUBE_GEN, old=document.getElementById("renSel").value, neu=document.getElementById("renNew").value.trim();
       if(!old||!neu){toast("Completá jugador y nuevo nombre");return;}
       if(allKnownNames().includes(neu)){toast("Ese nombre ya existe — usá Unir");return;}
-      if(!confirm(`¿Renombrar "${old}" a "${neu}" en todo el historial?`))return;
-      renameInData(DATA,old,neu);save();toast(`${old} → ${neu} ✓`);render();
+      if(!confirm(`¿Renombrar "${old}" a "${neu}" en todo el historial?\n\n"${old}" queda como apodo, y la foto de perfil y los vinculados ⭐ pasan al nombre nuevo.`))return;
+      const so=slugName(old), sn=slugName(neu), j0=DATA.jugadores.find(x=>x.n===old);
+      // 📸 la foto del repo va por apodo (fotos/perfil/<slug>.jpg): si el slug cambia, se queda fija con la ruta vieja
+      const repo=so&&so!==sn&&j0&&!j0.foto&&await existeArchivo(`fotos/perfil/${so}.jpg`)?`fotos/perfil/${so}.jpg`:null;
+      renameInData(DATA,old,neu);
+      const j=DATA.jugadores.find(x=>x.n===neu); if(j){sumarApodo(j,old);if(repo&&!j.foto)j.foto=repo;}
+      if(!await save(g0))return; // no entró en la nube: no se toca nada más
+      toast(`${old} → ${neu} ✓`);render();
+      moverFotoPerfil(so,sn);
     };
     const bm=document.getElementById("btnMerge");
-    if(bm)bm.onclick=()=>{
-      const keep=document.getElementById("mergeKeep").value, dup=document.getElementById("mergeDup").value;
+    if(bm)bm.onclick=async()=>{
+      const g0=NUBE_GEN, keep=document.getElementById("mergeKeep").value, dup=document.getElementById("mergeDup").value;
       if(!keep||!dup){toast("Elegí los dos nombres");return;}
       if(keep===dup){toast("Son el mismo nombre");return;}
-      if(!confirm(`¿Unir "${dup}" dentro de "${keep}"?\n\nTodas las fechas, Kias, cucharas y MVP de "${dup}" pasan a "${keep}" y "${dup}" desaparece.\n\nEsto no se puede deshacer.`))return;
-      mergePlayers(keep,dup);toast(`${dup} → ${keep} ✓`);render();
+      if(!confirm(`¿Unir "${dup}" dentro de "${keep}"?\n\nTodas las fechas, Kias, cucharas y MVP de "${dup}" pasan a "${keep}" y "${dup}" desaparece (queda como apodo de "${keep}"; si "${keep}" no tiene foto, se queda con la de "${dup}").\n\nEsto no se puede deshacer.`))return;
+      const sk=slugName(keep), sd=slugName(dup), kj=DATA.jugadores.find(x=>x.n===keep), dj=DATA.jugadores.find(x=>x.n===dup);
+      // 📸 si el que queda no tiene foto (nube, datos ni repo), hereda la del duplicado
+      let nube=false, repo=null;
+      if(sd&&sk!==sd&&!fotoNube("perfil",sk)&&!(kj&&kj.foto)&&!(sk&&await existeArchivo(`fotos/perfil/${sk}.jpg`))){
+        nube=!!fotoNube("perfil",sd);
+        repo=(dj&&dj.foto)||(await existeArchivo(`fotos/perfil/${sd}.jpg`)?`fotos/perfil/${sd}.jpg`:null);
+      }
+      mergePlayers(keep,dup);
+      const j=DATA.jugadores.find(x=>x.n===keep); if(j&&repo&&!j.foto)j.foto=repo;
+      if(!await save(g0))return;
+      toast(`${dup} → ${keep} ✓`);render();
+      if(nube)moverFotoPerfil(sd,sk);
     };
     document.querySelectorAll("[data-alta]").forEach(b=>b.onclick=()=>{
       const n=b.dataset.alta;
       const sel=document.querySelector(`select[data-altacop="${CSS.escape(n)}"]`);
       const c=sel&&sel.value?sel.value:"";
-      if(!c&&!confirm(`No elegiste copón para ${n}. ¿Darlo de alta igual como invitado sin copón?`))return;
       if(DATA.jugadores.some(j=>j.n===n)){toast(n+" ya está en el plantel");render();return;} // (otro admin lo dio de alta recién)
-      DATA.jugadores.push({n,c,real:"ex invitado sorpresa"});
+      DATA.jugadores.push({n,c,real:""}); // sin apodos inventados ("ex invitado sorpresa" hacía que "Invitado" fuera él)
       if(DATA.bolsa)DATA.bolsa=DATA.bolsa.filter(x=>x!==n);
       if(DATA.bolsaCop)delete DATA.bolsaCop[n];
       save();toast(n+" dado de alta como jugador estable ✓");render();
