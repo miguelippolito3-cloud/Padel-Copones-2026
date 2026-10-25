@@ -623,6 +623,10 @@ const PARCHES=[
     const faltan=nuevos.filter(x=>!ya.some(y=>(mismo(y.a,x.a)&&mismo(y.b,x.b))||(mismo(y.a,x.b)&&mismo(y.b,x.a))));
     if(faltan.length)f.partidos=[...ya,...faltan];
   }},
+  { id:"2026-10-25-foto-kia", aplicar:d=>{ // quién es quién en la foto de la Kia del 25/10 (la pasó Mike)
+    const f=d.fechas.find(x=>x.f==="2026-10-25");
+    if(f&&f.campeon&&f.campeon.join()==="Matso,Toto")f.fotoQuien={...(f.fotoQuien||{}),kia:["Toto","Matso"]};
+  }},
 ];
 let PARCHE_PENDIENTE=false; // se aplicó un parche que la nube todavía no tiene
 const LS="padel_espn_v1";
