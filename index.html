@@ -610,6 +610,19 @@ const PARCHES=[
   { id:"2026-10-11-mvp-ficky", aplicar:d=>{ // el MVP del 11/10 (Ficky) no llegó a la nube: un celu con la app vieja abierta guardó el resultado sin él
     const f=d.fechas.find(x=>x.f==="2026-10-11"); if(f&&(f.mvp===undefined||f.mvp===null))f.mvp="Calambre";
   }},
+  { id:"2026-10-25-resultado-y-partidos", aplicar:d=>{ // resultado del 25/10 (lo pasó Mike): Kia Matso & Toto, MVP Toto, la cuchara individual para Mike; y los 8 partidos de la mañana
+    const f=d.fechas.find(x=>x.f==="2026-10-25"); if(!f)return;
+    if(!f.campeon){ f.campeon=["Matso","Toto"]; f.confirmada=true; }
+    if(f.pala===undefined||f.pala===null)f.pala=["Mike Rafa"];
+    if(f.mvp===undefined||f.mvp===null)f.mvp="Toto";
+    const TM=["Track","Mike Rafa"],MT=["Matso","Toto"],DC=["Don (Diegui)","Chuck"],MP=["MP","Taya"],AP=["Alba","Pati"],BP=["Bati","Pachuza"];
+    const m=(n,a,b,ga,gb)=>({n,a,b,ga,gb,fin:ga===6||gb===6,por:"Mike (chat)"});
+    // el "7-5" de Matso & Toto a MP & Taya se guarda 6-5: en el formato de la app el set va a 6 (6-5 = tiebreak)
+    const nuevos=[m(1,TM,MT,5,6),m(2,TM,MP,5,6),m(3,TM,DC,6,5),m(2,DC,MT,2,6),m(2,MP,MT,5,6),m(3,DC,AP,6,3),m(2,AP,BP,5,6),m(2,BP,MP,2,6)];
+    const ya=f.partidos||[], mismo=(t,u)=>t.slice().sort().join("|")===u.slice().sort().join("|");
+    const faltan=nuevos.filter(x=>!ya.some(y=>(mismo(y.a,x.a)&&mismo(y.b,x.b))||(mismo(y.a,x.b)&&mismo(y.b,x.a))));
+    if(faltan.length)f.partidos=[...ya,...faltan];
+  }},
 ];
 let PARCHE_PENDIENTE=false; // se aplicó un parche que la nube todavía no tiene
 const LS="padel_espn_v1";
